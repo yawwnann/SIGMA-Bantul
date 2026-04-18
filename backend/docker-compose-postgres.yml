@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: gis-bantul-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: gis_bantul
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/setup-pgrouting.sql:/docker-entrypoint-initdb.d/setup-pgrouting.sql
+    command: postgres -c shared_preload_libraries=postgis-3
+
+  pgrouting-setup:
+    image: postgis/postgis:15-3.3
+    depends_on:
+      - postgres
+    environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: gis_bantul
+    volumes:
+      - ./scripts:/scripts
+    command: >
+      bash -c "
+        echo 'Waiting for PostgreSQL...'
+        sleep 10
+        echo 'Installing pgRouting extension...'
+        psql -c 'CREATE EXTENSION IF NOT EXISTS postgis;'
+        psql -c 'CREATE EXTENSION IF NOT EXISTS pgrouting;'
+        echo 'pgRouting installed successfully!'
+      "
+
+volumes:
+  postgres_data:

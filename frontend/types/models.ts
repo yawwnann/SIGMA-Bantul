@@ -1,0 +1,154 @@
+﻿export enum UserRole {
+  ADMIN = 'ADMIN',
+  USER = 'USER',
+}
+
+export enum HazardLevel {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL',
+}
+
+export enum RoadType {
+  NATIONAL = 'NATIONAL',
+  PROVINCIAL = 'PROVINCIAL',
+  REGIONAL = 'REGIONAL',
+  LOCAL = 'LOCAL',
+}
+
+export enum RoadCondition {
+  GOOD = 'GOOD',
+  MODERATE = 'MODERATE',
+  POOR = 'POOR',
+  DAMAGED = 'DAMAGED',
+}
+
+export enum RoadVulnerability {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL',
+}
+
+export enum ShelterCondition {
+  GOOD = 'GOOD',
+  MODERATE = 'MODERATE',
+  NEEDS_REPAIR = 'NEEDS_REPAIR',
+  DAMAGED = 'DAMAGED',
+}
+
+export enum RouteType {
+  PRIMARY = 'PRIMARY',
+  ALTERNATIVE = 'ALTERNATIVE',
+}
+
+export interface User {
+  id: number;
+  email: string;
+  name: string;
+  role: UserRole;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Earthquake {
+  id: number;
+  bmkgId?: string;
+  magnitude: number;
+  depth: number;
+  lat: number;
+  lon: number;
+  location: string;
+  region: string;
+  time: string;
+  timestamp: string;
+  isLatest: boolean;
+  dirasakan?: string;
+  potential?: string;
+  shakemapUrl?: string;
+}
+
+export interface HazardZone {
+  id: number;
+  name: string;
+  level: HazardLevel;
+  geometry: object;
+  description?: string;
+  area?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Shelter {
+  id: number;
+  name: string;
+  capacity: number;
+  geometry: object;
+  address?: string;
+  condition: ShelterCondition;
+  facilities?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Road {
+  id: number;
+  name: string;
+  geometry: object;
+  type: RoadType;
+  condition: RoadCondition;
+  vulnerability: RoadVulnerability;
+  length?: number;
+  safe_cost?: number;
+  source?: number;
+  target?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EvacuationRoute {
+  id: number;
+  name: string;
+  geometry: object;
+  type: RouteType;
+  score: number;
+  startLat: number;
+  startLon: number;
+  endLat: number;
+  endLon: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PublicFacility {
+  id: number;
+  name: string;
+  type: string;
+  geometry: object;
+  address?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface AuthResponse {
+  access_token: string;
+  user: User;
+}
+
+export interface DashboardStats {
+  shelterCount: number;
+  earthquakeCount: number;
+  routeCount: number;
+  latestEarthquake?: Earthquake;
+}

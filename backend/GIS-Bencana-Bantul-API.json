@@ -1,0 +1,571 @@
+{
+  "info": {
+    "name": "GIS Bencana Bantul API",
+    "description": "API Documentation for SIG Manajemen Krisis Bencana Gempa Bumi Kabupaten Bantul",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@bantul.go.id\",\n  \"password\": \"admin123\",\n  \"name\": \"Admin BPBD\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@bantul.go.id\",\n  \"password\": \"admin123\"\n}"
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200 || pm.response.code === 201) {",
+                    "    var jsonData = pm.response.json();",
+                    "    pm.collectionVariables.set('token', jsonData.access_token);",
+                    "}"
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/profile",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Summary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/dashboard/summary",
+            "header": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Earthquakes",
+      "item": [
+        {
+          "name": "Get Latest (DB)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/earthquakes/latest",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Latest BMKG",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/earthquakes/latest-bmkg",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Magnitude Earthquakes",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/earthquakes/magnitude",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Felt Earthquakes",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/earthquakes/felt",
+            "header": []
+          }
+        },
+        {
+          "name": "Get All Earthquakes",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/earthquakes?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["earthquakes"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"}
+              ]
+            },
+            "header": []
+          }
+        },
+        {
+          "name": "Get Statistics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/earthquakes/statistics",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Earthquake by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/earthquakes/1",
+            "header": []
+          }
+        },
+        {
+          "name": "Sync from BMKG",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/earthquakes/sync",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ]
+          }
+        },
+        {
+          "name": "Create Earthquake",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/earthquakes",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"magnitude\": 5.2,\n  \"depth\": 10,\n  \"lat\": -7.5,\n  \"lon\": 110.5,\n  \"location\": \"Bantul, DIY\",\n  \"region\": \"Yogyakarta\",\n  \"time\": \"2024-01-15T10:30:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Earthquake",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/earthquakes/1",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shelters",
+      "item": [
+        {
+          "name": "Get All Shelters",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/shelters",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Nearby Shelters",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/shelters/nearby?lat=-7.5&lon=110.5&radius=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["shelters", "nearby"],
+              "query": [
+                {"key": "lat", "value": "-7.5"},
+                {"key": "lon", "value": "110.5"},
+                {"key": "radius", "value": "10"}
+              ]
+            },
+            "header": []
+          }
+        },
+        {
+          "name": "Get Statistics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/shelters/statistics",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Shelter by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/shelters/1",
+            "header": []
+          }
+        },
+        {
+          "name": "Create Shelter",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/shelters",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \" Shelter Pengungsian\",\n  \"capacity\": 500,\n  \"geometry\": {\n    \"type\": \"Point\",\n    \"coordinates\": [110.5, -7.5]\n  },\n  \"address\": \"Jl. Raya Bantul No. 1\",\n  \"condition\": \"GOOD\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Shelter",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/shelters/1",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \" Shelter Pengungsian Updated\",\n  \"capacity\": 600,\n  \"geometry\": {\n    \"type\": \"Point\",\n    \"coordinates\": [110.5, -7.5]\n  },\n  \"address\": \"Jl. Raya Bantul No. 1\",\n  \"condition\": \"GOOD\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Shelter",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/shelters/1",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Roads",
+      "item": [
+        {
+          "name": "Get All Roads",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/roads",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Statistics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/roads/statistics",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Road by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/roads/1",
+            "header": []
+          }
+        },
+        {
+          "name": "Create Road",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/roads",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jalan Raya Bantul\",\n  \"geometry\": {\n    \"type\": \"LineString\",\n    \"coordinates\": [[110.5, -7.5], [110.6, -7.6]]\n  },\n  \"type\": \"REGIONAL\",\n  \"condition\": \"GOOD\",\n  \"vulnerability\": \"LOW\",\n  \"length\": 15.5\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Road",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/roads/1",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jalan Raya Bantul Updated\",\n  \"geometry\": {\n    \"type\": \"LineString\",\n    \"coordinates\": [[110.5, -7.5], [110.6, -7.6]]\n  },\n  \"type\": \"REGIONAL\",\n  \"condition\": \"GOOD\",\n  \"vulnerability\": \"LOW\",\n  \"length\": 16.0\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Road",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/roads/1",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Hazard Zones",
+      "item": [
+        {
+          "name": "Get All Hazard Zones",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/hazard-zones",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Statistics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/hazard-zones/statistics",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Hazard Zone by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/hazard-zones/1",
+            "header": []
+          }
+        },
+        {
+          "name": "Create Hazard Zone",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/hazard-zones",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Zona Rawan Gempa Selatan\",\n  \"level\": \"HIGH\",\n  \"geometry\": {\n    \"type\": \"Polygon\",\n    \"coordinates\": [[[110.5, -7.5], [110.6, -7.5], [110.6, -7.6], [110.5, -7.6], [110.5, -7.5]]]\n  },\n  \"description\": \"Zona rawan gempa tinggi\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Hazard Zone",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/hazard-zones/1",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Zona Rawan Gempa Selatan Updated\",\n  \"level\": \"CRITICAL\",\n  \"geometry\": {\n    \"type\": \"Polygon\",\n    \"coordinates\": [[[110.5, -7.5], [110.6, -7.5], [110.6, -7.6], [110.5, -7.6], [110.5, -7.5]]]\n  },\n  \"description\": \"Zona kritis\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Hazard Zone",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/hazard-zones/1",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public Facilities",
+      "item": [
+        {
+          "name": "Get All Facilities",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/public-facilities",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Statistics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/public-facilities/statistics",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Facility by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/public-facilities/1",
+            "header": []
+          }
+        },
+        {
+          "name": "Create Facility",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/public-facilities",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"RSUD Bantul\",\n  \"type\": \"hospital\",\n  \"geometry\": {\n    \"type\": \"Point\",\n    \"coordinates\": [110.5, -7.5]\n  },\n  \"address\": \"Jl. Kesehatan No. 1\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Facility",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/public-facilities/1",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"RSUD Bantul Updated\",\n  \"type\": \"hospital\",\n  \"geometry\": {\n    \"type\": \"Point\",\n    \"coordinates\": [110.5, -7.5]\n  },\n  \"address\": \"Jl. Kesehatan No. 2\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Facility",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/public-facilities/1",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Evacuation Routes",
+      "item": [
+        {
+          "name": "Calculate Route Recommendation",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/routes/recommendation",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startLat\": -7.5,\n  \"startLon\": 110.5,\n  \"endLat\": -7.6,\n  \"endLon\": 110.6,\n  \"type\": \"PRIMARY\",\n  \"maxResults\": 5\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Recommended Routes",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/routes/recommended",
+            "header": []
+          }
+        },
+        {
+          "name": "Get Nearest Shelter",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/routes/nearest-shelter?lat=-7.5&lon=110.5&limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["routes", "nearest-shelter"],
+              "query": [
+                {"key": "lat", "value": "-7.5"},
+                {"key": "lon", "value": "110.5"},
+                {"key": "limit", "value": "5"}
+              ]
+            },
+            "header": []
+          }
+        },
+        {
+          "name": "Get Weights",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/routes/weights",
+            "header": []
+          }
+        },
+        {
+          "name": "Update Weights",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/routes/weights",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hazard\": 0.5,\n  \"roadCondition\": 0.3,\n  \"distance\": 0.2\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Statistics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/routes/statistics",
+            "header": []
+          }
+        }
+      ]
+    }
+  ]
+}

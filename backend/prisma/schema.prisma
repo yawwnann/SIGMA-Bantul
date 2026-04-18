@@ -1,0 +1,148 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis(version: "3.4.2"), pgrouting(version: "3.6.2")]
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum HazardLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RoadType {
+  NATIONAL
+  PROVINCIAL
+  REGIONAL
+  LOCAL
+}
+
+enum RoadCondition {
+  GOOD
+  MODERATE
+  POOR
+  DAMAGED
+}
+
+enum RoadVulnerability {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ShelterCondition {
+  GOOD
+  MODERATE
+  NEEDS_REPAIR
+  DAMAGED
+}
+
+enum RouteType {
+  PRIMARY
+  ALTERNATIVE
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Earthquake {
+  id          Int       @id @default(autoincrement())
+  bmkgId      String?   @unique
+  magnitude   Float
+  depth       Float
+  lat         Float
+  lon         Float
+  geom        Unsupported("geometry(Point, 4326)")?
+  location    String
+  region      String
+  time        DateTime
+  timestamp   DateTime  @default(now())
+  isLatest    Boolean   @default(false)
+  dirasakan   String?
+  potential   String?
+  shakemapUrl String?
+}
+
+model HazardZone {
+  id          Int        @id @default(autoincrement())
+  name        String
+  level       HazardLevel
+  geometry    Json
+  geom        Unsupported("geometry(Polygon, 4326)")?
+  description String?
+  area        Float?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Shelter {
+  id        Int            @id @default(autoincrement())
+  name      String
+  capacity  Int
+  geometry  Json
+  geom      Unsupported("geometry(Point, 4326)")?
+  address   String?
+  condition ShelterCondition
+  facilities String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model Road {
+  id           Int              @id @default(autoincrement())
+  name         String
+  geometry     Json
+  geom         Unsupported("geometry(LineString, 4326)")?
+  type         RoadType
+  condition    RoadCondition
+  vulnerability RoadVulnerability
+  length       Float?
+  safe_cost    Float?
+  source       Int?
+  target       Int?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+model EvacuationRoute {
+  id        Int       @id @default(autoincrement())
+  name      String
+  geometry  Json
+  type      RouteType
+  score     Float
+  startLat  Float
+  startLon  Float
+  endLat    Float
+  endLon    Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PublicFacility {
+  id        Int      @id @default(autoincrement())
+  name      String
+  type      String
+  geometry  Json
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
