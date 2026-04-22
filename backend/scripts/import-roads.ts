@@ -7,11 +7,14 @@ const prisma = new PrismaClient();
 interface RoadFeature {
   type: 'Feature';
   properties: {
-    NAMRJL?: string;
-    FCODE?: string;
-    RJLKLS?: string;
+    // Dataset A: JALAN_LN_25K.geojson fields
+    NAMOBJ?: string;    // Road name (primary)
+    NAMRJL?: string;    // Also road name (fallback)
+    FCODE?: string;     // Feature code (e.g. AP030 = National, AP030003 = Provincial)
+    RJLKLS?: string;    // Road class/type
     RJLSURFACE?: string;
     RJLWIDTH?: number;
+    SRS_ID?: string;
     [key: string]: any;
   };
   geometry: {
@@ -26,43 +29,35 @@ interface GeoJSONFeatureCollection {
 }
 
 async function importRoads() {
-  console.log('🚀 Starting road network import from SHP...');
+  console.log('🚀 Starting road network import from Dataset A (JALAN_LN_25K.geojson)...');
 
-  // Path to GeoJSON file (you need to convert SHP to GeoJSON first)
-  const geojsonPath = path.join(__dirname, '../Data/Jalan_bantul.geojson');
+  // Dataset A: JALAN_LN_25K.geojson - primary road geometry layer
+  const geojsonPath = path.join(__dirname, '../Data/GeoJSon/JALAN_LN_25K.geojson');
 
-  // Check if GeoJSON exists, if not, provide instructions
+  // Check if GeoJSON exists
   if (!fs.existsSync(geojsonPath)) {
-    console.log('📝 GeoJSON file not found. Converting SHP to GeoJSON...');
+    console.error('❌ Dataset A not found at:', geojsonPath);
     console.log('');
-    console.log('Please run one of these commands:');
-    console.log('');
-    console.log('Option 1 - Using ogr2ogr (GDAL):');
-    console.log(
-      '  ogr2ogr -f GeoJSON Data/JALAN_LN_25K.geojson Data/JALAN_LN_25K.shp',
-    );
-    console.log('');
-    console.log('Option 2 - Using QGIS:');
-    console.log('  1. Open JALAN_LN_25K.shp in QGIS');
-    console.log('  2. Right-click layer > Export > Save Features As');
-    console.log('  3. Format: GeoJSON, CRS: EPSG:4326 (WGS84)');
-    console.log('');
-    console.log('Option 3 - Using online converter:');
-    console.log('  https://mygeodata.cloud/converter/shp-to-geojson');
-    console.log('');
+    console.log('Expected file: backend/Data/GeoJSon/JALAN_LN_25K.geojson');
+    console.log('Please ensure the file exists before running this script.');
     process.exit(1);
   }
 
-  console.log('📁 Reading GeoJSON file...');
+  console.log('📁 Reading JALAN_LN_25K.geojson (Dataset A)...');
   const geojsonData: GeoJSONFeatureCollection = JSON.parse(
     fs.readFileSync(geojsonPath, 'utf-8'),
   );
 
-  console.log(`✅ Found ${geojsonData.features.length} road features`);
+  console.log(`✅ Found ${geojsonData.features.length} road features in Dataset A`);
+  console.log('');
+  console.log('💡 Note: Road names will be generic placeholders.');
+  console.log('   After import, run: npm run db:enrich-roads');
+  console.log('   to enrich names from Dataset B (NAMA_RUAS_JALAN.geojson).');
+  console.log('');
 
   // Clear existing road network data
   console.log('🗑️  Clearing existing road network...');
-  await prisma.$executeRaw`DELETE FROM "Road" WHERE name LIKE 'Road%' OR name LIKE 'Jalan%'`;
+  await prisma.$executeRawUnsafe(`TRUNCATE TABLE "Road" RESTART IDENTITY CASCADE`);
 
   console.log('💾 Importing roads to database...');
 
@@ -73,54 +68,58 @@ async function importRoads() {
     try {
       const { properties, geometry } = feature;
 
-      // Extract road name
-      const name =
+      // Extract road name from Dataset A fields
+      // NAMOBJ is the primary name field in JALAN_LN_25K
+      const rawName =
+        properties.NAMOBJ ||
         properties.NAMRJL ||
         properties.name ||
-        properties.NAME ||
-        `Road ${imported + 1}`;
+        properties.NAME;
 
-      // Determine road type based on classification
+      // Placeholder name — will be enriched by enrich-roads.ts (Dataset B)
+      const name = rawName && rawName.trim() ? rawName.trim() : `Road ${imported + 1}`;
+
+      // Determine road type from FCODE or RJLKLS
       let roadType: 'NATIONAL' | 'PROVINCIAL' | 'REGIONAL' | 'LOCAL' = 'LOCAL';
-      const fcode = properties.FCODE || '';
-      const rjlkls = properties.RJLKLS || '';
+      const fcode = (properties.FCODE || '').toUpperCase();
+      const rjlkls = (properties.RJLKLS || '').toString();
 
-      if (
-        fcode.includes('NATIONAL') ||
-        rjlkls.includes('1') ||
-        name.toLowerCase().includes('nasional')
-      ) {
+      // FCODE mappings for Indonesian road network:
+      // AP030      = National road
+      // AP030003   = Provincial road
+      // AP030004   = Regional/Kabupaten road
+      if (fcode === 'AP030' || rjlkls === '1' || rjlkls.startsWith('N') ||
+          name.toLowerCase().includes('nasional')) {
         roadType = 'NATIONAL';
-      } else if (
-        fcode.includes('PROVINCIAL') ||
-        rjlkls.includes('2') ||
-        name.toLowerCase().includes('provinsi')
-      ) {
+      } else if (fcode === 'AP030003' || rjlkls === '2' || rjlkls.startsWith('P') ||
+                 name.toLowerCase().includes('provinsi')) {
         roadType = 'PROVINCIAL';
-      } else if (
-        fcode.includes('REGIONAL') ||
-        rjlkls.includes('3') ||
-        name.toLowerCase().includes('kabupaten')
-      ) {
+      } else if (fcode === 'AP030004' || rjlkls === '3' || rjlkls.startsWith('K') ||
+                 name.toLowerCase().includes('kabupaten')) {
         roadType = 'REGIONAL';
       }
 
-      // Determine condition based on surface
-      let condition: 'GOOD' | 'MODERATE' | 'POOR' = 'GOOD';
+      // Determine condition based on surface type
+      let condition: 'GOOD' | 'MODERATE' | 'POOR' | 'DAMAGED' = 'GOOD';
       const surface = (properties.RJLSURFACE || '').toLowerCase();
-      if (surface.includes('rusak') || surface.includes('poor')) {
+      if (surface.includes('rusak berat') || surface.includes('damaged')) {
+        condition = 'DAMAGED';
+      } else if (surface.includes('rusak') || surface.includes('poor')) {
         condition = 'POOR';
       } else if (surface.includes('sedang') || surface.includes('moderate')) {
         condition = 'MODERATE';
       }
 
-      // Determine vulnerability (simplified logic)
-      let vulnerability: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
+      // Determine vulnerability
+      let vulnerability: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' = 'LOW';
       if (roadType === 'LOCAL') {
         vulnerability = 'MEDIUM';
       }
       if (condition === 'POOR') {
         vulnerability = 'HIGH';
+      }
+      if (condition === 'DAMAGED') {
+        vulnerability = 'CRITICAL';
       }
 
       // Convert geometry to proper format
@@ -227,6 +226,34 @@ async function importRoads() {
   }
 
   console.log('🎉 Road network is ready!');
+
+  // Invalidate Redis caches for road-network data
+  console.log('');
+  console.log('🔄 Invalidating Redis road-network cache...');
+  try {
+    const Redis = require('ioredis');
+    const redis = new Redis({
+      host: process.env.REDIS_HOST || '127.0.0.1',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+    });
+
+    // Delete all road-network cache keys
+    const keys = await redis.keys('road-network:*');
+    const evacKeys = await redis.keys('evacuation:route:*');
+    const allKeys = [...keys, ...evacKeys];
+
+    if (allKeys.length > 0) {
+      await redis.del(...allKeys);
+      console.log(`   ✅ Deleted ${allKeys.length} stale cache keys`);
+    } else {
+      console.log('   ℹ️  No stale cache keys found');
+    }
+
+    await redis.quit();
+  } catch (err) {
+    console.warn(`   ⚠️  Could not invalidate Redis cache (non-fatal): ${err.message}`);
+    console.warn('      Restart the backend server to clear the cache manually.');
+  }
 }
 
 importRoads()

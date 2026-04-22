@@ -3,9 +3,10 @@ import { HttpModule } from '@nestjs/axios';
 import { EarthquakeController } from './earthquake.controller';
 import { EarthquakeService } from './earthquake.service';
 import { EarthquakeGateway } from './earthquake.gateway';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [HttpModule],
+  imports: [HttpModule, NotificationsModule],
   controllers: [EarthquakeController],
   providers: [EarthquakeService, EarthquakeGateway],
   exports: [EarthquakeService],

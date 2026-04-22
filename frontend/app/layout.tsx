@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarProvider } from "@/components/layout/sidebar-provider";
 import { AppLayout } from "@/components/layout/app-layout";
+import { PushNotificationManager } from "@/components/PushNotificationManager";
 import "./globals.css";
 
 const inter = Inter({
@@ -36,7 +37,8 @@ export default function RootLayout({
     <html lang="id" suppressHydrationWarning>
       <body
         className={
-          inter.variable + " font-sans min-h-screen antialiased bg-slate-100 dark:bg-zinc-950 text-slate-900 dark:text-zinc-50"
+          inter.variable +
+          " font-sans min-h-screen antialiased bg-slate-100 dark:bg-gray-950 text-slate-900 dark:text-gray-50"
         }
       >
         <ThemeProvider
@@ -49,6 +51,7 @@ export default function RootLayout({
             <div className="flex min-h-screen">
               <Sidebar />
               <AppLayout>
+                <PushNotificationManager />
                 {children}
               </AppLayout>
             </div>

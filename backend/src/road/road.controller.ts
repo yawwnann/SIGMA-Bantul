@@ -26,18 +26,35 @@ export class RoadController {
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('condition') condition?: RoadCondition | 'all',
     @Query('type') type?: RoadType | 'all',
+    @Query('search') search?: string,
   ) {
-    return this.roadService.findAll({ 
-      condition, 
-      type, 
-      page: isNaN(page) ? parseInt(page as any) || 1 : page, 
-      limit: isNaN(limit) ? parseInt(limit as any) || 20 : limit 
+    return this.roadService.findAll({
+      condition,
+      type,
+      page: isNaN(page) ? parseInt(page as any) || 1 : page,
+      limit: isNaN(limit) ? parseInt(limit as any) || 20 : limit,
+      search,
     });
   }
 
   @Get('statistics')
   async getStatistics() {
     return this.roadService.getStatistics();
+  }
+
+  /**
+   * Manually invalidate road-network cache.
+   * Call this after running db:import-roads or db:enrich-roads.
+   *
+   * Example: POST /roads/invalidate-cache
+   */
+  @Post('invalidate-cache')
+  async invalidateCache() {
+    const deletedKeys = await this.roadService.invalidateRoadCache();
+    return {
+      success: true,
+      message: `Invalidated ${deletedKeys} cache keys. Next request will fetch fresh data from database.`,
+    };
   }
 
   /**

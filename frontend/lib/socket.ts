@@ -15,13 +15,15 @@ class SocketService {
     if (this.socket?.connected) return;
 
     const socketUrl =
-      url || process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
+      url || process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3000";
 
     this.socket = io(socketUrl, {
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: this.maxReconnectAttempts,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 10000,
     });
 
     this.socket.on("connect", () => {
@@ -34,7 +36,7 @@ class SocketService {
     });
 
     this.socket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error);
+      console.warn("Socket connection error - backend may not be running");
       this.reconnectAttempts++;
     });
 

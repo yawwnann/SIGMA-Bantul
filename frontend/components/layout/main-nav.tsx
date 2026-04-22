@@ -25,7 +25,7 @@ const menuItems = [
     description: 'Histori dan data gempa bumi dari BMKG',
   },
   {
-    title: 'Jalur Evakuasi',
+    title: 'Manajemen Evakuasi',
     href: '/evacuation',
     description: 'Rekomendasi jalur evakuasi utama dan alternatif',
   },

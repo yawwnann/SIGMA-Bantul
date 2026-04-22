@@ -25,7 +25,10 @@ export default function AdminLoginPage() {
 
       const token = res.access_token;
       console.log("Token:", token);
-      console.log("LocalStorage token after login:", localStorage.getItem("token"));
+      console.log(
+        "LocalStorage token after login:",
+        localStorage.getItem("token"),
+      );
 
       if (token) {
         // Hard navigate — tidak pakai router agar tidak ada middleware interference
@@ -69,10 +72,23 @@ export default function AdminLoginPage() {
           >
             <Shield style={{ width: 40, height: 40, color: "#60a5fa" }} />
           </div>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#fafafa", margin: 0 }}>
+          <h1
+            style={{
+              fontSize: "1.5rem",
+              fontWeight: 700,
+              color: "#fafafa",
+              margin: 0,
+            }}
+          >
             SIGMA Bantul
           </h1>
-          <p style={{ color: "#71717a", fontSize: "0.875rem", marginTop: "0.25rem" }}>
+          <p
+            style={{
+              color: "#71717a",
+              fontSize: "0.875rem",
+              marginTop: "0.25rem",
+            }}
+          >
             Panel Administrator
           </p>
         </div>
@@ -86,10 +102,23 @@ export default function AdminLoginPage() {
             padding: "2rem",
           }}
         >
-          <h2 style={{ color: "#f4f4f5", fontWeight: 600, marginBottom: "0.25rem", fontSize: "1.125rem" }}>
+          <h2
+            style={{
+              color: "#f4f4f5",
+              fontWeight: 600,
+              marginBottom: "0.25rem",
+              fontSize: "1.125rem",
+            }}
+          >
             Masuk ke Dashboard
           </h2>
-          <p style={{ color: "#71717a", fontSize: "0.875rem", marginBottom: "1.5rem" }}>
+          <p
+            style={{
+              color: "#71717a",
+              fontSize: "0.875rem",
+              marginBottom: "1.5rem",
+            }}
+          >
             Hanya untuk administrator sistem
           </p>
 
@@ -109,9 +138,20 @@ export default function AdminLoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <form
+            onSubmit={handleSubmit}
+            style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+          >
             <div>
-              <label style={{ display: "block", color: "#d4d4d8", fontSize: "0.875rem", fontWeight: 500, marginBottom: "0.5rem" }}>
+              <label
+                style={{
+                  display: "block",
+                  color: "#d4d4d8",
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  marginBottom: "0.5rem",
+                }}
+              >
                 Email
               </label>
               <Input
@@ -120,12 +160,20 @@ export default function AdminLoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
-                className="bg-zinc-950 border-zinc-700 text-zinc-100 h-11"
+                className="bg-gray-950 border-gray-700 text-gray-100 h-11"
               />
             </div>
 
             <div>
-              <label style={{ display: "block", color: "#d4d4d8", fontSize: "0.875rem", fontWeight: 500, marginBottom: "0.5rem" }}>
+              <label
+                style={{
+                  display: "block",
+                  color: "#d4d4d8",
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  marginBottom: "0.5rem",
+                }}
+              >
                 Password
               </label>
               <div style={{ position: "relative" }}>
@@ -135,7 +183,7 @@ export default function AdminLoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLoading}
-                  className="bg-zinc-950 border-zinc-700 text-zinc-100 h-11 pr-10"
+                  className="bg-gray-950 border-gray-700 text-gray-100 h-11 pr-10"
                   placeholder="••••••••"
                 />
                 <button
@@ -160,12 +208,27 @@ export default function AdminLoginPage() {
             <Button
               type="submit"
               disabled={isLoading}
-              style={{ height: "2.75rem", background: "#2563eb", color: "white", fontWeight: 600, marginTop: "0.5rem" }}
+              style={{
+                height: "2.75rem",
+                background: "#2563eb",
+                color: "white",
+                fontWeight: 600,
+                marginTop: "0.5rem",
+              }}
               className="hover:bg-blue-500 transition-colors"
             >
               {isLoading ? (
-                <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <Loader2
+                    size={16}
+                    style={{ animation: "spin 1s linear infinite" }}
+                  />
                   Memverifikasi...
                 </span>
               ) : (
@@ -174,8 +237,22 @@ export default function AdminLoginPage() {
             </Button>
           </form>
 
-          <div style={{ marginTop: "1.5rem", paddingTop: "1.25rem", borderTop: "1px solid #27272a", textAlign: "center" }}>
-            <Link href="/" style={{ color: "#71717a", fontSize: "0.875rem", textDecoration: "none" }}>
+          <div
+            style={{
+              marginTop: "1.5rem",
+              paddingTop: "1.25rem",
+              borderTop: "1px solid #27272a",
+              textAlign: "center",
+            }}
+          >
+            <Link
+              href="/"
+              style={{
+                color: "#71717a",
+                fontSize: "0.875rem",
+                textDecoration: "none",
+              }}
+            >
               ← Kembali ke Beranda
             </Link>
           </div>

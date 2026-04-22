@@ -3,16 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type {
-  Shelter,
-  HazardZone,
-  Earthquake,
-  PublicFacility,
-} from "@/types";
+import type { Shelter, HazardZone, Earthquake, PublicFacility } from "@/types";
 import { analysisApi } from "@/api/analysis";
 import { Filter, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import "leaflet-providers";
+import { BpbdRiskLayer } from "./bpbd-risk-layer";
 
 interface MapClientProps {
   shelters: Shelter[];
@@ -27,8 +23,9 @@ interface MapClientProps {
     shelterLng: number,
     shelterName: string,
   ) => void;
-  roadNetwork?: any;
-  calculatedRoute?: any;
+  roadNetwork?: Record<string, unknown>;
+  calculatedRoute?: Record<string, unknown>;
+  selectedEarthquake?: Earthquake | null;
 }
 
 const BANTUL_CENTER: [number, number] = [-7.888, 110.33];
@@ -40,7 +37,12 @@ function createShelterIcon(condition: string) {
       : condition === "MODERATE"
         ? "#eab308"
         : "#ef4444";
-  const shadowColor = condition === 'GOOD' ? 'rgba(34, 197, 94, 0.4)' : condition === 'MODERATE' ? 'rgba(234, 179, 8, 0.4)' : 'rgba(239, 68, 68, 0.4)';
+  const shadowColor =
+    condition === "GOOD"
+      ? "rgba(34, 197, 94, 0.4)"
+      : condition === "MODERATE"
+        ? "rgba(234, 179, 8, 0.4)"
+        : "rgba(239, 68, 68, 0.4)";
 
   return L.divIcon({
     className: "custom-marker",
@@ -96,6 +98,7 @@ export default function MapClient({
   onCalculateRoute,
   roadNetwork,
   calculatedRoute,
+  selectedEarthquake,
 }: MapClientProps) {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -110,7 +113,10 @@ export default function MapClient({
   const facilityLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const earthquakeCirclesRef = useRef<Map<number, L.LayerGroup>>(new Map());
   const locationMarkerRef = useRef<L.Marker | null>(null);
-  const [bantulBoundary, setBantulBoundary] = useState<any>(null);
+  const [bantulBoundary, setBantulBoundary] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
   const [visibleLayers, setVisibleLayers] = useState({
     boundary: true,
     shelters: true,
@@ -118,8 +124,11 @@ export default function MapClient({
     earthquakes: true,
     facilities: true,
     roads: false,
+    bpbdRisk: false,
   });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isMapReady, setIsMapReady] = useState(false);
+  const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const { resolvedTheme } = useTheme();
   const tileLayerRef = useRef<L.TileLayer | null>(null);
 
@@ -155,9 +164,11 @@ export default function MapClient({
       preferCanvas: true,
     });
 
-    L.control.zoom({
-      position: "bottomleft",
-    }).addTo(mapRef.current);
+    L.control
+      .zoom({
+        position: "bottomleft",
+      })
+      .addTo(mapRef.current);
 
     earthquakeLayerGroupRef.current = L.layerGroup().addTo(mapRef.current);
     shelterLayerGroupRef.current = L.layerGroup().addTo(mapRef.current);
@@ -171,28 +182,46 @@ export default function MapClient({
       }
     });
 
+    Promise.resolve().then(() => {
+      setIsMapReady(true);
+      setMapInstance(mapRef.current);
+    });
+
     return () => {
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
       }
+      setIsMapReady(false);
+      setMapInstance(null);
     };
   }, []);
 
   useEffect(() => {
     if (!mapRef.current) return;
-    
+
     // Default to light mode tile if resolvedTheme isn't ready
-    const tileName = resolvedTheme === "dark" ? "Stadia.AlidadeSmoothDark" : "Stadia.AlidadeSmooth";
+    const tileName =
+      resolvedTheme === "dark"
+        ? "Stadia.AlidadeSmoothDark"
+        : "Stadia.AlidadeSmooth";
 
     if (tileLayerRef.current) {
       mapRef.current.removeLayer(tileLayerRef.current);
     }
-    
-    tileLayerRef.current = (L.tileLayer as any).provider(tileName, {
-      maxZoom: 19,
-    }).addTo(mapRef.current);
 
+    tileLayerRef.current = (
+      L.tileLayer as unknown as {
+        provider: (
+          name: string,
+          options?: Record<string, unknown>,
+        ) => L.TileLayer;
+      }
+    )
+      .provider(tileName, {
+        maxZoom: 19,
+      })
+      .addTo(mapRef.current);
   }, [resolvedTheme]);
 
   useEffect(() => {
@@ -207,7 +236,12 @@ export default function MapClient({
 
     if (!visibleLayers.boundary) return;
 
-    const feature = bantulBoundary.features[0];
+    const bantulData = bantulBoundary as {
+      features: Array<{
+        geometry: { type: string; coordinates: number[][][][] };
+      }>;
+    };
+    const feature = bantulData.features[0];
     const geometry = feature.geometry;
 
     let minLon = Infinity,
@@ -252,7 +286,8 @@ export default function MapClient({
       interactive: false,
     }).addTo(mapRef.current);
 
-    boundaryLayerRef.current = L.geoJSON(bantulBoundary, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    boundaryLayerRef.current = L.geoJSON(bantulBoundary as any, {
       style: {
         color: "#2563eb",
         weight: 2,
@@ -261,12 +296,23 @@ export default function MapClient({
       },
     }).addTo(mapRef.current);
 
-    if (boundaryLayerRef.current) {
+    if (
+      boundaryLayerRef.current &&
+      !calculatedRoute &&
+      !selectedEarthquake &&
+      !selectedLocation
+    ) {
       mapRef.current.fitBounds(boundaryLayerRef.current.getBounds(), {
         padding: [30, 30],
       });
     }
-  }, [bantulBoundary, visibleLayers.boundary]);
+  }, [
+    bantulBoundary,
+    visibleLayers.boundary,
+    calculatedRoute,
+    selectedEarthquake,
+    selectedLocation,
+  ]);
 
   useEffect(() => {
     if (!mapRef.current || !shelterLayerGroupRef.current) return;
@@ -285,31 +331,96 @@ export default function MapClient({
           },
         ).addTo(shelterLayerGroupRef.current!);
 
-        // Create popup with route button
+        // Create enhanced popup with better styling and dark mode support
+        const conditionBadge =
+          shelter.condition === "GOOD"
+            ? '<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Baik</span>'
+            : shelter.condition === "MODERATE"
+              ? '<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Sedang</span>'
+              : '<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">Buruk</span>';
+
         const popupContent = `
-          <div class="p-3 min-w-[200px]">
-            <h3 class="font-bold text-lg mb-2">${shelter.name}</h3>
-            <div class="space-y-1 mb-3">
-              <p class="text-sm"><strong>Kapasitas:</strong> ${shelter.capacity} orang</p>
-              <p class="text-sm"><strong>Kondisi:</strong> ${shelter.condition}</p>
-              ${shelter.address ? `<p class="text-sm"><strong>Alamat:</strong> ${shelter.address}</p>` : ""}
+          <div class="shelter-popup-content min-w-50 bg-slate-900 dark:bg-slate-950 text-white rounded-lg overflow-hidden">
+            <!-- Badge & Close -->
+            <div class="px-4 pt-3 pb-2">
+              ${conditionBadge}
             </div>
+            
+            <!-- Title & Address -->
+            <div class="px-4 pb-3">
+              <h3 class="font-bold text-base mb-1">${shelter.name}</h3>
+              <div class="flex items-center gap-1 text-xs text-slate-300">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
+                ${shelter.address ? shelter.address : "Pleret, Bantul"}
+              </div>
+            </div>
+
+            <!-- Capacity Grid -->
+            <div class="grid grid-cols-2 gap-2 px-4 pb-3">
+              <div class="bg-slate-800 rounded-lg p-3">
+                <div class="flex items-center gap-1 mb-2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  <span class="text-[10px] text-slate-400 font-semibold uppercase">KAPASITAS</span>
+                </div>
+                <p class="text-xl font-bold">${shelter.capacity}</p>
+              </div>
+              <div class="bg-slate-800 rounded-lg p-3">
+                <div class="flex items-center gap-1 mb-2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                  </svg>
+                  <span class="text-[10px] text-slate-400 font-semibold uppercase">TERSEDIA</span>
+                </div>
+                <p class="text-xl font-bold">${Math.max(0, shelter.capacity - (shelter.currentOccupancy ?? 0))}</p>
+              </div>
+            </div>
+
+            <!-- Details Section -->
+            <div class="px-4 pb-3 space-y-2 text-sm">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Jenis Fasilitas</span>
+                <span class="font-medium text-slate-100">Ruang Publik</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Jam Operasional</span>
+                <span class="font-medium text-slate-100">24 Jam (Siaga)</span>
+              </div>
+            </div>
+
+            <!-- Button -->
             <button 
               id="route-btn-${shelter.id}"
-              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 transition-colors flex items-center justify-center gap-2"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                <circle cx="12" cy="10" r="3"/>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 11l19-9-9 19-2-8-8-2z"/>
               </svg>
-              Hitung Rute
+              Rute Evakuasi
             </button>
           </div>
         `;
 
+        const isDark =
+          resolvedTheme === "dark" ||
+          (resolvedTheme === "system" &&
+            window.matchMedia?.("(prefers-color-scheme: dark)")?.matches);
+
         const popup = marker.bindPopup(popupContent, {
-          maxWidth: 250,
-          className: "custom-popup",
+          maxWidth: 300,
+          minWidth: 240,
+          className: `custom-shelter-popup ${isDark ? "dark" : ""}`,
+          closeButton: true,
+          autoPan: true,
+          autoPanPadding: [50, 50],
         });
 
         popup.on("popupopen", () => {
@@ -330,7 +441,7 @@ export default function MapClient({
         });
       }
     });
-  }, [shelters, visibleLayers.shelters]);
+  }, [shelters, visibleLayers.shelters, resolvedTheme]);
 
   useEffect(() => {
     if (!mapRef.current || !facilityLayerGroupRef.current) return;
@@ -377,20 +488,39 @@ export default function MapClient({
 
         const redZone = L.circle([eq.lat, eq.lon], {
           radius: baseRadius,
-          color: "#dc2626", fillColor: "#dc2626", fillOpacity: 0, weight: 0, opacity: 0, interactive: false,
+          color: "#dc2626",
+          fillColor: "#dc2626",
+          fillOpacity: 0,
+          weight: 0,
+          opacity: 0,
+          interactive: false,
         });
 
         const yellowZone = L.circle([eq.lat, eq.lon], {
           radius: baseRadius * 3,
-          color: "#eab308", fillColor: "#eab308", fillOpacity: 0, weight: 0, opacity: 0, interactive: false,
+          color: "#eab308",
+          fillColor: "#eab308",
+          fillOpacity: 0,
+          weight: 0,
+          opacity: 0,
+          interactive: false,
         });
 
         const greenZone = L.circle([eq.lat, eq.lon], {
           radius: baseRadius * 6,
-          color: "#22c55e", fillColor: "#22c55e", fillOpacity: 0, weight: 0, opacity: 0, interactive: false,
+          color: "#22c55e",
+          fillColor: "#22c55e",
+          fillOpacity: 0,
+          weight: 0,
+          opacity: 0,
+          interactive: false,
         });
 
-        const radiusGroup = L.layerGroup([greenZone, yellowZone, redZone]).addTo(earthquakeLayerGroupRef.current!);
+        const radiusGroup = L.layerGroup([
+          greenZone,
+          yellowZone,
+          redZone,
+        ]).addTo(earthquakeLayerGroupRef.current!);
 
         // Store circle reference
         earthquakeCirclesRef.current.set(eq.id, radiusGroup);
@@ -417,7 +547,7 @@ export default function MapClient({
               </div>
               <div style="
                 margin-top: 4px;
-                background: rgba(24, 24, 27, 0.85); /* zinc-900 with opacity */
+                background: rgba(24, 24, 27, 0.85); /* gray-900 with opacity */
                 backdrop-filter: blur(4px);
                 padding: 3px 8px;
                 border-radius: 12px;
@@ -446,18 +576,21 @@ export default function MapClient({
 
           // Hide all circles first
           earthquakeCirclesRef.current.forEach((group) => {
-            group.eachLayer((layer: any) => layer.setStyle({
-              fillOpacity: 0,
-              weight: 0,
-              opacity: 0,
-            }));
+            group.eachLayer((layer) => {
+              const pathLayer = layer as L.Path;
+              pathLayer.setStyle({
+                fillOpacity: 0,
+                weight: 0,
+                opacity: 0,
+              });
+            });
           });
 
           // Show current circles immediately
           redZone.setStyle({ fillOpacity: 0.25, weight: 2, opacity: 0.8 });
           yellowZone.setStyle({ fillOpacity: 0.15, weight: 2, opacity: 0.6 });
           greenZone.setStyle({ fillOpacity: 0.1, weight: 1.5, opacity: 0.4 });
-          
+
           activeCircleRef.current = radiusGroup;
 
           // Call earthquake click handler
@@ -469,8 +602,9 @@ export default function MapClient({
 
     const hideRadiusHandler = () => {
       if (activeCircleRef.current) {
-        activeCircleRef.current.eachLayer((layer: any) => {
-          layer.setStyle({
+        activeCircleRef.current.eachLayer((layer) => {
+          const pathLayer = layer as L.Path;
+          pathLayer.setStyle({
             fillOpacity: 0,
             weight: 0,
             opacity: 0,
@@ -518,13 +652,67 @@ export default function MapClient({
               ${zone.description ? `<p class="text-sm">${zone.description}</p>` : ""}
             </div>
           `);
-      } catch (e) {
+      } catch {
         console.warn("Invalid GeoJSON geometry for hazard zone:", zone.id);
       }
     });
   }, [hazardZones, visibleLayers.hazardZones]);
 
+  useEffect(() => {
+    if (!mapRef.current || !selectedEarthquake) return;
 
+    const { lat, lon, id } = selectedEarthquake;
+    if (lat == null || lon == null) return;
+
+    // 1. Zoom/Pan to earthquake
+    const currentZoom = mapRef.current.getZoom();
+    const targetZoom = Math.max(currentZoom, 12);
+    mapRef.current.flyTo([lat, lon], targetZoom, {
+      duration: 1.5,
+    });
+
+    // 2. Show impact radius circles
+    // Hide previous if exists
+    if (activeCircleRef.current) {
+      activeCircleRef.current.eachLayer((layer) => {
+        const pathLayer = layer as L.Path;
+        if (pathLayer.setStyle) {
+          pathLayer.setStyle({ fillOpacity: 0, weight: 0, opacity: 0 });
+        }
+      });
+    }
+
+    // Find and show current circles
+    const radiusGroup = earthquakeCirclesRef.current.get(id);
+    if (radiusGroup) {
+      radiusGroup.eachLayer((layer) => {
+        if (layer instanceof L.Circle) {
+          const circleLayer = layer as L.Circle;
+          const color = (circleLayer.options as Record<string, unknown>)
+            .color as string;
+          if (color === "#dc2626")
+            circleLayer.setStyle({
+              fillOpacity: 0.25,
+              weight: 2,
+              opacity: 0.8,
+            });
+          else if (color === "#eab308")
+            circleLayer.setStyle({
+              fillOpacity: 0.15,
+              weight: 2,
+              opacity: 0.6,
+            });
+          else if (color === "#22c55e")
+            circleLayer.setStyle({
+              fillOpacity: 0.1,
+              weight: 1.5,
+              opacity: 0.4,
+            });
+        }
+      });
+      activeCircleRef.current = radiusGroup;
+    }
+  }, [selectedEarthquake]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -535,24 +723,32 @@ export default function MapClient({
     }
 
     if (selectedLocation) {
-      locationMarkerRef.current = L.marker([selectedLocation.lat, selectedLocation.lng], {
-        icon: L.divIcon({
-          className: "selected-location",
-          html: '<div style="background-color: #3b82f6; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4);"></div>',
-          iconSize: [30, 30],
-          iconAnchor: [15, 15],
-        }),
-      }).addTo(mapRef.current)
+      locationMarkerRef.current = L.marker(
+        [selectedLocation.lat, selectedLocation.lng],
+        {
+          icon: L.divIcon({
+            className: "selected-location",
+            html: '<div style="background-color: #3b82f6; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4);"></div>',
+            iconSize: [30, 30],
+            iconAnchor: [15, 15],
+          }),
+        },
+      )
+        .addTo(mapRef.current)
         .bindPopup(
           `Lokasi Terpilih: ${selectedLocation.lat.toFixed(4)}, ${selectedLocation.lng.toFixed(4)}`,
         );
 
       const currentZoom = mapRef.current.getZoom();
       const targetZoom = Math.max(currentZoom, 15);
-      
-      mapRef.current.flyTo([selectedLocation.lat, selectedLocation.lng], targetZoom, {
-        duration: 1.5,
-      });
+
+      mapRef.current.flyTo(
+        [selectedLocation.lat, selectedLocation.lng],
+        targetZoom,
+        {
+          duration: 1.5,
+        },
+      );
     }
   }, [selectedLocation]);
 
@@ -566,7 +762,8 @@ export default function MapClient({
 
     if (!visibleLayers.roads) return;
 
-    roadLayerRef.current = L.geoJSON(roadNetwork, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    roadLayerRef.current = L.geoJSON(roadNetwork as any, {
       style: (feature) => {
         const type = feature?.properties?.type || "LOCAL";
         const condition = feature?.properties?.condition || "GOOD";
@@ -592,8 +789,13 @@ export default function MapClient({
       },
     })
       .addTo(mapRef.current)
-      .bindPopup((layer: any) => {
-        const props = layer.feature.properties;
+      .bindPopup((layer) => {
+        const geoLayer = layer as L.GeoJSON;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const props = ((geoLayer.feature as any)?.properties || {}) as Record<
+          string,
+          unknown
+        >;
         return `
         <div class="p-2">
           <h3 class="font-bold">${props.name || "Jalan"}</h3>
@@ -617,9 +819,10 @@ export default function MapClient({
     const routeGroup = L.layerGroup();
 
     // Solid outline/shadow base
-    L.geoJSON(calculatedRoute, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    L.geoJSON(calculatedRoute as any, {
       style: (feature) => {
-        const isPrimary = feature?.properties?.routeId !== 'ALTERNATIVE';
+        const isPrimary = feature?.properties?.routeId !== "ALTERNATIVE";
         return {
           color: isPrimary ? "#1d4ed8" : "#94a3b8", // blue-700 vs slate-400
           weight: isPrimary ? 6 : 5,
@@ -630,26 +833,27 @@ export default function MapClient({
     }).addTo(routeGroup);
 
     // Animated dashed line on top for primary, distinct dash for alternative
-    const topLayer = L.geoJSON(calculatedRoute, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const topLayer = L.geoJSON(calculatedRoute as any, {
       style: (feature) => {
-        const isPrimary = feature?.properties?.routeId !== 'ALTERNATIVE';
+        const isPrimary = feature?.properties?.routeId !== "ALTERNATIVE";
         return {
           color: isPrimary ? "#93c5fd" : "#f1f5f9", // blue-300 vs slate-100
           weight: isPrimary ? 3 : 2,
           opacity: 1,
           dashArray: isPrimary ? undefined : "6, 12",
-          className: isPrimary ? "route-animated-dash" : "", 
+          className: isPrimary ? "route-animated-dash" : "",
         };
       },
       onEachFeature: (feature, layer) => {
         const props = feature.properties;
-        const isPrimary = props.routeId !== 'ALTERNATIVE';
+        const isPrimary = props.routeId !== "ALTERNATIVE";
         const distKm = props.totalDistance / 1000;
         const bikeTime = Math.ceil((distKm / 40) * 60);
 
         const tooltipHtml = `
           <div class="flex flex-col items-center px-1">
-            <div class="font-bold flex items-center gap-1 ${isPrimary ? 'text-blue-700' : 'text-slate-600'} text-[13px] leading-none mb-1">
+            <div class="font-bold flex items-center gap-1 ${isPrimary ? "text-blue-700" : "text-slate-600"} text-[13px] leading-none mb-1">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
               ${bikeTime} mnt
             </div>
@@ -661,26 +865,31 @@ export default function MapClient({
 
         layer.bindTooltip(tooltipHtml, {
           permanent: true,
-          direction: 'center',
-          className: 'route-floating-tooltip shadow-md'
+          direction: "center",
+          className: "route-floating-tooltip shadow-md",
         });
-      }
+      },
     }).addTo(routeGroup);
 
-    topLayer.bindPopup((layer: any) => {
-        const props = layer.feature.properties;
-        const isPrimary = props.routeId !== 'ALTERNATIVE';
-        const distKm = props.totalDistance / 1000;
-        const walkTime = (distKm / 5) * 60; // Asumsi jalan kaki 5 km/jam
-        const bikeTime = (distKm / 40) * 60; // Asumsi motor 40 km/jam
-        const carTime = (distKm / 30) * 60; // Asumsi mobil 30 km/jam (kepadatan rute darurat)
+    topLayer.bindPopup((layer) => {
+      const geoLayer = layer as L.GeoJSON;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const props = ((geoLayer.feature as any)?.properties || {}) as Record<
+        string,
+        unknown
+      >;
+      const isPrimary = (props.routeId as string) !== "ALTERNATIVE";
+      const distKm = (props.totalDistance as number) / 1000;
+      const walkTime = (distKm / 5) * 60; // Asumsi jalan kaki 5 km/jam
+      const bikeTime = (distKm / 40) * 60; // Asumsi motor 40 km/jam
+      const carTime = (distKm / 30) * 60; // Asumsi mobil 30 km/jam (kepadatan rute darurat)
 
-        return `
-        <div class="px-2 pt-1 pb-4 w-[260px]">
+      return `
+        <div class="px-2 pt-1 pb-4 w-65">
           <div class="flex items-center gap-2 mb-3 border-b border-slate-200 dark:border-slate-700 pb-2">
             <h3 class="font-bold text-[15px] text-slate-800 dark:text-slate-100">Detail Rute Evakuasi</h3>
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isPrimary ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}">
-              ${isPrimary ? 'JALUR UTAMA' : 'ALTERNATIF'}
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isPrimary ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}">
+              ${isPrimary ? "JALUR UTAMA" : "ALTERNATIF"}
             </span>
           </div>
           <div class="space-y-3 mt-2">
@@ -712,9 +921,10 @@ export default function MapClient({
           </div>
         </div>
       `;
-      });
+    });
 
     routeGroup.addTo(mapRef.current);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     calculatedRouteLayerRef.current = routeGroup as any;
 
     if (topLayer) {
@@ -732,97 +942,142 @@ export default function MapClient({
   return (
     <div className="relative w-full h-full text-left">
       <div ref={mapContainerRef} className="w-full h-full" />
-      <div className="absolute top-4 left-4 md:left-4 z-[1000] flex flex-col items-start gap-2">
-        <button 
-          onClick={(e) => { e.stopPropagation(); setIsFilterOpen(!isFilterOpen); }}
-          className="bg-white/95 dark:bg-zinc-950/90 backdrop-blur-md rounded-lg shadow-lg border border-slate-200 dark:border-zinc-800/60 p-2.5 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2"
+      {isMapReady && mapInstance && (
+        <BpbdRiskLayer map={mapInstance} visible={visibleLayers.bpbdRisk} />
+      )}
+      <div className="absolute top-4 left-4 md:left-4 z-1000 flex flex-col items-start gap-2">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsFilterOpen(!isFilterOpen);
+          }}
+          className="bg-white/95 dark:bg-gray-950/90 backdrop-blur-md rounded-lg shadow-lg border border-slate-200 dark:border-gray-800/60 p-2.5 text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2"
         >
-          {isFilterOpen ? <X className="w-4 h-4" /> : <Filter className="w-4 h-4" />}
-          <span className="text-xs font-bold uppercase tracking-wider">{isFilterOpen ? "Tutup Filter" : "Filter Map"}</span>
+          {isFilterOpen ? (
+            <X className="w-4 h-4" />
+          ) : (
+            <Filter className="w-4 h-4" />
+          )}
+          <span className="text-xs font-bold uppercase tracking-wider">
+            {isFilterOpen ? "Tutup Filter" : "Filter Map"}
+          </span>
         </button>
 
         {isFilterOpen && (
-          <div className="bg-white/95 dark:bg-zinc-950/90 backdrop-blur-md rounded-xl shadow-2xl border border-slate-200 dark:border-zinc-800/60 p-4 w-[180px] transition-all animate-in fade-in slide-in-from-top-2">
-            <h3 className="font-bold text-[11px] uppercase tracking-wider mb-3 text-slate-800 dark:text-zinc-200 border-b border-slate-100 dark:border-zinc-800/50 pb-2">
+          <div className="bg-white/95 dark:bg-gray-950/90 backdrop-blur-md rounded-xl shadow-2xl border border-slate-200 dark:border-gray-800/60 p-4 w-45 transition-all animate-in fade-in slide-in-from-top-2">
+            <h3 className="font-bold text-[11px] uppercase tracking-wider mb-3 text-slate-800 dark:text-gray-200 border-b border-slate-100 dark:border-gray-800/50 pb-2">
               Layer Aktif
             </h3>
             <div className="space-y-3">
               <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
+                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-gray-400 dark:group-hover:text-gray-100 transition-colors">
                   Batas Wilayah
                 </span>
                 <input
                   type="checkbox"
                   checked={visibleLayers.boundary}
                   onChange={() => toggleLayer("boundary")}
-                  className="rounded border-slate-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
+                  className="rounded border-slate-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-gray-900"
                 />
               </label>
               <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
+                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-gray-400 dark:group-hover:text-gray-100 transition-colors">
                   Shelter
                 </span>
                 <input
                   type="checkbox"
                   checked={visibleLayers.shelters}
                   onChange={() => toggleLayer("shelters")}
-                  className="rounded border-slate-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
+                  className="rounded border-slate-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-gray-900"
                 />
               </label>
               <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
+                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-gray-400 dark:group-hover:text-gray-100 transition-colors">
                   Zona Rawan
                 </span>
                 <input
                   type="checkbox"
                   checked={visibleLayers.hazardZones}
                   onChange={() => toggleLayer("hazardZones")}
-                  className="rounded border-slate-300 dark:border-zinc-700 text-orange-600 focus:ring-orange-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
+                  className="rounded border-slate-300 dark:border-gray-700 text-orange-600 focus:ring-orange-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-gray-900"
                 />
               </label>
               <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
+                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-gray-400 dark:group-hover:text-gray-100 transition-colors">
                   Titik Gempa
                 </span>
                 <input
                   type="checkbox"
                   checked={visibleLayers.earthquakes}
                   onChange={() => toggleLayer("earthquakes")}
-                  className="rounded border-slate-300 dark:border-zinc-700 text-red-600 focus:ring-red-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
+                  className="rounded border-slate-300 dark:border-gray-700 text-red-600 focus:ring-red-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-gray-900"
                 />
               </label>
               <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
+                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-gray-400 dark:group-hover:text-gray-100 transition-colors">
                   Fasilitas
                 </span>
                 <input
                   type="checkbox"
                   checked={visibleLayers.facilities}
                   onChange={() => toggleLayer("facilities")}
-                  className="rounded border-slate-300 dark:border-zinc-700 text-green-600 focus:ring-green-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
+                  className="rounded border-slate-300 dark:border-gray-700 text-green-600 focus:ring-green-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-gray-900"
                 />
               </label>
               <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
+                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-gray-400 dark:group-hover:text-gray-100 transition-colors">
                   List Jalan
                 </span>
                 <input
                   type="checkbox"
                   checked={visibleLayers.roads}
                   onChange={() => toggleLayer("roads")}
-                  className="rounded border-slate-300 dark:border-zinc-700 text-slate-600 focus:ring-slate-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
+                  className="rounded border-slate-300 dark:border-gray-700 text-slate-600 focus:ring-slate-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-gray-900"
+                />
+              </label>
+              <label className="flex items-center justify-between cursor-pointer group">
+                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-gray-400 dark:group-hover:text-gray-100 transition-colors">
+                  Zona BPBD
+                </span>
+                <input
+                  type="checkbox"
+                  checked={visibleLayers.bpbdRisk}
+                  onChange={() => toggleLayer("bpbdRisk")}
+                  className="rounded border-slate-300 dark:border-gray-700 text-amber-600 focus:ring-amber-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-gray-900"
                 />
               </label>
             </div>
 
+            {visibleLayers.bpbdRisk && (
+              <div className="mt-4 pt-4 border-t border-slate-200 dark:border-gray-800/60">
+                <h4 className="text-[10px] uppercase font-bold text-slate-700 dark:text-gray-400 mb-2 tracking-wider">
+                  Legenda BPBD
+                </h4>
+                <div className="space-y-2.5 text-xs text-slate-600 dark:text-gray-300">
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 bg-[#10b981] rounded border border-white dark:border-gray-900 shadow-sm"></div>
+                    <span className="font-medium">Risiko Rendah</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 bg-[#f59e0b] rounded border border-white dark:border-gray-900 shadow-sm"></div>
+                    <span className="font-medium">Risiko Sedang</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 bg-[#ef4444] rounded border border-white dark:border-gray-900 shadow-sm"></div>
+                    <span className="font-medium">Risiko Tinggi</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {visibleLayers.earthquakes && earthquakes.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-slate-200 dark:border-zinc-800/60">
-                <h4 className="text-[10px] uppercase font-bold text-slate-700 dark:text-zinc-400 mb-2 tracking-wider">
+              <div className="mt-4 pt-4 border-t border-slate-200 dark:border-gray-800/60">
+                <h4 className="text-[10px] uppercase font-bold text-slate-700 dark:text-gray-400 mb-2 tracking-wider">
                   Legenda Gempa
                 </h4>
-                <div className="space-y-2.5 text-xs text-slate-600 dark:text-zinc-300">
+                <div className="space-y-2.5 text-xs text-slate-600 dark:text-gray-300">
                   <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 bg-red-600 rounded-full border border-white dark:border-zinc-900 shadow-sm"></div>
+                    <div className="w-2.5 h-2.5 bg-red-600 rounded-full border border-white dark:border-gray-900 shadow-sm"></div>
                     <span className="font-medium">Pusat gempa</span>
                   </div>
                   <div className="flex items-center gap-3">

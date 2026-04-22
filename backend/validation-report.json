@@ -1,0 +1,31 @@
+{
+  "totalZones": 75,
+  "totalRoads": 12230,
+  "roadsWithBpbdRisk": 12230,
+  "roadsWithoutBpbdRisk": 0,
+  "geometryValidation": {
+    "validZones": 64,
+    "invalidZones": 11
+  },
+  "riskDistribution": {
+    "zones": {
+      "LOW": 24,
+      "MEDIUM": 41,
+      "HIGH": 10
+    },
+    "roads": {
+      "LOW": 11788,
+      "MEDIUM": 417,
+      "HIGH": 25
+    }
+  },
+  "spatialJoinCompleteness": {
+    "percentage": 100,
+    "status": "complete"
+  },
+  "correlationAnalysis": {
+    "highRiskZonesCount": 10,
+    "highVulnerabilityRoadsCount": 0,
+    "overlap": 0
+  }
+}

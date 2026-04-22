@@ -87,7 +87,12 @@ export class EarthquakeAnalysisService {
     }
 
     // Read from file
-    const filePath = path.join(process.cwd(), 'data', '34.02_Bantul.geojson');
+    const filePath = path.join(
+      process.cwd(),
+      'Data',
+      'GeoJSon',
+      '34.02_Bantul.geojson',
+    );
 
     try {
       const fileContent = fs.readFileSync(filePath, 'utf-8');

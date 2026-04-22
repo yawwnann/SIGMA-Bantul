@@ -11,7 +11,7 @@ import { Logger } from '@nestjs/common';
   cors: {
     origin: '*',
   },
-  namespace: '/earthquakes',
+  // Removed namespace so it emits to to root namespace matching frontend
 })
 export class EarthquakeGateway
   implements OnGatewayConnection, OnGatewayDisconnect
@@ -30,7 +30,8 @@ export class EarthquakeGateway
   }
 
   broadcastLatestEarthquake(data: any) {
-    this.server.emit('latestEarthquake', data);
+    // Change to match frontend listener
+    this.server.emit('new-earthquake', data);
   }
 
   broadcastEarthquakeHistory(data: any[]) {

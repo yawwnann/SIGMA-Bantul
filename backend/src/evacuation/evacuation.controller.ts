@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
-import { EvacuationService } from './evacuation.service';
+import { EvacuationService, RouteScore } from './evacuation.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CalculateRouteDto } from './dto/calculate-route.dto';
 import { RouteType } from '@prisma/client';
@@ -9,7 +9,7 @@ export class EvacuationController {
   constructor(private evacuationService: EvacuationService) {}
 
   @Post('recommendation')
-  async calculateRoute(@Body() dto: CalculateRouteDto) {
+  async calculateRoute(@Body() dto: CalculateRouteDto): Promise<RouteScore[]> {
     return this.evacuationService.calculateWeightedOverlay(
       dto.startLat,
       dto.startLon,
@@ -45,13 +45,13 @@ export class EvacuationController {
   }
 
   @Get('weights')
-  async getWeights() {
+  getWeights() {
     return this.evacuationService.getWeights();
   }
 
   @Post('weights')
   @UseGuards(JwtAuthGuard)
-  async updateWeights(
+  updateWeights(
     @Body()
     weights: {
       hazard?: number;

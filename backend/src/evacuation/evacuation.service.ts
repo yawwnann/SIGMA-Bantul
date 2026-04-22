@@ -1,17 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import {
-  RouteType,
-  HazardLevel,
-  RoadCondition,
-  RoadVulnerability,
-} from '@prisma/client';
+import { RouteType, RoadCondition, RoadVulnerability } from '@prisma/client';
 
-interface RouteScore {
+export interface RouteScore {
   roadId: number;
   roadName: string;
-  geometry: any;
+  geometry: unknown;
   score: number;
   breakdown: {
     hazardScore: number;
@@ -23,8 +18,18 @@ interface RouteScore {
 interface ShelterWithDistance {
   id: number;
   name: string;
-  geometry: any;
+  geometry: unknown;
   distance: number;
+}
+
+interface RoadGeometry {
+  type: string;
+  coordinates: number[][][] | number[][] | number[];
+}
+
+interface HazardZoneGeometry {
+  type: string;
+  coordinates: number[][][][] | number[][][];
 }
 
 @Injectable()
@@ -49,29 +54,42 @@ export class EvacuationService {
     endLon: number,
     type: RouteType = RouteType.PRIMARY,
     maxResults: number = 5,
+    useBpbdRisk: boolean = true, // Enable BPBD risk by default
   ) {
-    const cacheKey = `evacuation:route:${startLat}:${startLon}:${endLat}:${endLon}:${type}`;
-    const cached = await this.redis.getJson<any[]>(cacheKey);
+    const cacheKey = `evacuation:route:${startLat}:${startLon}:${endLat}:${endLon}:${type}:${useBpbdRisk}`;
+    const cached = await this.redis.getJson<RouteScore[]>(cacheKey);
     if (cached) return cached;
 
     const roads = await this.prisma.road.findMany();
-    const shelters = await this.prisma.shelter.findMany();
+    // Load all shelters and filter out full ones
+    const allShelters = await this.prisma.shelter.findMany();
+    const shelters = allShelters.filter((s) => s.currentOccupancy < s.capacity);
+
+    if (shelters.length === 0) {
+      this.logger.warn('No available shelters found!');
+      // fallback just in case to show paths
+    }
+
     const hazardZones = await this.prisma.hazardZone.findMany();
 
     const scoredRoutes: RouteScore[] = [];
 
     for (const road of roads) {
-      const geometry = road.geometry as any;
+      const geometry = road.geometry as unknown as RoadGeometry | null;
       const roadCoords = this.extractCoordinates(geometry);
 
-      const isNearHazard = this.isRoadNearHazard(roadCoords, hazardZones);
-      const hazardScore = this.calculateHazardScore(
-        road,
-        isNearHazard,
-        hazardZones,
-      );
+      const hazardZonesTyped = hazardZones.map((z) => ({
+        geometry: z.geometry as unknown as HazardZoneGeometry | null,
+      }));
+      const isNearHazard = this.isRoadNearHazard(roadCoords, hazardZonesTyped);
+
+      const hazardScore =
+        useBpbdRisk && road.bpbdRiskScore
+          ? this.calculateEnhancedHazardScore(road, isNearHazard)
+          : this.calculateHazardScore(road, isNearHazard);
+
       const conditionScore = this.calculateConditionScore(road.condition);
-      const distanceScore = await this.calculateDistanceScore(
+      const distanceScore = this.calculateDistanceScoreSync(
         roadCoords,
         startLat,
         startLon,
@@ -101,12 +119,13 @@ export class EvacuationService {
     scoredRoutes.sort((a, b) => b.score - a.score);
     const topRoutes = scoredRoutes.slice(0, maxResults);
 
-    const routesToSave: any[] = [];
+    const routesToSave: RouteScore[] = [];
     for (const route of topRoutes) {
-      const savedRoute = await this.prisma.evacuationRoute.create({
+      await this.prisma.evacuationRoute.create({
         data: {
           name: `Route ${route.roadName} (Score: ${route.score})`,
-          geometry: route.geometry,
+          geometry:
+            route.geometry as import('@prisma/client').Prisma.JsonObject,
           type,
           score: route.score,
           startLat,
@@ -115,10 +134,7 @@ export class EvacuationService {
           endLon,
         },
       });
-      routesToSave.push({
-        ...savedRoute,
-        breakdown: route.breakdown,
-      });
+      routesToSave.push(route);
     }
 
     await this.redis.setJson(cacheKey, routesToSave, 3600);
@@ -126,28 +142,37 @@ export class EvacuationService {
     return routesToSave;
   }
 
-  private extractCoordinates(geometry: any): [number, number][] {
-    if (geometry?.type === 'LineString' && geometry?.coordinates) {
-      return geometry.coordinates;
+  private extractCoordinates(
+    geometry: RoadGeometry | null,
+  ): [number, number][] {
+    if (!geometry) return [];
+    if (geometry.type === 'LineString' && Array.isArray(geometry.coordinates)) {
+      return geometry.coordinates as [number, number][];
     }
-    if (geometry?.type === 'MultiLineString' && geometry?.coordinates) {
-      return geometry.coordinates[0] || [];
+    if (
+      geometry.type === 'MultiLineString' &&
+      Array.isArray(geometry.coordinates)
+    ) {
+      const coords = geometry.coordinates[0];
+      return Array.isArray(coords) ? (coords as [number, number][]) : [];
     }
-    if (geometry?.type === 'Point' && geometry?.coordinates) {
-      return [geometry.coordinates];
+    if (geometry.type === 'Point' && Array.isArray(geometry.coordinates)) {
+      return [geometry.coordinates as [number, number]];
     }
     return [];
   }
 
   private isRoadNearHazard(
     coordinates: [number, number][],
-    hazardZones: any[],
+    hazardZones: { geometry: HazardZoneGeometry | null }[],
   ): boolean {
-    const bufferDeg = 0.01;
     for (const coord of coordinates) {
       for (const zone of hazardZones) {
         const zoneGeom = zone.geometry;
-        if (zoneGeom?.type === 'Polygon' || zoneGeom?.type === 'MultiPolygon') {
+        if (
+          zoneGeom &&
+          (zoneGeom.type === 'Polygon' || zoneGeom.type === 'MultiPolygon')
+        ) {
           if (this.isPointInPolygon(coord, zoneGeom)) {
             return true;
           }
@@ -157,19 +182,31 @@ export class EvacuationService {
     return false;
   }
 
-  private isPointInPolygon(point: [number, number], polygon: any): boolean {
+  private isPointInPolygon(
+    point: [number, number],
+    polygon: HazardZoneGeometry,
+  ): boolean {
     const [x, y] = point;
-    const coords =
-      polygon.type === 'MultiPolygon'
-        ? polygon.coordinates[0][0]
-        : polygon.coordinates[0];
+    let coords: number[][];
+
+    if (polygon.type === 'MultiPolygon' && Array.isArray(polygon.coordinates)) {
+      coords = polygon.coordinates[0][0] as number[][];
+    } else if (
+      polygon.type === 'Polygon' &&
+      Array.isArray(polygon.coordinates)
+    ) {
+      coords = polygon.coordinates[0] as number[][];
+    } else {
+      return false;
+    }
+
     let inside = false;
 
     for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
-      const xi = coords[i][0],
-        yi = coords[i][1];
-      const xj = coords[j][0],
-        yj = coords[j][1];
+      const xi = coords[i][0];
+      const yi = coords[i][1];
+      const xj = coords[j][0];
+      const yj = coords[j][1];
 
       const intersect =
         yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
@@ -180,17 +217,9 @@ export class EvacuationService {
   }
 
   private calculateHazardScore(
-    road: any,
+    road: { vulnerability: RoadVulnerability },
     isNearHazard: boolean,
-    hazardZones: any[],
   ): number {
-    const levelScores: Record<HazardLevel, number> = {
-      [HazardLevel.LOW]: 1,
-      [HazardLevel.MEDIUM]: 3,
-      [HazardLevel.HIGH]: 4,
-      [HazardLevel.CRITICAL]: 5,
-    };
-
     const vulnerabilityScores: Record<RoadVulnerability, number> = {
       [RoadVulnerability.LOW]: 1,
       [RoadVulnerability.MEDIUM]: 2.5,
@@ -210,6 +239,40 @@ export class EvacuationService {
     return Math.min(5, Math.max(1, baseScore));
   }
 
+  /**
+   * Calculate enhanced hazard score combining frequency analysis and BPBD risk
+   * Formula: Hazard = (FrequencyScore * 0.5) + (BpbdScore_normalized * 0.5)
+   * @param road - Road object with vulnerability and BPBD risk data
+   * @param isNearHazard - Whether road is near hazard zone
+   * @param hazardZones - Array of hazard zones
+   * @returns Combined hazard score (1-5)
+   */
+  private calculateEnhancedHazardScore(
+    road: { vulnerability: RoadVulnerability; bpbdRiskScore?: number | null },
+    isNearHazard: boolean,
+  ): number {
+    const vulnerabilityScores: Record<RoadVulnerability, number> = {
+      [RoadVulnerability.LOW]: 1,
+      [RoadVulnerability.MEDIUM]: 2.5,
+      [RoadVulnerability.HIGH]: 4,
+      [RoadVulnerability.CRITICAL]: 5,
+    };
+
+    let frequencyScore = 2;
+    if (isNearHazard) {
+      frequencyScore = 3;
+    }
+    const vulnerability = vulnerabilityScores[road.vulnerability] || 2;
+    frequencyScore = (frequencyScore + vulnerability) / 2;
+
+    const bpbdScore = road.bpbdRiskScore ?? 1;
+    const normalizedBpbd = ((bpbdScore - 1) / 2) * 4 + 1;
+
+    const combinedHazard = frequencyScore * 0.5 + normalizedBpbd * 0.5;
+
+    return Math.min(5, Math.max(1, combinedHazard));
+  }
+
   private calculateConditionScore(condition: RoadCondition): number {
     const scores: Record<RoadCondition, number> = {
       [RoadCondition.GOOD]: 1,
@@ -220,14 +283,14 @@ export class EvacuationService {
     return scores[condition] || 3;
   }
 
-  private async calculateDistanceScore(
+  private calculateDistanceScoreSync(
     roadCoords: [number, number][],
     startLat: number,
     startLon: number,
     endLat: number,
     endLon: number,
-    shelters: any[],
-  ): Promise<number> {
+    shelters: { id: number; name: string; geometry: unknown }[],
+  ): number {
     if (roadCoords.length < 2) return 3;
 
     const startDist = this.haversineDistance(
@@ -255,22 +318,22 @@ export class EvacuationService {
 
   private findNearestShelter(
     roadCoords: [number, number][],
-    shelters: any[],
+    shelters: { id: number; name: string; geometry: unknown }[],
   ): ShelterWithDistance | null {
     let nearest: ShelterWithDistance | null = null;
     let minDistance = Infinity;
 
     for (const shelter of shelters) {
-      const coords = (shelter.geometry as any)?.coordinates;
-      if (!coords) continue;
+      const geom = shelter.geometry as RoadGeometry | null;
+      const coords = geom?.coordinates;
+      if (!Array.isArray(coords)) continue;
 
       for (const coord of roadCoords) {
-        const dist = this.haversineDistance(
-          coord[1],
-          coord[0],
-          coords[1],
-          coords[0],
-        );
+        const lat2 = coords[1];
+        const lon2 = coords[0];
+        if (typeof lat2 !== 'number' || typeof lon2 !== 'number') continue;
+
+        const dist = this.haversineDistance(coord[1], coord[0], lat2, lon2);
         if (dist < minDistance) {
           minDistance = dist;
           nearest = {
@@ -326,9 +389,16 @@ export class EvacuationService {
     const shelters = await this.prisma.shelter.findMany();
 
     const sheltersWithDistance = shelters.map((shelter) => {
-      const coords = (shelter.geometry as any)?.coordinates;
-      const shelterLat = coords?.[1] || 0;
-      const shelterLon = coords?.[0] || 0;
+      const geom = shelter.geometry as unknown as RoadGeometry | null;
+      const coords = geom?.coordinates;
+      const shelterLat =
+        coords && Array.isArray(coords) && typeof coords[1] === 'number'
+          ? coords[1]
+          : 0;
+      const shelterLon =
+        coords && Array.isArray(coords) && typeof coords[0] === 'number'
+          ? coords[0]
+          : 0;
       const distance = this.haversineDistance(lat, lon, shelterLat, shelterLon);
 
       return {
@@ -342,11 +412,11 @@ export class EvacuationService {
       .slice(0, limit);
   }
 
-  async getWeights() {
+  getWeights() {
     return this.WEIGHTS;
   }
 
-  async updateWeights(weights: {
+  updateWeights(weights: {
     hazard?: number;
     roadCondition?: number;
     distance?: number;
@@ -357,6 +427,39 @@ export class EvacuationService {
     if (weights.distance !== undefined)
       this.WEIGHTS.distance = weights.distance;
     return this.WEIGHTS;
+  }
+
+  calculateDistanceScore(
+    roadCoords: [number, number][],
+    startLat: number,
+    startLon: number,
+    endLat: number,
+    endLon: number,
+    shelters: { id: number; name: string; geometry: unknown }[],
+  ): number {
+    if (roadCoords.length < 2) return 3;
+
+    const startDist = this.haversineDistance(
+      startLat,
+      startLon,
+      roadCoords[0][1],
+      roadCoords[0][0],
+    );
+    const endDist = this.haversineDistance(
+      roadCoords[roadCoords.length - 1][1],
+      roadCoords[roadCoords.length - 1][0],
+      endLat,
+      endLon,
+    );
+
+    const nearestShelter = this.findNearestShelter(roadCoords, shelters);
+    const shelterDistance = nearestShelter?.distance || 5;
+
+    const normalizedScore = Math.min(
+      5,
+      (startDist + endDist + shelterDistance) / 3,
+    );
+    return Math.max(1, normalizedScore);
   }
 
   async getEvacuationStatistics() {

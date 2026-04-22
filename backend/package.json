@@ -23,7 +23,16 @@
     "db:push": "prisma db push",
     "db:seed": "ts-node prisma/seed.ts",
     "db:studio": "prisma studio",
-    "db:import-roads": "ts-node scripts/import-roads.ts"
+    "db:import-roads": "ts-node scripts/import-roads.ts",
+    "db:enrich-roads": "ts-node scripts/enrich-roads.ts",
+    "db:import-bpbd": "ts-node scripts/import-bpbd-zones.ts",
+    "db:assign-bpbd": "ts-node scripts/assign-bpbd-to-roads.ts",
+    "db:validate-bpbd": "ts-node scripts/validate-bpbd-data.ts",
+    "db:check-roads": "ts-node scripts/check-road-conditions.ts",
+    "db:fix-length": "ts-node scripts/fix-road-length.ts",
+    "db:fix-topology": "ts-node scripts/fix-road-topology.ts",
+    "db:fix-safe-cost": "ts-node scripts/fix-safe-cost.ts",
+    "db:fix-all-roads": "ts-node scripts/fix-all-roads.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -42,18 +51,21 @@
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/websockets": "^11.1.19",
     "@prisma/client": "^5.22.0",
+    "@types/web-push": "^3.6.4",
     "axios": "^1.15.0",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "dotenv": "^17.4.2",
     "ioredis": "^5.10.1",
+    "msw": "^2.13.4",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "prisma": "^5.22.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

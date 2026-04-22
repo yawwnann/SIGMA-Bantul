@@ -11,4 +11,16 @@ export {
   type FrequencyAnalysisResponse,
   type GridCell,
 } from "./analysis";
+export {
+  getBpbdZones,
+  getBpbdZoneById,
+  importBpbdZones,
+  assignRiskToRoads,
+  getBpbdStatistics,
+  getValidation,
+  type BpbdRiskZone,
+  type BpbdStatistics,
+  type ImportResult,
+  type AssignmentResult,
+} from "./bpbd-risk";
 export { default as apiClient } from "./client";

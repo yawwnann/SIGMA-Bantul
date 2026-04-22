@@ -39,21 +39,51 @@ export class ShelterService {
     return this.prisma.shelter.delete({ where: { id } });
   }
 
+  async updateOccupancy(id: number, currentOccupancy: number) {
+    await this.findById(id);
+    return this.prisma.shelter.update({
+      where: { id },
+      data: { currentOccupancy },
+    });
+  }
+
   async getNearby(lat: number, lon: number, radiusKm: number = 10) {
     const shelters = await this.prisma.shelter.findMany();
 
     return shelters.filter((shelter) => {
-      const coords = shelter.geometry as any;
-      if (!coords?.coordinates) return false;
+      const geom = shelter.geometry as {
+        type: string;
+        coordinates: number[] | number[][];
+      } | null;
+      if (!geom?.coordinates) return false;
 
-      const shelterLat =
-        coords.type === 'Point'
-          ? coords.coordinates[1]
-          : coords.coordinates[0][1];
-      const shelterLon =
-        coords.type === 'Point'
-          ? coords.coordinates[0]
-          : coords.coordinates[0][0];
+      let shelterLat: number;
+      let shelterLon: number;
+
+      if (
+        geom.type === 'Point' &&
+        Array.isArray(geom.coordinates) &&
+        geom.coordinates.length >= 2
+      ) {
+        shelterLat = geom.coordinates[1] as number;
+        shelterLon = geom.coordinates[0] as number;
+      } else if (
+        Array.isArray(geom.coordinates) &&
+        geom.coordinates.length > 0
+      ) {
+        const firstCoord = geom.coordinates[0];
+        if (Array.isArray(firstCoord) && firstCoord.length >= 2) {
+          shelterLat = firstCoord[1];
+          shelterLon = firstCoord[0];
+        } else {
+          return false;
+        }
+      } else {
+        return false;
+      }
+
+      if (typeof shelterLat !== 'number' || typeof shelterLon !== 'number')
+        return false;
 
       const distance = this.calculateDistance(lat, lon, shelterLat, shelterLon);
       return distance <= radiusKm;

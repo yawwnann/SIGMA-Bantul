@@ -62,6 +62,15 @@ export class ShelterController {
     return this.shelterService.update(id, dto);
   }
 
+  @Put(':id/occupancy')
+  @UseGuards(JwtAuthGuard)
+  async updateOccupancy(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('occupancy', ParseIntPipe) occupancy: number,
+  ) {
+    return this.shelterService.updateOccupancy(id, occupancy);
+  }
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   async delete(@Param('id', ParseIntPipe) id: number) {

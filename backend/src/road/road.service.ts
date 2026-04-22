@@ -7,35 +7,142 @@ import { SimpleDijkstraService } from './simple-dijkstra.service';
 
 @Injectable()
 export class RoadService {
+  private readonly logger = new (require('@nestjs/common').Logger)(
+    RoadService.name,
+  );
+
   constructor(
     private prisma: PrismaService,
     private redis: RedisService,
     private simpleDijkstra: SimpleDijkstraService,
   ) {}
 
-  async create(dto: CreateRoadDto) {
-    return this.prisma.road.create({
-      data: dto,
-    });
+  /**
+   * Invalidate all road-related caches in Redis.
+   * Called automatically after create/update/delete operations.
+   * Can also be called manually via API endpoint after bulk imports.
+   */
+  async invalidateRoadCache(): Promise<number> {
+    try {
+      const roadKeys = await this.redis.keys('road-network:*');
+      const evacKeys = await this.redis.keys('evacuation:route:*');
+      const allKeys = [...roadKeys, ...evacKeys];
+
+      if (allKeys.length > 0) {
+        for (const key of allKeys) {
+          await this.redis.del(key);
+        }
+        this.logger.log(
+          `Invalidated ${allKeys.length} road/evacuation cache keys`,
+        );
+      }
+
+      return allKeys.length;
+    } catch (error) {
+      this.logger.warn(`Failed to invalidate road cache: ${error.message}`);
+      return 0;
+    }
   }
 
-  async findAll(params?: { condition?: RoadCondition | 'all'; type?: RoadType | 'all'; page?: number; limit?: number }) {
-    const { condition, type, page = 1, limit = 20 } = params || {};
+  /**
+   * Recalculate safe_cost for all roads using combined hazard score
+   * Formula: safe_cost = length * (1 + combinedHazard * 0.5)
+   * Should be called after BPBD risk assignment
+   */
+  async recalculateSafeCost(): Promise<{ updated: number }> {
+    this.logger.log(
+      'Recalculating safe_cost for all roads with combined hazard...',
+    );
+
+    try {
+      // Update safe_cost based on combined hazard
+      await this.prisma.$executeRaw`
+        UPDATE "Road"
+        SET 
+          safe_cost = COALESCE(length, 1) * (1 + COALESCE("combinedHazard", 2) * 0.5),
+          "updatedAt" = NOW()
+        WHERE geom IS NOT NULL
+      `;
+
+      const count = await this.prisma.road.count({
+        where: { safe_cost: { not: null } },
+      });
+
+      // Invalidate cache after recalculation
+      await this.invalidateRoadCache();
+
+      this.logger.log(`Safe cost recalculated for ${count} roads`);
+      return { updated: count };
+    } catch (error) {
+      this.logger.error('Failed to recalculate safe_cost', error.stack);
+      throw error;
+    }
+  }
+
+  async create(dto: CreateRoadDto) {
+    const road = await this.prisma.road.create({
+      data: dto,
+    });
+    await this.invalidateRoadCache();
+    return road;
+  }
+
+  async findAll(params?: {
+    condition?: RoadCondition | 'all';
+    type?: RoadType | 'all';
+    page?: number;
+    limit?: number;
+    search?: string;
+  }) {
+    const { condition, type, page = 1, limit = 20, search } = params || {};
     const skip = (page - 1) * limit;
 
-    const where: any = {};
-    if (condition && condition !== 'all') where.condition = condition;
-    if (type && type !== 'all') where.type = type;
+    // Build WHERE clauses
+    const whereClauses: string[] = [];
+    const queryParams: any[] = [];
+    let paramIndex = 1;
 
-    const [data, total] = await Promise.all([
-      this.prisma.road.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { name: 'asc' }
-      }),
-      this.prisma.road.count({ where }),
+    if (condition && condition !== 'all') {
+      whereClauses.push(`condition::text = $${paramIndex}`);
+      queryParams.push(condition);
+      paramIndex++;
+    }
+    if (type && type !== 'all') {
+      whereClauses.push(`type::text = $${paramIndex}`);
+      queryParams.push(type);
+      paramIndex++;
+    }
+    if (search && search.trim()) {
+      whereClauses.push(`name ILIKE $${paramIndex}`);
+      queryParams.push(`%${search.trim()}%`);
+      paramIndex++;
+    }
+
+    const whereSQL =
+      whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    // Query with sort: real names first, then fallback names
+    const countQuery = `SELECT COUNT(*)::int as cnt FROM "Road" ${whereSQL}`;
+    const dataQuery = `
+      SELECT id, name, type, condition, vulnerability, length, safe_cost, source, target,
+             geometry, "createdAt", "updatedAt"
+      FROM "Road" 
+      ${whereSQL}
+      ORDER BY 
+        CASE WHEN name LIKE 'Jalan Lokal #%' THEN 1 ELSE 0 END ASC,
+        name ASC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+
+    const dataParams = [...queryParams, limit, skip];
+    const countParams = [...queryParams];
+
+    const [data, countResult] = await Promise.all([
+      this.prisma.$queryRawUnsafe<any[]>(dataQuery, ...dataParams),
+      this.prisma.$queryRawUnsafe<any[]>(countQuery, ...countParams),
     ]);
+
+    const total = countResult[0]?.cnt || 0;
 
     return {
       data,
@@ -58,15 +165,19 @@ export class RoadService {
 
   async update(id: number, dto: CreateRoadDto) {
     await this.findById(id);
-    return this.prisma.road.update({
+    const road = await this.prisma.road.update({
       where: { id },
       data: dto,
     });
+    await this.invalidateRoadCache();
+    return road;
   }
 
   async delete(id: number) {
     await this.findById(id);
-    return this.prisma.road.delete({ where: { id } });
+    const road = await this.prisma.road.delete({ where: { id } });
+    await this.invalidateRoadCache();
+    return road;
   }
 
   async getStatistics() {
@@ -112,9 +223,16 @@ export class RoadService {
       : 'road-network:all';
 
     // Try to get from cache
-    const cached = await this.redis.get(cacheKey);
-    if (cached) {
-      return JSON.parse(cached);
+    try {
+      const cached = await this.redis.get(cacheKey);
+      if (cached) {
+        this.logger.log(`Road network served from cache (key: ${cacheKey})`);
+        return JSON.parse(cached);
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Redis cache read failed, fetching from DB: ${err.message}`,
+      );
     }
 
     // Build query - get roads within bounds if specified
@@ -127,6 +245,10 @@ export class RoadService {
           type,
           condition,
           vulnerability,
+          "bpbdRiskLevel",
+          "bpbdRiskScore",
+          "combinedHazard",
+          safe_cost,
           geometry,
           ST_AsGeoJSON(geom)::json as geojson
         FROM "Road"
@@ -144,6 +266,10 @@ export class RoadService {
           type,
           condition,
           vulnerability,
+          "bpbdRiskLevel",
+          "bpbdRiskScore",
+          "combinedHazard",
+          safe_cost,
           geometry,
           ST_AsGeoJSON(geom)::json as geojson
         FROM "Road"
@@ -163,6 +289,10 @@ export class RoadService {
           type: road.type,
           condition: road.condition,
           vulnerability: road.vulnerability,
+          bpbdRiskLevel: road.bpbdRiskLevel,
+          bpbdRiskScore: road.bpbdRiskScore,
+          combinedHazard: road.combinedHazard,
+          safeCost: road.safe_cost,
         },
         geometry: road.geojson || road.geometry,
       })),

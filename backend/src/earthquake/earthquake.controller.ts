@@ -45,7 +45,13 @@ export class EarthquakeController {
     @Query('endDate') endDate?: string,
     @Query('region') region?: string,
   ) {
-    return this.earthquakeService.getAll({ page, limit, startDate, endDate, region });
+    return this.earthquakeService.getAll({
+      page,
+      limit,
+      startDate,
+      endDate,
+      region,
+    });
   }
 
   @Get('statistics')

@@ -1,46 +1,47 @@
 ﻿export enum UserRole {
-  ADMIN = 'ADMIN',
-  USER = 'USER',
+  ADMIN = "ADMIN",
+  USER = "USER",
+  SHELTER_OFFICER = "SHELTER_OFFICER",
 }
 
 export enum HazardLevel {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH',
-  CRITICAL = 'CRITICAL',
+  LOW = "LOW",
+  MEDIUM = "MEDIUM",
+  HIGH = "HIGH",
+  CRITICAL = "CRITICAL",
 }
 
 export enum RoadType {
-  NATIONAL = 'NATIONAL',
-  PROVINCIAL = 'PROVINCIAL',
-  REGIONAL = 'REGIONAL',
-  LOCAL = 'LOCAL',
+  NATIONAL = "NATIONAL",
+  PROVINCIAL = "PROVINCIAL",
+  REGIONAL = "REGIONAL",
+  LOCAL = "LOCAL",
 }
 
 export enum RoadCondition {
-  GOOD = 'GOOD',
-  MODERATE = 'MODERATE',
-  POOR = 'POOR',
-  DAMAGED = 'DAMAGED',
+  GOOD = "GOOD",
+  MODERATE = "MODERATE",
+  POOR = "POOR",
+  DAMAGED = "DAMAGED",
 }
 
 export enum RoadVulnerability {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH',
-  CRITICAL = 'CRITICAL',
+  LOW = "LOW",
+  MEDIUM = "MEDIUM",
+  HIGH = "HIGH",
+  CRITICAL = "CRITICAL",
 }
 
 export enum ShelterCondition {
-  GOOD = 'GOOD',
-  MODERATE = 'MODERATE',
-  NEEDS_REPAIR = 'NEEDS_REPAIR',
-  DAMAGED = 'DAMAGED',
+  GOOD = "GOOD",
+  MODERATE = "MODERATE",
+  NEEDS_REPAIR = "NEEDS_REPAIR",
+  DAMAGED = "DAMAGED",
 }
 
 export enum RouteType {
-  PRIMARY = 'PRIMARY',
-  ALTERNATIVE = 'ALTERNATIVE',
+  PRIMARY = "PRIMARY",
+  ALTERNATIVE = "ALTERNATIVE",
 }
 
 export interface User {
@@ -84,6 +85,7 @@ export interface Shelter {
   id: number;
   name: string;
   capacity: number;
+  currentOccupancy?: number;
   geometry: object;
   address?: string;
   condition: ShelterCondition;

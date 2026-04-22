@@ -7,14 +7,22 @@ async function main() {
   console.log('🌱 Starting database seeding...');
 
   // Clear existing data
-  console.log('🗑️  Clearing existing data...');
-  await prisma.evacuationRoute.deleteMany();
-  await prisma.publicFacility.deleteMany();
-  await prisma.road.deleteMany();
-  await prisma.shelter.deleteMany();
-  await prisma.hazardZone.deleteMany();
-  await prisma.earthquake.deleteMany();
-  await prisma.user.deleteMany();
+  // NOTE: 'Road' table is intentionally excluded here.
+  // Road data is managed separately via 'npm run db:import-roads' + 'npm run db:enrich-roads'.
+  // Truncating it here would wipe the 12,000+ imported road segments.
+  console.log('🗑️  Clearing existing data and resetting ID counters...');
+  const tableNames = [
+    'EvacuationRoute',
+    'PublicFacility',
+    'Shelter',
+    'HazardZone',
+    'Earthquake',
+    'User',
+  ];
+
+  for (const tableName of tableNames) {
+    await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${tableName}" RESTART IDENTITY CASCADE;`);
+  }
 
   // 1. Create Users
   console.log('👤 Creating users...');
@@ -480,49 +488,157 @@ async function main() {
 
   const shelters = [
     {
-      name: 'GOR Amongraga',
+      name: 'GOR Sewon',
       capacity: 500,
-      lat: -7.8876,
-      lon: 110.3306,
-      address: 'Jl. Veteran, Trirenggo, Bantul',
+      lat: -7.856296108383715,
+      lon: 110.3541890723684,
+      address: 'Jl. Parangtritis, Sewon, Bantul',
       condition: 'GOOD',
-      facilities: 'Toilet, Dapur Umum, Ruang P3K, Tempat Tidur',
+      facilities: 'Toilet, Dapur Umum, Ruang P3K, Area Tidur Luas',
     },
     {
-      name: 'Pendopo Kabupaten Bantul',
+      name: 'Balai Desa Kasihan',
+      capacity: 350,
+      lat: -7.8172463029681545,
+      lon: 110.32738532919865,
+      address: 'Kecamatan Kasihan, Bantul',
+      condition: 'GOOD',
+      facilities: 'Toilet, Ruang Pertemuan, Logistik',
+    },
+    {
+      name: 'Gedung Serbaguna Sedayu',
       capacity: 300,
-      lat: -7.8889,
-      lon: 110.3289,
-      address: 'Jl. R.W. Monginsidi, Bantul',
+      lat: -7.810991262758507,
+      lon: 110.26710368838619,
+      address: 'Sedayu, Bantul',
       condition: 'GOOD',
-      facilities: 'Toilet, Dapur Umum, Ruang P3K',
+      facilities: 'Toilet, Mushola, Parkir Luas',
     },
     {
-      name: 'SD Negeri Bantul Timur',
-      capacity: 200,
-      lat: -7.8901,
-      lon: 110.3345,
-      address: 'Jl. Imogiri Timur, Bantul',
+      name: 'Stadion Srandakan',
+      capacity: 1000,
+      lat: -7.983198689076997,
+      lon: 110.23214808212752,
+      address: 'Srandakan, Bantul',
       condition: 'MODERATE',
-      facilities: 'Toilet, Ruang P3K',
+      facilities: 'Lapangan Terbuka, Toilet, Akses Kendaraan Besar',
     },
     {
-      name: 'Masjid Agung Bantul',
+      name: 'Shelter Pantai Sanden',
       capacity: 400,
-      lat: -7.8867,
-      lon: 110.3278,
-      address: 'Jl. Jenderal Sudirman, Bantul',
+      lat: -7.997576382455282,
+      lon: 110.26056663018072,
+      address: 'Pesisir Sanden, Bantul',
       condition: 'GOOD',
-      facilities: 'Toilet, Dapur Umum, Tempat Wudhu',
+      facilities: 'Toilet, Tower Pantau, Ruang Evakuasi',
     },
     {
-      name: 'SMP Negeri 1 Bantul',
-      capacity: 250,
-      lat: -7.8923,
-      lon: 110.3367,
-      address: 'Jl. Raya Bantul, Bantul',
+      name: 'Pendopo Kecamatan Kretek',
+      capacity: 450,
+      lat: -8.011006967463425,
+      lon: 110.29957717156773,
+      address: 'Jl. Parangtritis Km. 21, Kretek',
       condition: 'GOOD',
-      facilities: 'Toilet, Ruang P3K, Lapangan',
+      facilities: 'Toilet, Dapur Umum, Pusat Informasi',
+    },
+    {
+      name: 'Pusat Evakuasi Pundong',
+      capacity: 300,
+      lat: -7.966843246218961,
+      lon: 110.34330084036814,
+      address: 'Pundong, Bantul',
+      condition: 'GOOD',
+      facilities: 'Toilet, Ruang Medis, Gudang Bantuan',
+    },
+    {
+      name: 'Balai Rehabilitasi Bambanglipuro',
+      capacity: 250,
+      lat: -7.937652158922342,
+      lon: 110.31667473812948,
+      address: 'Bambanglipuro, Bantul',
+      condition: 'GOOD',
+      facilities: 'Toilet, Ruang Rawat, Dapur',
+    },
+    {
+      name: 'Gedung Dakwah Pandak',
+      capacity: 200,
+      lat: -7.92690343469998,
+      lon: 110.2862179446127,
+      address: 'Pandak, Bantul',
+      condition: 'MODERATE',
+      facilities: 'Toilet, Ruang Pertemuan',
+    },
+    {
+      name: 'Shelter Utama Pajangan',
+      capacity: 300,
+      lat: -7.8699648307220444,
+      lon: 110.29329769624071,
+      address: 'Pajangan, Bantul',
+      condition: 'GOOD',
+      facilities: 'Toilet, Air Bersih, Listrik Cadangan',
+    },
+    {
+      name: 'Pendopo Kabupaten Bantul (Pusat)',
+      capacity: 600,
+      lat: -7.894107619527859,
+      lon: 110.33420878643149,
+      address: 'Pusat Kota Bantul',
+      condition: 'GOOD',
+      facilities: 'Fasilitas Lengkap, Pusat Komando, Medis',
+    },
+    {
+      name: 'GOR Jetis',
+      capacity: 400,
+      lat: -7.909525884997565,
+      lon: 110.36451410459532,
+      address: 'Jetis, Bantul',
+      condition: 'GOOD',
+      facilities: 'Toilet, Lapangan Indoor, Dapur Umum',
+    },
+    {
+      name: 'Shelter Budaya Imogiri',
+      capacity: 350,
+      lat: -7.932017147008937,
+      lon: 110.40120957934438,
+      address: 'Kawasan Wisata Imogiri',
+      condition: 'GOOD',
+      facilities: 'Toilet, Pendopo Luas, Air Bersih',
+    },
+    {
+      name: 'Camp Pengungsian Dlingo',
+      capacity: 500,
+      lat: -7.934798532886147,
+      lon: 110.45941807062738,
+      address: 'Dataran Tinggi Dlingo',
+      condition: 'MODERATE',
+      facilities: 'Tenda Besar, Toilet Portable, Dapur Umum',
+    },
+    {
+      name: 'Pusat Logistik Banguntapan',
+      capacity: 700,
+      lat: -7.8200834212668875,
+      lon: 110.40604025360231,
+      address: 'Jl. Gedongkuning, Banguntapan',
+      condition: 'GOOD',
+      facilities: 'Gudang Logistik, Toilet, Ruang P3K',
+    },
+    {
+      name: 'Gedung Pertemuan Pleret',
+      capacity: 300,
+      lat: -7.87444687784069,
+      lon: 110.41206753760906,
+      address: 'Pleret, Bantul',
+      condition: 'GOOD',
+      facilities: 'Toilet, Dapur, Area Parkir',
+    },
+    {
+      name: 'Shelter Piyungan',
+      capacity: 250,
+      lat: -7.840298523727882,
+      lon: 110.46776033793965,
+      address: 'Jl. Wonosari, Piyungan',
+      condition: 'MODERATE',
+      facilities: 'Toilet, Ruang Tunggu, Akses Jalan Raya',
     },
   ];
 
@@ -545,79 +661,12 @@ async function main() {
 
   console.log(`✅ Created ${shelters.length} shelters`);
 
-  // 5. Create Roads
-  console.log('🛣️  Creating roads...');
-
-  const roads = [
-    {
-      name: 'Jalan Imogiri Timur',
-      type: 'PROVINCIAL',
-      condition: 'GOOD',
-      vulnerability: 'LOW',
-      coordinates: [
-        [110.3289, -7.8889],
-        [110.3567, -7.9123],
-      ],
-    },
-    {
-      name: 'Jalan Parangtritis',
-      type: 'PROVINCIAL',
-      condition: 'GOOD',
-      vulnerability: 'MEDIUM',
-      coordinates: [
-        [110.3306, -7.8876],
-        [110.3123, -7.9345],
-      ],
-    },
-    {
-      name: 'Jalan Bantul-Wonosari',
-      type: 'NATIONAL',
-      condition: 'GOOD',
-      vulnerability: 'LOW',
-      coordinates: [
-        [110.3345, -7.8901],
-        [110.389, -7.8654],
-      ],
-    },
-    {
-      name: 'Jalan Pleret',
-      type: 'REGIONAL',
-      condition: 'MODERATE',
-      vulnerability: 'MEDIUM',
-      coordinates: [
-        [110.3678, -7.9012],
-        [110.3789, -7.889],
-      ],
-    },
-    {
-      name: 'Jalan Piyungan',
-      type: 'LOCAL',
-      condition: 'MODERATE',
-      vulnerability: 'MEDIUM',
-      coordinates: [
-        [110.3456, -7.9234],
-        [110.3567, -7.8723],
-      ],
-    },
-  ];
-
-  for (const road of roads) {
-    await prisma.$executeRaw`
-      INSERT INTO "Road" (name, type, condition, vulnerability, geometry, geom, "createdAt", "updatedAt")
-      VALUES (
-        ${road.name},
-        ${road.type}::"RoadType",
-        ${road.condition}::"RoadCondition",
-        ${road.vulnerability}::"RoadVulnerability",
-        ${JSON.stringify({ type: 'LineString', coordinates: road.coordinates })}::jsonb,
-        ST_GeomFromGeoJSON(${JSON.stringify({ type: 'LineString', coordinates: road.coordinates })}),
-        NOW(),
-        NOW()
-      )
-    `;
-  }
-
-  console.log(`✅ Created ${roads.length} roads`);
+  // 5. Roads — managed separately
+  // Road data is imported via: npm run db:import-roads
+  // Road names are enriched via: npm run db:enrich-roads
+  // Running those scripts will populate the Road table with 12,000+ segments from JALAN_LN_25K.geojson + NAMA_RUAS_JALAN.geojson
+  const existingRoads = await prisma.road.count();
+  console.log(`🛣️  Road table: ${existingRoads} existing road segments (managed by import-roads script, not touched by seed).`);
 
   // 6. Create Public Facilities
   console.log('🏥 Creating public facilities...');
@@ -683,14 +732,19 @@ async function main() {
 
   console.log(`✅ Created ${facilities.length} public facilities`);
 
+  const finalRoadCount = await prisma.road.count();
   console.log('✨ Seeding completed successfully!');
   console.log('\n📊 Summary:');
   console.log(`   - Users: 2`);
   console.log(`   - Earthquakes: ${earthquakes.length}`);
   console.log(`   - Hazard Zones: ${hazardZones.length}`);
   console.log(`   - Shelters: ${shelters.length}`);
-  console.log(`   - Roads: ${roads.length}`);
+  console.log(`   - Roads: ${finalRoadCount} (not cleared — managed by import-roads script)`);
   console.log(`   - Public Facilities: ${facilities.length}`);
+  console.log('');
+  console.log('💡 If Roads table is empty, run:');
+  console.log('     npm run db:import-roads  (imports geometry from JALAN_LN_25K.geojson)');
+  console.log('     npm run db:enrich-roads  (adds names from NAMA_RUAS_JALAN.geojson)');
 }
 
 main()

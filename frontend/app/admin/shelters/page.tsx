@@ -117,7 +117,8 @@ export default function AdminSheltersPage() {
 
   const handleEdit = (shelter: Shelter) => {
     setEditingShelter(shelter);
-    const coords = (shelter.geometry as { coordinates?: [number, number] })?.coordinates;
+    const coords = (shelter.geometry as { coordinates?: [number, number] })
+      ?.coordinates;
     setFormData({
       name: shelter.name,
       address: shelter.address || "",
@@ -155,32 +156,49 @@ export default function AdminSheltersPage() {
             <Home className="h-6 w-6 text-blue-500" />
             Manajemen Shelter Evakuasi
           </h2>
-          <p className="text-zinc-400 mt-1 text-sm">
-            Total {shelters.length} titik pengungsian terdaftar dalam pangkalan data.
+          <p className="text-gray-400 mt-1 text-sm">
+            Total {shelters.length} titik pengungsian terdaftar dalam pangkalan
+            data.
           </p>
         </div>
-        <Button onClick={openAddDialog} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/20">
+        <Button
+          onClick={openAddDialog}
+          className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/20"
+        >
           <Plus className="w-4 h-4 mr-2" /> Tambah Shelter
         </Button>
       </div>
 
       {/* Toolbar / Layout Spacing */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-md">
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-md">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-zinc-950/50">
-              <TableRow className="border-b border-zinc-800 hover:bg-transparent">
-                <TableHead className="font-semibold text-zinc-400">Nama Shelter</TableHead>
-                <TableHead className="font-semibold text-zinc-400">Alamat Geografis</TableHead>
-                <TableHead className="font-semibold text-zinc-400">Daya Tampung</TableHead>
-                <TableHead className="font-semibold text-zinc-400">Kondisi</TableHead>
-                <TableHead className="font-semibold text-zinc-400 text-right">Aksi</TableHead>
+            <TableHeader className="bg-gray-950/50">
+              <TableRow className="border-b border-gray-800 hover:bg-transparent">
+                <TableHead className="font-semibold text-gray-400">
+                  Nama Shelter
+                </TableHead>
+                <TableHead className="font-semibold text-gray-400">
+                  Alamat Geografis
+                </TableHead>
+                <TableHead className="font-semibold text-gray-400">
+                  Daya Tampung
+                </TableHead>
+                <TableHead className="font-semibold text-gray-400">
+                  Kondisi
+                </TableHead>
+                <TableHead className="font-semibold text-gray-400 text-right">
+                  Aksi
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12 text-zinc-500">
+                  <TableCell
+                    colSpan={5}
+                    className="text-center py-12 text-gray-500"
+                  >
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
                       Sinkronisasi pangkalan data...
@@ -189,35 +207,59 @@ export default function AdminSheltersPage() {
                 </TableRow>
               ) : shelters.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12 text-zinc-500">
+                  <TableCell
+                    colSpan={5}
+                    className="text-center py-12 text-gray-500"
+                  >
                     <Home className="w-8 h-8 opacity-20 mx-auto mb-3" />
                     Tidak ada data shelter yang dikelola.
                   </TableCell>
                 </TableRow>
               ) : (
                 shelters.map((shelter) => (
-                  <TableRow key={shelter.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
-                    <TableCell className="font-medium text-zinc-200">
+                  <TableRow
+                    key={shelter.id}
+                    className="border-b border-gray-800/50 hover:bg-gray-800/20 transition-colors"
+                  >
+                    <TableCell className="font-medium text-gray-200">
                       {shelter.name}
                     </TableCell>
-                    <TableCell className="text-zinc-400">
-                      <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3 shrink-0"/> {shelter.address || "Area Tidak Diketahui"}</div>
+                    <TableCell className="text-gray-400">
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="h-3 w-3 shrink-0" />{" "}
+                        {shelter.address || "Area Tidak Diketahui"}
+                      </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="bg-zinc-800 font-medium border-zinc-700 text-zinc-300">
-                        <Users className="w-3 h-3 mr-1 opacity-50"/> {shelter.capacity.toLocaleString()} Jiwa
+                      <Badge
+                        variant="outline"
+                        className="bg-gray-800 font-medium border-gray-700 text-gray-300"
+                      >
+                        <Users className="w-3 h-3 mr-1 opacity-50" />{" "}
+                        {shelter.capacity.toLocaleString()} Jiwa
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge className={conditionColors[shelter.condition]}>
-                        {conditionLabels[shelter.condition] || shelter.condition}
+                        {conditionLabels[shelter.condition] ||
+                          shelter.condition}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right space-x-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(shelter)} className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(shelter)}
+                        className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                      >
                         Edit
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(shelter.id)} className="text-red-400 hover:text-red-300 hover:bg-red-500/10">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(shelter.id)}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                      >
                         Hapus
                       </Button>
                     </TableCell>
@@ -230,12 +272,12 @@ export default function AdminSheltersPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-md bg-zinc-900 text-zinc-100 border-zinc-800">
+        <DialogContent className="max-w-md bg-gray-900 text-gray-100 border-gray-800">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">
               {editingShelter ? "Perbarui Shelter" : "Tambah Shelter Baru"}
             </DialogTitle>
-            <DialogDescription className="text-zinc-500">
+            <DialogDescription className="text-gray-500">
               {editingShelter
                 ? "Bila data tidak relevan, sesuaikan properti shelter di form ini."
                 : "Masukkan data logistik untuk penambahan situs bantuan/pengungsian."}
@@ -243,51 +285,69 @@ export default function AdminSheltersPage() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name" className="text-zinc-400">Nama Shelter Utama</Label>
+              <Label htmlFor="name" className="text-gray-400">
+                Nama Shelter Utama
+              </Label>
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 placeholder="Cth: Balai Desa Bantul"
-                className="bg-zinc-950 border-zinc-800 focus-visible:ring-blue-500"
+                className="bg-gray-950 border-gray-800 focus-visible:ring-blue-500"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="address" className="text-zinc-400">Informasi Alamat Terbuka</Label>
+              <Label htmlFor="address" className="text-gray-400">
+                Informasi Alamat Terbuka
+              </Label>
               <Input
                 id="address"
                 value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, address: e.target.value })
+                }
                 placeholder="Cth: Jl. Dr. Wahidin Sudiro Kusumo No.3"
-                className="bg-zinc-950 border-zinc-800 focus-visible:ring-blue-500"
+                className="bg-gray-950 border-gray-800 focus-visible:ring-blue-500"
               />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="capacity" className="text-zinc-400">Estimasi Kapasitas</Label>
+                <Label htmlFor="capacity" className="text-gray-400">
+                  Estimasi Kapasitas
+                </Label>
                 <Input
                   id="capacity"
                   type="number"
                   value={formData.capacity}
                   onChange={(e) =>
-                    setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })
+                    setFormData({
+                      ...formData,
+                      capacity: parseInt(e.target.value) || 0,
+                    })
                   }
-                  className="bg-zinc-950 border-zinc-800"
+                  className="bg-gray-950 border-gray-800"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="condition" className="text-zinc-400">Kelayakhunian</Label>
+                <Label htmlFor="condition" className="text-gray-400">
+                  Kelayakhunian
+                </Label>
                 <Select
                   value={formData.condition}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, condition: value as ShelterCondition })
+                    setFormData({
+                      ...formData,
+                      condition: value as ShelterCondition,
+                    })
                   }
                 >
-                  <SelectTrigger className="bg-zinc-950 border-zinc-800">
+                  <SelectTrigger className="bg-gray-950 border-gray-800">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
+                  <SelectContent className="bg-gray-900 border-gray-800 text-gray-100">
                     <SelectItem value="GOOD">Sangat Baik</SelectItem>
                     <SelectItem value="MODERATE">Layak Huni</SelectItem>
                     <SelectItem value="NEEDS_REPAIR">Butuh Rehap</SelectItem>
@@ -296,42 +356,59 @@ export default function AdminSheltersPage() {
                 </Select>
               </div>
             </div>
-            
+
             {/* Koordinat */}
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="lat" className="text-zinc-400">Garis Lintang (Lat)</Label>
+                <Label htmlFor="lat" className="text-gray-400">
+                  Garis Lintang (Lat)
+                </Label>
                 <Input
                   id="lat"
                   type="number"
                   step="any"
                   value={formData.lat}
                   onChange={(e) =>
-                    setFormData({ ...formData, lat: parseFloat(e.target.value) })
+                    setFormData({
+                      ...formData,
+                      lat: parseFloat(e.target.value),
+                    })
                   }
-                  className="bg-zinc-950 border-zinc-800 font-mono text-sm"
+                  className="bg-gray-950 border-gray-800 font-mono text-sm"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="lon" className="text-zinc-400">Garis Bujur (Lon)</Label>
+                <Label htmlFor="lon" className="text-gray-400">
+                  Garis Bujur (Lon)
+                </Label>
                 <Input
                   id="lon"
                   type="number"
                   step="any"
                   value={formData.lon}
                   onChange={(e) =>
-                    setFormData({ ...formData, lon: parseFloat(e.target.value) })
+                    setFormData({
+                      ...formData,
+                      lon: parseFloat(e.target.value),
+                    })
                   }
-                  className="bg-zinc-950 border-zinc-800 font-mono text-sm"
+                  className="bg-gray-950 border-gray-800 font-mono text-sm"
                 />
               </div>
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0 mt-4">
-            <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="hover:bg-zinc-800 hover:text-zinc-100">
+            <Button
+              variant="ghost"
+              onClick={() => setIsDialogOpen(false)}
+              className="hover:bg-gray-800 hover:text-gray-100"
+            >
               Urunkan
             </Button>
-            <Button onClick={handleSubmit} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/20">
+            <Button
+              onClick={handleSubmit}
+              className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/20"
+            >
               {editingShelter ? "Simpan Perbaikan" : "Validasi Titik"}
             </Button>
           </DialogFooter>

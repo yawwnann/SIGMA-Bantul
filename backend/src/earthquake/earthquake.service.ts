@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { EarthquakeGateway } from './earthquake.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Earthquake } from '@prisma/client';
 import { CreateEarthquakeDto } from './dto/create-earthquake.dto';
 
@@ -37,6 +38,33 @@ export interface BMKGGempaItem {
   Shaking: string;
 }
 
+const BANTUL_LAT = -7.886;
+const BANTUL_LON = 110.334;
+
+function getDistanceFromLatLonInKm(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) *
+      Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c; // Distance in km
+  return d;
+}
+
+function deg2rad(deg: number) {
+  return deg * (Math.PI / 180);
+}
+
 @Injectable()
 export class EarthquakeService {
   private readonly logger = new Logger(EarthquakeService.name);
@@ -47,6 +75,7 @@ export class EarthquakeService {
     private redis: RedisService,
     private earthquakeGateway: EarthquakeGateway,
     private configService: ConfigService,
+    private notifService: NotificationsService,
   ) {}
 
   private getBMKGUrl(endpoint: string): string {
@@ -174,6 +203,7 @@ export class EarthquakeService {
     };
 
     let currentId = existing?.id;
+    let isNewThreat = false;
 
     if (existing) {
       await this.prisma.earthquake.update({
@@ -183,6 +213,7 @@ export class EarthquakeService {
     } else {
       const newEq = await this.prisma.earthquake.create({ data: eqData });
       currentId = newEq.id;
+      isNewThreat = true;
     }
 
     if (currentId) {
@@ -190,6 +221,32 @@ export class EarthquakeService {
         where: { NOT: { id: currentId } },
         data: { isLatest: false },
       });
+    }
+
+    // Task 1.2: Check if it's within Bantul threat radius
+    if (isNewThreat) {
+      const dstToBantul = getDistanceFromLatLonInKm(
+        eqData.lat,
+        eqData.lon,
+        BANTUL_LAT,
+        BANTUL_LON,
+      );
+      // Base Radius formula: Magnitude^2.5 * constant (e.g. 1.0 km)
+      // Red = 1R, Yellow = 3R, Green = 6R
+      // We broadcast if it's within 6R or arbitrary large buffer
+      const R = Math.pow(eqData.magnitude, 2.5) * 1.5; // const 1.5
+      const maxImpactRadius = R * 6;
+
+      if (dstToBantul <= maxImpactRadius || dstToBantul <= 200) {
+        // Broadcast emergency notification
+        this.logger.warn(
+          `EARTHQUAKE ALERT: Mag ${eqData.magnitude} at ${dstToBantul.toFixed(2)}km from Bantul.`,
+        );
+        await this.notifService.broadcastEarthquakeAlert(
+          'Gempa Terdeteksi di Sekitar Bantul',
+          `Magnitudo: ${eqData.magnitude}, Jarak: ${dstToBantul.toFixed(0)}km. Klik untuk evakuasi.`,
+        );
+      }
     }
   }
 
@@ -364,7 +421,7 @@ export class EarthquakeService {
       if (startDate) timeFilter.gte = new Date(startDate);
       if (endDate) timeFilter.lte = new Date(endDate);
     }
-    
+
     if (region) {
       where.OR = [
         { location: { contains: region, mode: 'insensitive' } },
@@ -394,12 +451,23 @@ export class EarthquakeService {
   }
 
   async create(dto: CreateEarthquakeDto) {
-    return this.prisma.earthquake.create({
+    const eq = await this.prisma.earthquake.create({
       data: {
         ...dto,
         time: new Date(dto.time),
       },
     });
+
+    // Notify clients about this manual/simulation earthquake
+    this.earthquakeGateway.broadcastLatestEarthquake(eq);
+
+    // Optional: Only trigger heavy notification if it matches severity or is marked as emergency
+    await this.notifService.broadcastEarthquakeAlert(
+      `SIMULASI GEMPA: ${eq.location}`,
+      `Magnitudo: ${eq.magnitude}, Kedalaman: ${eq.depth}km. Ini adalah simulasi evakuasi.`,
+    );
+
+    return eq;
   }
 
   async findById(id: number) {

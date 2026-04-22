@@ -43,7 +43,10 @@ const emergencyContacts = [
 ];
 
 const emergencyChecklist = [
-  { item: "Kantong darurat dengan air mineral dan makanan ringan", done: false },
+  {
+    item: "Kantong darurat dengan air mineral dan makanan ringan",
+    done: false,
+  },
   { item: "Senter dan baterai cadangan", done: false },
   { item: "Kotak P3K", done: false },
   { item: "Dokumen penting (fotokopi KTP, KK, akta)", done: false },
@@ -55,15 +58,16 @@ const emergencyChecklist = [
 
 export default function EducationPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900 py-8">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900 py-8">
       <div className="container mx-auto px-4">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
-            <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-zinc-50 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-red-600">
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-gray-50 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-red-600">
               Edukasi Gempa Bumi
             </h1>
-            <p className="text-slate-500 dark:text-zinc-400">
-              Pelajari tips evakuasi dan SOP gempa bumi untuk kesiapan menghadapi bencana
+            <p className="text-slate-500 dark:text-gray-400">
+              Pelajari tips evakuasi dan SOP gempa bumi untuk kesiapan
+              menghadapi bencana
             </p>
           </div>
 
@@ -71,10 +75,10 @@ export default function EducationPage() {
             {evacuationTips.map((section, index) => (
               <Card
                 key={index}
-                className="border border-slate-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow duration-200 bg-white dark:bg-zinc-900"
+                className="border border-slate-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow duration-200 bg-white dark:bg-gray-900"
               >
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-zinc-100">
+                  <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-gray-100">
                     <AlertTriangle className="h-5 w-5 text-amber-500" />
                     {section.title}
                   </CardTitle>
@@ -84,10 +88,12 @@ export default function EducationPage() {
                     {section.tips.map((tip, tipIndex) => (
                       <li
                         key={tipIndex}
-                        className="flex items-start gap-2 px-4 py-2 bg-slate-50 dark:bg-zinc-800/50 rounded-md border border-slate-100 dark:border-zinc-800"
+                        className="flex items-start gap-2 px-4 py-2 bg-slate-50 dark:bg-gray-800/50 rounded-md border border-slate-100 dark:border-gray-800"
                       >
                         <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" />
-                        <span className="text-sm text-slate-700 dark:text-zinc-300">{tip}</span>
+                        <span className="text-sm text-slate-700 dark:text-gray-300">
+                          {tip}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -97,24 +103,22 @@ export default function EducationPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <Card
-              className="border border-slate-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow duration-200 bg-white dark:bg-zinc-900"
-            >
+            <Card className="border border-slate-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow duration-200 bg-white dark:bg-gray-900">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-zinc-100">
+                <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-gray-100">
                   <BookOpen className="h-5 w-5 text-blue-600" />
                   Checklist Kesiapsiagaan Darurat
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-slate-500 dark:text-zinc-400 mb-4">
+                <p className="text-sm text-slate-500 dark:text-gray-400 mb-4">
                   Siapkan barang-barang berikut dalam tas darurat:
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {emergencyChecklist.map((item, index) => (
                     <div
                       key={index}
-                      className="flex items-center gap-3 p-3 border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950 rounded-lg hover:border-blue-300 dark:hover:border-blue-500 transition-colors"
+                      className="flex items-center gap-3 p-3 border border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-950 rounded-lg hover:border-blue-300 dark:hover:border-blue-500 transition-colors"
                     >
                       <div className="h-6 w-6 flex items-center justify-center">
                         <input
@@ -123,18 +127,18 @@ export default function EducationPage() {
                           // Note: In a real app, you'd use state to manage checked items
                         />
                       </div>
-                      <span className="text-sm text-slate-700 dark:text-zinc-300">{item.item}</span>
+                      <span className="text-sm text-slate-700 dark:text-gray-300">
+                        {item.item}
+                      </span>
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
 
-            <Card
-              className="border border-slate-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow duration-200 bg-white dark:bg-zinc-900"
-            >
+            <Card className="border border-slate-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow duration-200 bg-white dark:bg-gray-900">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-zinc-100">
+                <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-gray-100">
                   <Phone className="h-5 w-5 text-red-500" />
                   Kontak Darurat
                 </CardTitle>
@@ -144,13 +148,13 @@ export default function EducationPage() {
                   {emergencyContacts.map((contact, index) => (
                     <div
                       key={index}
-                      className="p-4 border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950 rounded-lg flex items-center justify-between hover:border-blue-300 dark:hover:border-blue-500 transition-colors"
+                      className="p-4 border border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-950 rounded-lg flex items-center justify-between hover:border-blue-300 dark:hover:border-blue-500 transition-colors"
                     >
                       <div>
-                        <p className="font-medium text-slate-900 dark:text-zinc-100">
+                        <p className="font-medium text-slate-900 dark:text-gray-100">
                           {contact.name}
                         </p>
-                        <p className="text-sm text-slate-500 dark:text-zinc-400">
+                        <p className="text-sm text-slate-500 dark:text-gray-400">
                           {contact.phone}
                         </p>
                       </div>
@@ -167,9 +171,7 @@ export default function EducationPage() {
             </Card>
           </div>
 
-          <Card
-            className="border border-amber-200 dark:border-amber-900/30 shadow-sm bg-amber-50 dark:bg-amber-900/10"
-          >
+          <Card className="border border-amber-200 dark:border-amber-900/30 shadow-sm bg-amber-50 dark:bg-amber-900/10">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
@@ -178,9 +180,10 @@ export default function EducationPage() {
                     Important Reminder
                   </h3>
                   <p className="text-sm text-amber-800 dark:text-amber-300/90">
-                    Selalu perhatikan informasi dari sumber resmi seperti BMKG dan BPBD.
-                    Jangan percaya informasi hoaks yang beredar di media sosial saat terjadi bencana.
-                    Tetap tenang dan bertindak sesuai prosedur yang sudah dipelajari.
+                    Selalu perhatikan informasi dari sumber resmi seperti BMKG
+                    dan BPBD. Jangan percaya informasi hoaks yang beredar di
+                    media sosial saat terjadi bencana. Tetap tenang dan
+                    bertindak sesuai prosedur yang sudah dipelajari.
                   </p>
                 </div>
               </div>

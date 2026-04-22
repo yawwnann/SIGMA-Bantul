@@ -91,6 +91,14 @@ function isWithinBantul(lat: number, lng: number): boolean {
   return lat >= -8.05 && lat <= -7.75 && lng >= 110.15 && lng <= 110.55;
 }
 
+type CalculatedRoute = {
+  properties: {
+    totalDistance: number;
+    totalTime: number;
+    segments: number;
+  };
+};
+
 export default function MapPage() {
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;
@@ -101,8 +109,12 @@ export default function MapPage() {
   const [earthquakes, setEarthquakes] = useState<Earthquake[]>([]);
   const [routes, setRoutes] = useState<EvacuationRoute[]>([]);
   const [facilities, setFacilities] = useState<PublicFacility[]>([]);
-  const [roadNetwork, setRoadNetwork] = useState<any>(null);
-  const [calculatedRoute, setCalculatedRoute] = useState<any>(null);
+  const [roadNetwork, setRoadNetwork] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
+  const [calculatedRoute, setCalculatedRoute] =
+    useState<CalculatedRoute | null>(null);
   const [nearestShelters, setNearestShelters] = useState<Shelter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -137,7 +149,9 @@ export default function MapPage() {
       (position) => {
         const { latitude, longitude } = position.coords;
         if (!isWithinBantul(latitude, longitude)) {
-          toast.error("Maaf, lokasi GPS Anda di luar batas wilayah Kabupaten Bantul.");
+          toast.error(
+            "Maaf, lokasi GPS Anda di luar batas wilayah Kabupaten Bantul.",
+          );
           setGettingLocation(false);
           return;
         }
@@ -172,7 +186,9 @@ export default function MapPage() {
 
   const handleMapClick = (lat: number, lng: number) => {
     if (!isWithinBantul(lat, lng)) {
-      toast.error("Maaf, wilayah yang Anda pilih di luar batas wilayah Kabupaten Bantul.");
+      toast.error(
+        "Maaf, wilayah yang Anda pilih di luar batas wilayah Kabupaten Bantul.",
+      );
       return;
     }
 
@@ -189,12 +205,19 @@ export default function MapPage() {
     } else if (routeStart && !routeEnd) {
       setRouteEnd({ lat, lng });
       toast.success("Titik tujuan dipilih. Menghitung rute...");
-      
+
       setTimeout(async () => {
         try {
-          const route = await roadApi.calculateRoute(routeStart.lat, routeStart.lng, lat, lng);
+          const route = await roadApi.calculateRoute(
+            routeStart.lat,
+            routeStart.lng,
+            lat,
+            lng,
+          );
           setCalculatedRoute(route);
-          toast.success(`Rute ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`);
+          toast.success(
+            `Rute ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
+          );
         } catch (error) {
           console.error("Error calculating route:", error);
           toast.error("Gagal menghitung rute. Coba titik lain.");
@@ -205,12 +228,19 @@ export default function MapPage() {
       setRouteStart({ lat, lng });
       setSelectedLocation({ lat, lng });
       toast.success("Titik awal dipilih. Menghitung rute evakuasi...");
-      
+
       setTimeout(async () => {
         try {
-          const route = await roadApi.calculateRoute(lat, lng, routeEnd.lat, routeEnd.lng);
+          const route = await roadApi.calculateRoute(
+            lat,
+            lng,
+            routeEnd.lat,
+            routeEnd.lng,
+          );
           setCalculatedRoute(route);
-          toast.success(`Rute ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`);
+          toast.success(
+            `Rute ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
+          );
         } catch (error) {
           console.error("Error calculating route:", error);
           toast.error("Gagal menghitung rute. Coba titik lain.");
@@ -237,19 +267,30 @@ export default function MapPage() {
         setCalculatingRoute(true);
         toast.info("Menghitung rute dari titik awal terpilih...");
         try {
-          const route = await roadApi.calculateRoute(routeStart.lat, routeStart.lng, shelterLat, shelterLng);
+          const route = await roadApi.calculateRoute(
+            routeStart.lat,
+            routeStart.lng,
+            shelterLat,
+            shelterLng,
+          );
           setCalculatedRoute(route);
           setRouteEnd({ lat: shelterLat, lng: shelterLng });
-          toast.success(`Rute ke ${shelterName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`);
+          toast.success(
+            `Rute ke ${shelterName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
+          );
         } catch (error) {
           console.error("Error calculating route:", error);
-          toast.error("Gagal menghitung rute. Pastikan titik awal terhubung dengan jalan.");
+          toast.error(
+            "Gagal menghitung rute. Pastikan titik awal terhubung dengan jalan.",
+          );
         } finally {
           setCalculatingRoute(false);
         }
       } else {
         setRouteEnd({ lat: shelterLat, lng: shelterLng });
-        toast.info(`Tujuan di set ke ${shelterName}. Klik pada peta untuk memilih titik awal evakuasi Anda.`);
+        toast.info(
+          `Tujuan di set ke ${shelterName}. Klik pada peta untuk memilih titik awal evakuasi Anda.`,
+        );
       }
       return;
     }
@@ -264,33 +305,46 @@ export default function MapPage() {
       async (position) => {
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
-        
+
         if (!isWithinBantul(userLat, userLng)) {
-          toast.error("Maaf, lokasi GPS Anda di luar batas wilayah Kabupaten Bantul.");
+          toast.error(
+            "Maaf, lokasi GPS Anda di luar batas wilayah Kabupaten Bantul.",
+          );
           setCalculatingRoute(false);
           return;
         }
 
         try {
           toast.info("Menghitung rute terpendek...");
-          const route = await roadApi.calculateRoute(userLat, userLng, shelterLat, shelterLng);
+          const route = await roadApi.calculateRoute(
+            userLat,
+            userLng,
+            shelterLat,
+            shelterLng,
+          );
           setCalculatedRoute(route);
           setRouteStart({ lat: userLat, lng: userLng });
           setRouteEnd({ lat: shelterLat, lng: shelterLng });
-          toast.success(`Rute ke ${shelterName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km, Waktu: ${route.properties.totalTime.toFixed(1)} menit`);
+          toast.success(
+            `Rute ke ${shelterName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km, Waktu: ${route.properties.totalTime.toFixed(1)} menit`,
+          );
         } catch (error) {
           console.error("Error calculating route:", error);
-          toast.error("Gagal menghitung rute. Pastikan lokasi Anda terhubung dengan jalan.");
+          toast.error(
+            "Gagal menghitung rute. Pastikan lokasi Anda terhubung dengan jalan.",
+          );
         } finally {
           setCalculatingRoute(false);
         }
       },
       (error) => {
         console.error("Geolocation error:", error);
-        toast.error("Gagal mendapatkan lokasi Anda. Pastikan GPS aktif dan izin lokasi diberikan.");
+        toast.error(
+          "Gagal mendapatkan lokasi Anda. Pastikan GPS aktif dan izin lokasi diberikan.",
+        );
         setCalculatingRoute(false);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     );
   };
 
@@ -374,6 +428,11 @@ export default function MapPage() {
           {
             description: `Kedalaman: ${newEarthquake.depth} km`,
             duration: 10000,
+            action: {
+              label: "Lihat Rute",
+              onClick: () =>
+                (window.location.href = "/evacuation?emergency=true"),
+            },
           },
         );
         setEarthquakes((prev) => [newEarthquake, ...prev.slice(0, 9)]);
@@ -406,13 +465,13 @@ export default function MapPage() {
           onLocationSelect={handleMapClick}
           onEarthquakeClick={handleEarthquakeClick}
           onCalculateRoute={calculateRouteToShelter}
-          roadNetwork={roadNetwork}
-          calculatedRoute={calculatedRoute}
+          roadNetwork={roadNetwork ?? undefined}
+          calculatedRoute={calculatedRoute ?? undefined}
         />
 
         {/* Earthquake Detail Card - Top Right */}
         {selectedEarthquake && (
-          <Card className="absolute top-4 right-20 z-[1000] w-[360px] shadow-xl bg-white border-slate-200">
+          <Card className="absolute top-4 right-20 z-1000 w-[360px] shadow-xl bg-white border-slate-200">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <Badge className="bg-green-100 text-green-700 hover:bg-green-100">

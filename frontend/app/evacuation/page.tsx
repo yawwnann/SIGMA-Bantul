@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,19 +9,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { evacuationApi, roadApi } from "@/api";
-import type { Shelter } from "@/types";
-import { Compass, MapPin, Navigation, Route, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import type { Shelter, Earthquake } from "@/types";
+import {
+  Compass,
+  MapPin,
+  Navigation,
+  Route,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  Footprints,
+  Car,
+} from "lucide-react";
+import { EmergencyBanner } from "@/components/ui/emergency-banner";
 
 const MapClient = dynamic(
   () => import("@/components/map/map-client").then((mod) => mod.default),
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-full min-h-[400px] flex items-center justify-center bg-slate-100 dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800">
+      <div className="w-full h-full min-h-[400px] flex items-center justify-center bg-slate-100 dark:bg-gray-900 rounded-2xl border border-slate-200 dark:border-gray-800">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     ),
-  }
+  },
 );
 
 export default function EvacuationPage() {
@@ -31,25 +42,34 @@ export default function EvacuationPage() {
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedShelterId, setExpandedShelterId] = useState<number | null>(null);
+  const [expandedShelterId, setExpandedShelterId] = useState<number | null>(
+    null,
+  );
   const [selectedRouteGeometry, setSelectedRouteGeometry] = useState<any>(null);
-
+  const [zone, setZone] = useState<"RED" | "YELLOW" | "GREEN" | null>(null);
+  const [latestEq, setLatestEq] = useState<Earthquake | null>(null);
 
   const findNearestShelters = async (lat: string, lon: string) => {
     if (!lat || !lon) {
       setError("Harap isi koordinat lokasi Anda");
       return;
     }
+    if (zone === "RED") {
+      setError(
+        "Anda berada di ZONA MERAH. Rute evakuasi dinonaktifkan demi keselamatan. Tetap berlindung di tempat aman yang kuat!",
+      );
+      return;
+    }
 
     setCalculating(true);
     setError(null);
     try {
-      const shelters = await evacuationApi.getNearestShelter(
+      const shelters = (await evacuationApi.getNearestShelter(
         parseFloat(lat),
         parseFloat(lon),
         5,
-      ) as Shelter[];
-      
+      )) as Shelter[];
+
       setNearbyShelters(shelters);
       setExpandedShelterId(null);
       setSelectedRouteGeometry(null);
@@ -73,6 +93,13 @@ export default function EvacuationPage() {
       return;
     }
 
+    if (zone === "RED") {
+      setError(
+        "Rute evakuasi dinonaktifkan di ZONA MERAH. Tetap berlindung di tempat aman yang kuat!",
+      );
+      return;
+    }
+
     setExpandedShelterId(shelter.id);
     setSelectedRouteGeometry(null); // Clear previous map while loading
     setCalculating(true);
@@ -83,13 +110,13 @@ export default function EvacuationPage() {
         parseFloat(startLat),
         parseFloat(startLon),
         coords.coordinates[1],
-        coords.coordinates[0]
+        coords.coordinates[0],
       );
-      
+
       if (routeData) {
-         setSelectedRouteGeometry(routeData);
+        setSelectedRouteGeometry(routeData);
       } else {
-         setError("Rute menuju shelter ini tidak ditemukan.");
+        setError("Rute menuju shelter ini tidak ditemukan.");
       }
     } catch (err) {
       setError("Gagal menghitung rute ke shelter.");
@@ -101,7 +128,7 @@ export default function EvacuationPage() {
 
   const handleManualCalculate = () => findNearestShelters(startLat, startLon);
 
-  const useCurrentLocation = () => {
+  const useCurrentLocation = useCallback(() => {
     if (navigator.geolocation) {
       setCalculating(true); // show feedback sooner
       setError(null); // clear error
@@ -111,6 +138,8 @@ export default function EvacuationPage() {
           const lon = position.coords.longitude.toString();
           setStartLat(lat);
           setStartLon(lon);
+          // findNearestShelters will be called when user triggers manual calc or zone handles it,
+          // or we can call it right away if it's not RED.
           findNearestShelters(lat, lon);
         },
         (err) => {
@@ -122,17 +151,40 @@ export default function EvacuationPage() {
     } else {
       setError("Geolokasi tidak didukung oleh browser Anda");
     }
-  };
+  }, [zone]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 py-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-gray-950 py-8">
       <div className="container mx-auto px-4">
+        <EmergencyBanner
+          userLat={startLat}
+          userLon={startLon}
+          onZoneCalculated={(
+            newZone: "RED" | "YELLOW" | "GREEN" | null,
+            eq: Earthquake | null,
+          ) => {
+            setZone(newZone);
+            if (eq) setLatestEq(eq);
+            if (newZone === "RED") {
+              setNearbyShelters([]);
+              setSelectedRouteGeometry(null);
+              setError(
+                "Anda berada di ZONA MERAH. Sistem menetapkan Anda sebaiknya TETAP BERLINDUNG di tempat aman saat ini sampai guncangan sepenuhnya reda.",
+              );
+            }
+            if (newZone === null && !startLat && !startLon) {
+              // Initial ping to suggest geolocation
+              useCurrentLocation();
+            }
+          }}
+        />
+
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
-            <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-zinc-50">
-              Jalur Evakuasi
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-gray-50">
+              Manajemen Evakuasi
             </h1>
-            <p className="text-slate-500 dark:text-zinc-400">
+            <p className="text-slate-500 dark:text-gray-400">
               Hitung dan lihat rekomendasi jalur evakuasi optimal berdasarkan
               kondisi
             </p>
@@ -140,137 +192,164 @@ export default function EvacuationPage() {
 
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-6">
-              <Card className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-zinc-100">
-                  <Navigation className="h-5 w-5 text-blue-600" />
-                  Pencarian Rute Evakuasi Otomatis
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="startLat" className="text-slate-700 dark:text-zinc-300">Lintang Anda</Label>
-                    <Input
-                      id="startLat"
-                      type="number"
-                      step="any"
-                      placeholder="-7.888"
-                      value={startLat}
-                      onChange={(e) => setStartLat(e.target.value)}
-                      className="w-full border border-slate-300 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 rounded-md focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="startLon" className="text-slate-700 dark:text-zinc-300">Bujur Anda</Label>
-                    <Input
-                      id="startLon"
-                      type="number"
-                      step="any"
-                      placeholder="110.33"
-                      value={startLon}
-                      onChange={(e) => setStartLon(e.target.value)}
-                      className="w-full border border-slate-300 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 rounded-md focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                {error && <p className="text-sm font-medium text-red-500 dark:text-red-400">{error}</p>}
-
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <Button
-                    variant="outline"
-                    onClick={useCurrentLocation}
-                    disabled={calculating}
-                    className="flex-1 min-w-[200px] border-slate-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 hover:bg-slate-50 transition-colors"
-                  >
-                    <MapPin className="mr-2 h-4 w-4 text-green-500" />
-                    Gunakan Lokasi Saya (Otomatis)
-                  </Button>
-                  <Button
-                    onClick={handleManualCalculate}
-                    disabled={calculating}
-                    className="flex-1 min-w-[200px] bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
-                  >
-                    {calculating ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Navigation className="mr-2 h-4 w-4" />
-                    )}
-                    {calculating ? "Mencari rute..." : "Cari Shelter & Rute Terdekat"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Map Area */}
-            {expandedShelterId && (
-              <Card className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900 overflow-hidden">
-                <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex justify-between items-center bg-slate-50 dark:bg-zinc-900/50">
-                  <h3 className="font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
-                    <Route className="h-5 w-5 text-blue-500" />
-                    Peta Rute ke Tujuan
-                  </h3>
-                </div>
-                <div className="w-full h-[500px] relative bg-slate-100 dark:bg-zinc-950">
-                  {calculating ? (
-                    <div className="w-full h-full flex flex-col items-center justify-center">
-                      <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-3" />
-                      <p className="text-slate-500 dark:text-zinc-400 font-medium">
-                        Mengkalkulasi Rute Optimal...
-                      </p>
+              <Card className="border border-slate-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-gray-100">
+                    <Navigation className="h-5 w-5 text-blue-600" />
+                    Pencarian Rute Evakuasi Otomatis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="startLat"
+                        className="text-slate-700 dark:text-gray-300"
+                      >
+                        Lintang Anda
+                      </Label>
+                      <Input
+                        id="startLat"
+                        type="number"
+                        step="any"
+                        placeholder="-7.888"
+                        value={startLat}
+                        onChange={(e) => setStartLat(e.target.value)}
+                        className="w-full border border-slate-300 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-blue-500"
+                      />
                     </div>
-                  ) : selectedRouteGeometry ? (
-                    <MapClient
-                      shelters={nearbyShelters.filter(s => s.id === expandedShelterId)}
-                      earthquakes={[]}
-                      hazardZones={[]}
-                      facilities={[]}
-                      selectedLocation={startLat && startLon ? { lat: parseFloat(startLat), lng: parseFloat(startLon) } : null}
-                      onLocationSelect={() => {}}
-                      calculatedRoute={selectedRouteGeometry}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <p className="text-slate-500 dark:text-zinc-400">
-                        {error || "Rute tidak tersedia."}
-                      </p>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="startLon"
+                        className="text-slate-700 dark:text-gray-300"
+                      >
+                        Bujur Anda
+                      </Label>
+                      <Input
+                        id="startLon"
+                        type="number"
+                        step="any"
+                        placeholder="110.33"
+                        value={startLon}
+                        onChange={(e) => setStartLon(e.target.value)}
+                        className="w-full border border-slate-300 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 rounded-md focus:ring-2 focus:ring-blue-500"
+                      />
                     </div>
+                  </div>
+
+                  {error && (
+                    <p className="text-sm font-medium text-red-500 dark:text-red-400">
+                      {error}
+                    </p>
                   )}
-                </div>
-              </Card>
-            )}
-          </div>
 
-            <Card className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900">
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      onClick={useCurrentLocation}
+                      disabled={calculating}
+                      className="flex-1 min-w-[200px] border-slate-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 hover:bg-slate-50 transition-colors"
+                    >
+                      <MapPin className="mr-2 h-4 w-4 text-green-500" />
+                      Gunakan Lokasi Saya (Otomatis)
+                    </Button>
+                    <Button
+                      onClick={handleManualCalculate}
+                      disabled={calculating}
+                      className="flex-1 min-w-[200px] bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                    >
+                      {calculating ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Navigation className="mr-2 h-4 w-4" />
+                      )}
+                      {calculating
+                        ? "Mencari rute..."
+                        : "Cari Shelter & Rute Terdekat"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Map Area */}
+              {(expandedShelterId || latestEq) && (
+                <Card className="border border-slate-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900 overflow-hidden">
+                  <div className="p-4 border-b border-slate-100 dark:border-gray-800 flex justify-between items-center bg-slate-50 dark:bg-gray-900/50">
+                    <h3 className="font-semibold text-slate-900 dark:text-gray-100 flex items-center gap-2">
+                      <Route className="h-5 w-5 text-blue-500" />
+                      Peta Interaktif
+                    </h3>
+                  </div>
+                  <div className="w-full h-[500px] relative bg-slate-100 dark:bg-gray-950">
+                    {calculating && !selectedRouteGeometry && !latestEq ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center">
+                        <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-3" />
+                        <p className="text-slate-500 dark:text-gray-400 font-medium">
+                          Loading...
+                        </p>
+                      </div>
+                    ) : selectedRouteGeometry || latestEq ? (
+                      <MapClient
+                        shelters={nearbyShelters}
+                        earthquakes={latestEq ? [latestEq] : []}
+                        selectedEarthquake={latestEq}
+                        hazardZones={[]}
+                        facilities={[]}
+                        selectedLocation={
+                          startLat && startLon
+                            ? {
+                                lat: parseFloat(startLat),
+                                lng: parseFloat(startLon),
+                              }
+                            : null
+                        }
+                        onLocationSelect={() => {}}
+                        calculatedRoute={selectedRouteGeometry}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <p className="text-slate-500 dark:text-gray-400">
+                          {error || "Peta tidak tersedia."}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )}
+            </div>
+
+            <Card className="border border-slate-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-zinc-100">
+                <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-gray-100">
                   <MapPin className="h-5 w-5 text-green-600" />
                   Shelter Terdekat
                 </CardTitle>
               </CardHeader>
-            <CardContent>
+              <CardContent>
                 {nearbyShelters.length > 0 ? (
                   <div className="space-y-4">
                     {nearbyShelters.map((shelter) => (
                       <div
                         key={shelter.id}
-                        className="flex flex-col border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-xl overflow-hidden transition-all duration-200"
+                        className="flex flex-col border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-950 rounded-xl overflow-hidden transition-all duration-200"
                       >
                         {/* Shelter Card Main Header */}
-                        <div 
-                          className="p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                        <div
+                          className="p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                           onClick={() => {
-                            if (expandedShelterId === shelter.id && selectedRouteGeometry) {
-                                setExpandedShelterId(null);
-                                setSelectedRouteGeometry(null);
+                            if (
+                              expandedShelterId === shelter.id &&
+                              selectedRouteGeometry
+                            ) {
+                              setExpandedShelterId(null);
+                              setSelectedRouteGeometry(null);
                             } else {
-                                setExpandedShelterId(shelter.id);
+                              setExpandedShelterId(shelter.id);
                             }
                           }}
                         >
                           <div>
-                            <h4 className="font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2 text-lg">
+                            <h4 className="font-bold text-slate-900 dark:text-gray-100 flex items-center gap-2 text-lg">
                               {shelter.name}
                             </h4>
                             <div className="flex flex-wrap items-center gap-2 mt-1.5">
@@ -288,10 +367,50 @@ export default function EvacuationPage() {
                               >
                                 {shelter.condition}
                               </Badge>
-                              <span className="text-sm font-medium text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-800 px-2.5 py-0.5 rounded-full">
+                              <span className="text-sm font-medium text-slate-500 dark:text-gray-400 border border-slate-200 dark:border-gray-800 px-2.5 py-0.5 rounded-full">
                                 Kapasitas: {shelter.capacity}
                               </span>
                             </div>
+                            {/* Distance & estimated travel time */}
+                            {(shelter as any).distanceKm !== undefined && (
+                              <div className="flex flex-wrap items-center gap-2 mt-2">
+                                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 px-2.5 py-0.5 rounded-full">
+                                  <Compass className="w-3.5 h-3.5" />
+                                  {(shelter as any).distanceKm < 1
+                                    ? `${Math.round((shelter as any).distanceKm * 1000)} m`
+                                    : `${(shelter as any).distanceKm} km`}
+                                </span>
+                                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 px-2.5 py-0.5 rounded-full">
+                                  <Footprints className="w-3.5 h-3.5" />
+                                  {(() => {
+                                    const walkingMinutes = Math.round(
+                                      ((shelter as any).distanceKm / 5) * 60,
+                                    );
+                                    if (walkingMinutes < 60) {
+                                      return `~${walkingMinutes} menit jalan kaki`;
+                                    } else {
+                                      const hours = Math.floor(
+                                        walkingMinutes / 60,
+                                      );
+                                      const mins = walkingMinutes % 60;
+                                      return `~${hours} jam ${mins > 0 ? `${mins} menit` : ""} jalan kaki`;
+                                    }
+                                  })()}
+                                </span>
+                                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5 rounded-full">
+                                  <Car className="w-3.5 h-3.5" />
+                                  {(() => {
+                                    const drivingMinutes = Math.max(
+                                      1,
+                                      Math.round(
+                                        ((shelter as any).distanceKm / 40) * 60,
+                                      ),
+                                    );
+                                    return `~${drivingMinutes} menit berkendara`;
+                                  })()}
+                                </span>
+                              </div>
+                            )}
                           </div>
                           <div className="flex items-center gap-2">
                             <Button
@@ -299,38 +418,61 @@ export default function EvacuationPage() {
                                 e.stopPropagation();
                                 handleCalculateRouteForShelter(shelter);
                               }}
-                              variant={expandedShelterId === shelter.id && selectedRouteGeometry ? "secondary" : "default"}
-                              className={expandedShelterId === shelter.id && selectedRouteGeometry ? "bg-slate-100 dark:bg-zinc-800" : "bg-blue-600 hover:bg-blue-700"}
+                              variant={
+                                expandedShelterId === shelter.id &&
+                                selectedRouteGeometry
+                                  ? "secondary"
+                                  : "default"
+                              }
+                              className={
+                                expandedShelterId === shelter.id &&
+                                selectedRouteGeometry
+                                  ? "bg-slate-100 dark:bg-gray-800"
+                                  : "bg-blue-600 hover:bg-blue-700"
+                              }
                             >
                               <Route className="w-4 h-4 mr-2" />
-                              {expandedShelterId === shelter.id && selectedRouteGeometry ? "Tutup Rute" : "Lihat Rute"}
+                              {expandedShelterId === shelter.id &&
+                              selectedRouteGeometry
+                                ? "Tutup Rute"
+                                : "Lihat Rute"}
                             </Button>
                           </div>
                         </div>
 
                         {/* Expanded Content (Details & Map) */}
                         {expandedShelterId === shelter.id && (
-                           <div className="p-4 border-t border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/30 space-y-4">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                <div>
-                                  <p className="text-slate-500 font-medium mb-1">Alamat Lengkap</p>
-                                  <p className="text-slate-900 dark:text-zinc-100">{shelter.address || "Belum ada detail alamat"}</p>
-                                </div>
-                                <div>
-                                  <p className="text-slate-500 font-medium mb-1">Fasilitas Tersedia</p>
-                                  <p className="text-slate-900 dark:text-zinc-100">{shelter.facilities || "Data fasilitas belum dilengkapi"}</p>
-                                </div>
+                          <div className="p-4 border-t border-slate-100 dark:border-gray-800 bg-slate-50 dark:bg-gray-900/30 space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-slate-500 font-medium mb-1">
+                                  Alamat Lengkap
+                                </p>
+                                <p className="text-slate-900 dark:text-gray-100">
+                                  {shelter.address || "Belum ada detail alamat"}
+                                </p>
                               </div>
-                           </div>
+                              <div>
+                                <p className="text-slate-500 font-medium mb-1">
+                                  Fasilitas Tersedia
+                                </p>
+                                <p className="text-slate-900 dark:text-gray-100">
+                                  {shelter.facilities ||
+                                    "Data fasilitas belum dilengkapi"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
                         )}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-12 px-4 rounded-xl border border-dashed border-slate-200 dark:border-zinc-800 flex flex-col items-center">
-                    <Navigation className="w-8 h-8 text-slate-300 dark:text-zinc-600 mb-3" />
-                    <p className="text-slate-500 dark:text-zinc-400 font-medium">
-                      Silakan isi Koordinat Awal Anda. Sistem akan mencari shelter terdekat secara otomatis.
+                  <div className="text-center py-12 px-4 rounded-xl border border-dashed border-slate-200 dark:border-gray-800 flex flex-col items-center">
+                    <Navigation className="w-8 h-8 text-slate-300 dark:text-gray-600 mb-3" />
+                    <p className="text-slate-500 dark:text-gray-400 font-medium">
+                      Silakan isi Koordinat Awal Anda. Sistem akan mencari
+                      shelter terdekat secara otomatis.
                     </p>
                   </div>
                 )}
