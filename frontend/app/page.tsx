@@ -155,6 +155,11 @@ export default function Dashboard() {
     null,
   );
   const [calculatingRoute, setCalculatingRoute] = useState(false);
+  const [flyToLocation, setFlyToLocation] = useState<{
+    lat: number;
+    lon: number;
+    zoom?: number;
+  } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -205,14 +210,33 @@ export default function Dashboard() {
     socketService.connect();
 
     const unsubscribeEarthquake = socketService.onNewEarthquake((newEq) => {
-      toast.error(`Gempa Baru! M${newEq.magnitude} - ${newEq.location}`, {
-        description: `Kedalaman: ${newEq.depth} km`,
-        duration: 8000,
-        action: {
-          label: "Lihat Rute",
-          onClick: () => (window.location.href = "/?emergency=true"),
-        },
-      });
+      const isInsideBantul = isWithinBantul(newEq.lat, newEq.lon);
+
+      if (isInsideBantul) {
+        // Gempa di dalam wilayah Bantul → tampilkan dengan tombol rute evakuasi
+        toast.error(`🚨 Gempa M${newEq.magnitude} di ${newEq.location}`, {
+          description: `Kedalaman: ${newEq.depth} km · Dalam wilayah Bantul`,
+          duration: 10000,
+          action: {
+            label: "Lihat Rute",
+            onClick: () => (window.location.href = "/?emergency=true"),
+          },
+        });
+      } else {
+        // Gempa di luar wilayah Bantul → hanya info + fly to lokasi
+        toast.warning(`Terjadi gempa di ${newEq.location}`, {
+          description: `M${newEq.magnitude} · Kedalaman: ${newEq.depth} km · Di luar wilayah Bantul`,
+          duration: 10000,
+          action: {
+            label: "Lihat di Peta",
+            onClick: () => {
+              setFlyToLocation({ lat: newEq.lat, lon: newEq.lon, zoom: 11 });
+              setSelectedEarthquake(newEq);
+            },
+          },
+        });
+      }
+
       setEarthquakes((prev) => [newEq, ...prev.slice(0, 99)]);
     });
 
@@ -813,43 +837,118 @@ export default function Dashboard() {
 
         {/* Selected Earthquake Floating Detail */}
         {selectedEarthquake && (
-          <Card className="absolute top-20 md:top-20 left-1/2 transform -translate-x-1/2 md:-translate-x-0 md:left-4 md:right-auto z-[1000] w-[320px] md:w-[360px] shadow-2xl bg-white dark:bg-gray-950 border-slate-200 dark:border-gray-800">
-            <CardHeader className="pb-3 border-b border-slate-100 dark:border-gray-800">
-              <div className="flex items-center justify-between">
-                <Badge className="bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400">
-                  Pusat Gempa Terpilih
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={handleCloseEarthquakeDetail}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4 space-y-3">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-gray-100 leading-tight">
+          <div
+            className="absolute top-40 right-4 z-[1000] w-[300px] md:w-[340px] shadow-2xl rounded-xl overflow-hidden"
+            style={{
+              background: "#030712",
+              color: "#f1f5f9",
+              fontFamily: "system-ui,sans-serif",
+              border: "1px solid rgba(255,255,255,0.07)",
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: "12px 14px 10px",
+                borderBottom: "1px solid #111827",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <span
+                style={{
+                  background: "#7f1d1d",
+                  color: "#f87171",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  padding: "3px 10px",
+                  borderRadius: "999px",
+                }}
+              >
+                Pusat Gempa Terpilih
+              </span>
+              <button
+                onClick={handleCloseEarthquakeDetail}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#6b7280",
+                  cursor: "pointer",
+                  padding: "2px",
+                  lineHeight: 1,
+                }}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {/* Body */}
+            <div style={{ padding: "12px 14px 14px" }}>
+              <h3
+                style={{
+                  fontSize: "17px",
+                  fontWeight: 700,
+                  marginBottom: "12px",
+                  lineHeight: 1.3,
+                }}
+              >
                 {selectedEarthquake.location}
               </h3>
-              <div className="flex justify-between items-center text-sm p-2 bg-slate-50 dark:bg-gray-900 rounded">
-                <span className="text-slate-600 dark:text-gray-400 font-medium">
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "7px 8px",
+                  background: "#111827",
+                  borderRadius: "6px",
+                  marginBottom: "6px",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "13px",
+                    color: "#9ca3af",
+                    fontWeight: 500,
+                  }}
+                >
                   Magnitudo
                 </span>
-                <span className="font-bold text-red-600 dark:text-red-400">
+                <span
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    color: "#f87171",
+                  }}
+                >
                   M {selectedEarthquake.magnitude}
                 </span>
               </div>
-              <div className="flex justify-between items-center text-sm p-2 bg-slate-50 dark:bg-gray-900 rounded">
-                <span className="text-slate-600 dark:text-gray-400 font-medium">
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "7px 8px",
+                  background: "#111827",
+                  borderRadius: "6px",
+                  marginBottom: "10px",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "13px",
+                    color: "#9ca3af",
+                    fontWeight: 500,
+                  }}
+                >
                   Kedalaman
                 </span>
-                <span className="font-bold text-slate-800 dark:text-gray-200">
+                <span style={{ fontSize: "13px", fontWeight: 700 }}>
                   {selectedEarthquake.depth} Km
                 </span>
               </div>
-              <p className="text-xs text-slate-500 pb-2">
+              <p style={{ fontSize: "11px", color: "#6b7280" }}>
                 {new Date(selectedEarthquake.time).toLocaleDateString("id-ID", {
                   day: "2-digit",
                   month: "long",
@@ -859,8 +958,8 @@ export default function Dashboard() {
                 })}{" "}
                 WIB
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Routing Info Form/Floating Detail */}
@@ -999,6 +1098,7 @@ export default function Dashboard() {
             roadNetwork={roadNetwork}
             calculatedRoute={calculatedRoute}
             selectedEarthquake={selectedEarthquake}
+            flyToLocation={flyToLocation}
           />
         </div>
       </div>
@@ -1083,7 +1183,7 @@ export default function Dashboard() {
               ) : (
                 earthquakes.slice(0, 5).map((eq, i) => (
                   <div
-                    key={eq.id || i}
+                    key={`eq-${eq.id}-${i}`}
                     className="p-4 hover:bg-slate-50 dark:hover:bg-gray-900/30 transition-colors cursor-pointer"
                     onClick={() => handleEarthquakeClick(eq)}
                   >
@@ -1122,10 +1222,12 @@ export default function Dashboard() {
                           Waktu Waktu
                         </span>
                         <span className="text-sm font-medium text-slate-700 dark:text-gray-300">
-                          {eq.time ? new Date(eq.time).toLocaleDateString("id-ID", {
-                            month: "short",
-                            day: "numeric",
-                          }) : "-"}
+                          {eq.time
+                            ? new Date(eq.time).toLocaleDateString("id-ID", {
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : "-"}
                         </span>
                       </div>
                     </div>

@@ -119,10 +119,14 @@ export class EarthquakeService {
     }
 
     const eq: BMKGAutoGempa = data.Infogempa.gempa;
-    await this.upsertAutoGempa(eq);
+    const savedEarthquake = await this.upsertAutoGempa(eq);
 
     await this.redis.setJson('bmkg:latest', eq, 300);
-    this.earthquakeGateway.broadcastLatestEarthquake(eq);
+
+    // Send the saved earthquake from database (with proper field names), not raw BMKG data
+    if (savedEarthquake) {
+      this.earthquakeGateway.broadcastLatestEarthquake(savedEarthquake);
+    }
 
     this.logger.log('Synced latest earthquake from autogempa.json');
   }
@@ -202,17 +206,18 @@ export class EarthquakeService {
       isLatest: true,
     };
 
+    let savedEarthquake;
     let currentId = existing?.id;
     let isNewThreat = false;
 
     if (existing) {
-      await this.prisma.earthquake.update({
+      savedEarthquake = await this.prisma.earthquake.update({
         where: { id: existing.id },
         data: eqData,
       });
     } else {
-      const newEq = await this.prisma.earthquake.create({ data: eqData });
-      currentId = newEq.id;
+      savedEarthquake = await this.prisma.earthquake.create({ data: eqData });
+      currentId = savedEarthquake.id;
       isNewThreat = true;
     }
 
@@ -248,6 +253,8 @@ export class EarthquakeService {
         );
       }
     }
+
+    return savedEarthquake;
   }
 
   private async upsertGempaTerbaru(data: BMKGAutoGempa) {

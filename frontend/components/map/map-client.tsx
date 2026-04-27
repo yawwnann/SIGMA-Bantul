@@ -26,6 +26,7 @@ interface MapClientProps {
   roadNetwork?: Record<string, unknown>;
   calculatedRoute?: Record<string, unknown>;
   selectedEarthquake?: Earthquake | null;
+  flyToLocation?: { lat: number; lon: number; zoom?: number } | null;
 }
 
 const BANTUL_CENTER: [number, number] = [-7.888, 110.33];
@@ -99,6 +100,7 @@ export default function MapClient({
   roadNetwork,
   calculatedRoute,
   selectedEarthquake,
+  flyToLocation,
 }: MapClientProps) {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -331,93 +333,82 @@ export default function MapClient({
           },
         ).addTo(shelterLayerGroupRef.current!);
 
-        // Create enhanced popup with better styling and dark mode support
-        const conditionBadge =
+        // Create popup with inline styles (no Tailwind dependency inside Leaflet)
+        const badgeColor =
           shelter.condition === "GOOD"
-            ? '<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Baik</span>'
+            ? { bg: "#166534", text: "#4ade80", label: "Baik" }
             : shelter.condition === "MODERATE"
-              ? '<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Sedang</span>'
-              : '<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">Buruk</span>';
+              ? { bg: "#854d0e", text: "#facc15", label: "Sedang" }
+              : { bg: "#7f1d1d", text: "#f87171", label: "Buruk" };
+
+        const available = Math.max(
+          0,
+          shelter.capacity - (shelter.currentOccupancy ?? 0),
+        );
 
         const popupContent = `
-          <div class="shelter-popup-content min-w-50 bg-slate-900 dark:bg-slate-950 text-white rounded-lg overflow-hidden">
-            <!-- Badge & Close -->
-            <div class="px-4 pt-3 pb-2">
-              ${conditionBadge}
+          <div style="width:260px;background:#030712;color:#f1f5f9;border-radius:12px;overflow:hidden;font-family:system-ui,sans-serif;">
+            <!-- Badge -->
+            <div style="padding:12px 14px 8px;">
+              <span style="display:inline-block;background:${badgeColor.bg};color:${badgeColor.text};font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:0.03em;">${badgeColor.label}</span>
             </div>
-            
+
             <!-- Title & Address -->
-            <div class="px-4 pb-3">
-              <h3 class="font-bold text-base mb-1">${shelter.name}</h3>
-              <div class="flex items-center gap-1 text-xs text-slate-300">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                  <circle cx="12" cy="10" r="3"/>
-                </svg>
-                ${shelter.address ? shelter.address : "Pleret, Bantul"}
+            <div style="padding:0 14px 10px;">
+              <div style="font-size:15px;font-weight:700;line-height:1.3;margin-bottom:5px;">${shelter.name}</div>
+              <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:#94a3b8;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                ${shelter.address || "Bantul, DIY"}
               </div>
             </div>
 
             <!-- Capacity Grid -->
-            <div class="grid grid-cols-2 gap-2 px-4 pb-3">
-              <div class="bg-slate-800 rounded-lg p-3">
-                <div class="flex items-center gap-1 mb-2">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                  </svg>
-                  <span class="text-[10px] text-slate-400 font-semibold uppercase">KAPASITAS</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 10px;">
+              <div style="background:#111827;border-radius:8px;padding:10px;">
+                <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <span style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">KAPASITAS</span>
                 </div>
-                <p class="text-xl font-bold">${shelter.capacity}</p>
+                <div style="font-size:22px;font-weight:800;">${shelter.capacity}</div>
               </div>
-              <div class="bg-slate-800 rounded-lg p-3">
-                <div class="flex items-center gap-1 mb-2">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                  </svg>
-                  <span class="text-[10px] text-slate-400 font-semibold uppercase">TERSEDIA</span>
+              <div style="background:#111827;border-radius:8px;padding:10px;">
+                <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                  <span style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">TERSEDIA</span>
                 </div>
-                <p class="text-xl font-bold">${Math.max(0, shelter.capacity - (shelter.currentOccupancy ?? 0))}</p>
+                <div style="font-size:22px;font-weight:800;">${available}</div>
               </div>
             </div>
 
-            <!-- Details Section -->
-            <div class="px-4 pb-3 space-y-2 text-sm">
-              <div class="flex justify-between">
-                <span class="text-slate-400">Jenis Fasilitas</span>
-                <span class="font-medium text-slate-100">Ruang Publik</span>
+            <!-- Details -->
+            <div style="padding:0 14px 12px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 8px;margin-bottom:4px;background:#111827;border-radius:6px;">
+                <span style="font-size:12px;color:#9ca3af;">Jenis Fasilitas</span>
+                <span style="font-size:12px;font-weight:600;">Ruang Publik</span>
               </div>
-              <div class="flex justify-between">
-                <span class="text-slate-400">Jam Operasional</span>
-                <span class="font-medium text-slate-100">24 Jam (Siaga)</span>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 8px;background:#111827;border-radius:6px;">
+                <span style="font-size:12px;color:#9ca3af;">Jam Operasional</span>
+                <span style="font-size:12px;font-weight:600;">24 Jam (Siaga)</span>
               </div>
             </div>
 
             <!-- Button -->
-            <button 
+            <button
               id="route-btn-${shelter.id}"
-              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 transition-colors flex items-center justify-center gap-2"
+              style="width:100%;background:#2563eb;color:#fff;font-size:13px;font-weight:700;padding:11px 16px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:0.02em;"
+              onmouseover="this.style.background='#1d4ed8'"
+              onmouseout="this.style.background='#2563eb'"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 11l19-9-9 19-2-8-8-2z"/>
-              </svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
               Rute Evakuasi
             </button>
           </div>
         `;
 
-        const isDark =
-          resolvedTheme === "dark" ||
-          (resolvedTheme === "system" &&
-            window.matchMedia?.("(prefers-color-scheme: dark)")?.matches);
-
         const popup = marker.bindPopup(popupContent, {
-          maxWidth: 300,
-          minWidth: 240,
-          className: `custom-shelter-popup ${isDark ? "dark" : ""}`,
+          maxWidth: 280,
+          minWidth: 260,
+          className: "custom-shelter-popup",
           closeButton: true,
           autoPan: true,
           autoPanPadding: [50, 50],
@@ -713,6 +704,27 @@ export default function MapClient({
       activeCircleRef.current = radiusGroup;
     }
   }, [selectedEarthquake]);
+
+  useEffect(() => {
+    if (!mapRef.current || !flyToLocation) return;
+    // Validate coordinates before flying
+    if (
+      typeof flyToLocation.lat !== "number" ||
+      typeof flyToLocation.lon !== "number" ||
+      isNaN(flyToLocation.lat) ||
+      isNaN(flyToLocation.lon)
+    ) {
+      console.warn("Invalid flyToLocation coordinates:", flyToLocation);
+      return;
+    }
+    mapRef.current.flyTo(
+      [flyToLocation.lat, flyToLocation.lon],
+      flyToLocation.zoom ?? 13,
+      {
+        duration: 1.5,
+      },
+    );
+  }, [flyToLocation]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -1092,15 +1104,36 @@ export default function MapClient({
       </div>
 
       <style jsx global>{`
+        .custom-shelter-popup .leaflet-popup-content-wrapper {
+          padding: 0;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .custom-shelter-popup .leaflet-popup-content {
+          margin: 0;
+          line-height: 1.4;
+        }
+        .custom-shelter-popup .leaflet-popup-tip-container {
+          display: none;
+        }
+        .custom-shelter-popup .leaflet-popup-close-button {
+          color: #94a3b8 !important;
+          font-size: 18px !important;
+          top: 8px !important;
+          right: 8px !important;
+          z-index: 10;
+        }
+        .custom-shelter-popup .leaflet-popup-close-button:hover {
+          color: #f1f5f9 !important;
+        }
         .custom-popup .leaflet-popup-content-wrapper {
           border-radius: 12px;
           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
         }
         .custom-popup .leaflet-popup-content {
           margin: 0;
-        }
-        .custom-popup button:hover {
-          transform: translateY(-1px);
         }
       `}</style>
     </div>

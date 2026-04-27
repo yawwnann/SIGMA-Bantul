@@ -76,4 +76,19 @@ export class ShelterController {
   async delete(@Param('id', ParseIntPipe) id: number) {
     return this.shelterService.delete(id);
   }
+
+  @Put(':id/assign')
+  @UseGuards(JwtAuthGuard)
+  async assignOfficer(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('officerId', ParseIntPipe) officerId: number,
+  ) {
+    return this.shelterService.assignOfficer(id, officerId);
+  }
+
+  @Delete(':id/assign')
+  @UseGuards(JwtAuthGuard)
+  async unassignOfficer(@Param('id', ParseIntPipe) id: number) {
+    return this.shelterService.unassignOfficer(id);
+  }
 }

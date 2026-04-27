@@ -640,30 +640,22 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
                 </p>
               </div>
 
-              {/* Kerentanan */}
+              {/* Kerentanan - READ ONLY (dihitung otomatis dari zona BPBD) */}
               <div className="space-y-2">
                 <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
                   Kerentanan Bencana
                 </Label>
-                <Select
-                  value={formData.vulnerability}
-                  onValueChange={(v) =>
-                    setFormData({
-                      ...formData,
-                      vulnerability: v as RoadVulnerability,
-                    })
-                  }
-                >
-                  <SelectTrigger className="bg-gray-950 border-gray-700 text-sm text-gray-100">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-900 border-gray-700 text-gray-100">
-                    <SelectItem value="LOW">🟢 Aman (Rendah)</SelectItem>
-                    <SelectItem value="MEDIUM">🟡 Waspada (Sedang)</SelectItem>
-                    <SelectItem value="HIGH">🟠 Bahaya (Tinggi)</SelectItem>
-                    <SelectItem value="CRITICAL">🔴 Zona Kritis</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="bg-gray-950/50 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-gray-100">
+                  <Badge
+                    className={vulnerabilityColors[formData.vulnerability]}
+                  >
+                    {vulnerabilityLabels[formData.vulnerability]}
+                  </Badge>
+                </div>
+                <p className="text-[11px] text-amber-500">
+                  ⚠️ Kerentanan dihitung otomatis berdasarkan zona rawan gempa
+                  BPBD
+                </p>
               </div>
 
               {/* Panjang */}

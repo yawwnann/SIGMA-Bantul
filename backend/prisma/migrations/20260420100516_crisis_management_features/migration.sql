@@ -1,0 +1,1 @@
+-- Crisis management features migration placeholder

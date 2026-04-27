@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { authApi } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Shield, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("admin@bantul.go.id");
@@ -24,15 +25,23 @@ export default function AdminLoginPage() {
       console.log("Login response:", res);
 
       const token = res.access_token;
+      const user = res.user;
       console.log("Token:", token);
+      console.log("User role:", user.role);
       console.log(
         "LocalStorage token after login:",
         localStorage.getItem("token"),
       );
 
       if (token) {
-        // Hard navigate — tidak pakai router agar tidak ada middleware interference
-        window.location.replace("/admin/dashboard");
+        // Redirect based on user role
+        if (user.role === "SHELTER_OFFICER") {
+          window.location.replace("/officer/dashboard");
+        } else if (user.role === "ADMIN") {
+          window.location.replace("/admin/dashboard");
+        } else {
+          window.location.replace("/");
+        }
       } else {
         setErrorMsg("Token tidak diterima dari server.");
         setIsLoading(false);
@@ -70,7 +79,13 @@ export default function AdminLoginPage() {
               marginBottom: "1rem",
             }}
           >
-            <Shield style={{ width: 40, height: 40, color: "#60a5fa" }} />
+            <Image
+              src="/logo.png"
+              alt="SIGMA Bantul Logo"
+              width={40}
+              height={40}
+              style={{ objectFit: "contain" }}
+            />
           </div>
           <h1
             style={{

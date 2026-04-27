@@ -8,27 +8,17 @@ import { authApi } from "@/api";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-import {
-  LayoutDashboard,
-  Home,
-  Building2,
-  Map as MapIcon,
-  LogOut,
-  ShieldAlert,
-  UserCircle,
-  Settings,
-} from "lucide-react";
+import { LayoutDashboard, LogOut, ShieldAlert, UserCircle } from "lucide-react";
 
 const menuItems = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/shelters", label: "Shelter Evakuasi", icon: Home },
-  { href: "/admin/officers", label: "Petugas Shelter", icon: ShieldAlert },
-  { href: "/admin/facilities", label: "Fasilitas Umum", icon: Building2 },
-  { href: "/admin/routes", label: "Manajemen Evakuasi", icon: MapIcon },
-  { href: "/admin/simulation", label: "Simulasi Gempa", icon: Settings },
+  {
+    href: "/officer/dashboard",
+    label: "Dashboard Saya",
+    icon: LayoutDashboard,
+  },
 ];
 
-export default function AdminLayout({
+export default function OfficerLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -36,28 +26,26 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [checked, setChecked] = useState(false);
   const [authed, setAuthed] = useState(false);
-  const [user, setUser] = useState<{ name: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
 
   useEffect(() => {
-    // Login page needs no auth check
-    if (pathname === "/admin/login") {
-      setChecked(true);
+    const token = localStorage.getItem("token");
+    const currentUser = authApi.getCurrentUser();
+
+    if (!token || !currentUser) {
+      window.location.replace("/admin/login");
       return;
     }
 
-    const token = localStorage.getItem("token");
-    console.log(
-      "[AdminLayout] token in localStorage:",
-      token ? "EXISTS" : "MISSING",
-    );
-
-    if (!token) {
+    // Check if user has SHELTER_OFFICER role
+    if (currentUser.role !== "SHELTER_OFFICER") {
+      toast.error("Akses ditolak. Anda bukan petugas shelter.");
       window.location.replace("/admin/login");
       return;
     }
 
     setAuthed(true);
-    setUser(authApi.getCurrentUser());
+    setUser(currentUser);
     setChecked(true);
   }, [pathname]);
 
@@ -67,12 +55,6 @@ export default function AdminLayout({
     window.location.replace("/admin/login");
   };
 
-  // Always render login page as-is
-  if (pathname === "/admin/login") {
-    return <>{children}</>;
-  }
-
-  // Show spinner while checking token
   if (!checked) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
@@ -88,7 +70,7 @@ export default function AdminLayout({
       {/* Sidebar */}
       <aside className="hidden md:flex w-64 bg-gray-950 border-r border-gray-800 flex-col fixed inset-y-0 left-0 z-50 shadow-xl">
         <div className="h-16 px-6 border-b border-gray-800 flex items-center gap-3">
-          <div className="p-1.5 bg-blue-500/10 rounded-lg border border-blue-500/20">
+          <div className="p-1.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
             <Image
               src="/logo.png"
               alt="SIGMA Bantul Logo"
@@ -102,14 +84,14 @@ export default function AdminLayout({
               SIGMA Bantul
             </h1>
             <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium mt-1 leading-none">
-              Admin Panel
+              Petugas Shelter
             </p>
           </div>
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-4 px-2">
-            Menu Utama
+            Menu Petugas
           </div>
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -120,7 +102,7 @@ export default function AdminLayout({
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-blue-600 font-semibold text-white shadow-md shadow-blue-900/20"
+                    ? "bg-emerald-600 font-semibold text-white shadow-md shadow-emerald-900/20"
                     : "text-gray-400 hover:bg-gray-800/80 hover:text-gray-100"
                 }`}
               >
@@ -140,10 +122,10 @@ export default function AdminLayout({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs text-gray-500 font-medium leading-tight">
-                Logged in as
+                Petugas Shelter
               </p>
               <p className="text-sm font-semibold text-gray-200 truncate leading-tight">
-                {user?.name || "Administrator"}
+                {user?.name || "Officer"}
               </p>
             </div>
           </div>
@@ -154,17 +136,17 @@ export default function AdminLayout({
             className="w-full bg-gray-900 border-gray-700 text-gray-400 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-colors justify-start px-3"
           >
             <LogOut className="w-4 h-4 mr-2" />
-            Logout Account
+            Logout
           </Button>
         </div>
       </aside>
 
       {/* Main */}
-      <main className="flex-1 min-h-screen md:pl-64">
+      <main className="flex-1 min-h-screen ">
         <header className="h-16 bg-gray-900 border-b border-gray-800 px-6 flex items-center sticky top-0 z-40">
           <h2 className="text-base font-semibold text-gray-100">
             {menuItems.find((item) => item.href === pathname)?.label ||
-              "Admin Panel"}
+              "Dashboard Petugas"}
           </h2>
         </header>
         <div className="p-6">{children}</div>

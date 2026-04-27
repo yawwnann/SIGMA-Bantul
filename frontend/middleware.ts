@@ -6,7 +6,22 @@ const publicPaths = ["/admin/login"];
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/admin") && !publicPaths.some((path) => pathname.startsWith(path))) {
+  // Handle officer routes
+  if (pathname.startsWith("/officer")) {
+    const token = request.cookies.get("auth_token")?.value;
+
+    if (!token) {
+      const loginUrl = new URL("/admin/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // Handle admin routes
+  if (
+    pathname.startsWith("/admin") &&
+    !publicPaths.some((path) => pathname.startsWith(path))
+  ) {
     const token = request.cookies.get("auth_token")?.value;
 
     if (!token) {
@@ -20,5 +35,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/officer/:path*"],
 };

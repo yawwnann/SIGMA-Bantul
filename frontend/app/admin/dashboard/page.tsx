@@ -30,6 +30,9 @@ import {
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [rawStats, setRawStats] = useState<Record<string, unknown> | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,11 +43,18 @@ export default function AdminDashboardPage() {
           shelterApi.getStatistics(),
           evacuationApi.getStatistics(),
         ]);
+        // dashboardData shape: { earthquake: { total, last30Days }, shelter, latestEarthquake, ... }
+        const data = dashboardData as unknown as {
+          earthquake?: { total?: number };
+          latestEarthquake?: DashboardStats["latestEarthquake"];
+          earthquakeCount?: number;
+        };
+        setRawStats(dashboardData as unknown as Record<string, unknown>);
         setStats({
           shelterCount: shelterStats.total || 0,
-          earthquakeCount: dashboardData.earthquakeCount || 0,
+          earthquakeCount: data.earthquake?.total ?? data.earthquakeCount ?? 0,
           routeCount: routeStats.totalRoutes || 0,
-          latestEarthquake: dashboardData.latestEarthquake,
+          latestEarthquake: data.latestEarthquake,
         });
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
@@ -316,7 +326,7 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Map Placeholder Panel */}
+        {/* Spatial Stats Panel */}
         <Card className="md:col-span-2 border border-gray-800 bg-gray-900/60 backdrop-blur-md shadow-xl rounded-2xl overflow-hidden flex flex-col">
           <CardHeader className="border-b border-gray-800/50 bg-gray-900/50 pb-4">
             <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
@@ -327,34 +337,85 @@ export default function AdminDashboardPage() {
               Ringkasan geospasial titik rawan dan evakuasi
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-0 flex-1 relative min-h-[300px] bg-gray-950/50">
-            {/* Elegant placeholder pattern */}
-            <div
-              className="absolute inset-0 opacity-[0.03]"
-              style={{
-                backgroundImage: "radial-gradient(#fff 1px, transparent 1px)",
-                backgroundSize: "20px 20px",
-              }}
-            ></div>
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 z-10">
-              <div className="w-16 h-16 rounded-2xl bg-gray-900 border border-gray-800 flex items-center justify-center mb-4 shadow-2xl relative overflow-hidden">
-                <div className="absolute inset-0 bg-blue-500/10 animate-pulse"></div>
-                <Map className="w-8 h-8 text-blue-500/50" />
+          <CardContent className="p-5 flex-1">
+            {rawStats ? (
+              (() => {
+                const eq = rawStats.earthquake as
+                  | Record<string, number>
+                  | undefined;
+                const hz = rawStats.hazardZone as
+                  | Record<string, number>
+                  | undefined;
+                const sh = rawStats.shelter as
+                  | Record<string, number>
+                  | undefined;
+                const ev = rawStats.evacuation as
+                  | Record<string, number>
+                  | undefined;
+                const items = [
+                  {
+                    label: "Gempa 30 Hari",
+                    value: eq?.last30Days ?? 0,
+                    sub: `Rata-rata M${eq?.averageMagnitude ?? 0}`,
+                    color: "text-red-400",
+                    bg: "bg-red-500/10",
+                    border: "border-red-500/20",
+                  },
+                  {
+                    label: "Zona Rawan",
+                    value: hz?.total ?? 0,
+                    sub: `${hz?.critical ?? 0} Kritis · ${hz?.high ?? 0} Tinggi`,
+                    color: "text-orange-400",
+                    bg: "bg-orange-500/10",
+                    border: "border-orange-500/20",
+                  },
+                  {
+                    label: "Kapasitas Shelter",
+                    value: sh?.totalCapacity ?? 0,
+                    sub: `${sh?.goodCondition ?? 0} kondisi baik`,
+                    color: "text-blue-400",
+                    bg: "bg-blue-500/10",
+                    border: "border-blue-500/20",
+                  },
+                  {
+                    label: "Rute Evakuasi",
+                    value: ev?.totalRoutes ?? 0,
+                    sub: `Skor rata-rata ${ev?.averageScore ?? 0}`,
+                    color: "text-emerald-400",
+                    bg: "bg-emerald-500/10",
+                    border: "border-emerald-500/20",
+                  },
+                ];
+                return (
+                  <div className="grid grid-cols-2 gap-4 h-full">
+                    {items.map((item) => (
+                      <div
+                        key={item.label}
+                        className={`rounded-xl border ${item.border} ${item.bg} p-5 flex flex-col justify-between`}
+                      >
+                        <span className="text-sm text-gray-400 font-medium">
+                          {item.label}
+                        </span>
+                        <div>
+                          <div
+                            className={`text-4xl font-black tracking-tight ${item.color}`}
+                          >
+                            {item.value.toLocaleString("id-ID")}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {item.sub}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-600 text-sm">
+                Memuat data...
               </div>
-              <p className="font-medium text-gray-400">
-                Statistik Peta Interaktif
-              </p>
-              <p className="text-sm mt-1 max-w-sm text-center">
-                Fitur visualisasi ringkasan pemetaan admin akan dimuat di area
-                ini.
-              </p>
-              <Button
-                variant="outline"
-                className="mt-4 border-gray-800 hover:bg-gray-800 bg-gray-900"
-              >
-                Muat Peta <Activity className="w-4 h-4 ml-2" />
-              </Button>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>

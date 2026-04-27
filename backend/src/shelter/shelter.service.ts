@@ -1,7 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateShelterDto } from './dto/create-shelter.dto';
-import { ShelterCondition } from '@prisma/client';
+import { ShelterCondition, UserRole } from '@prisma/client';
 
 @Injectable()
 export class ShelterService {
@@ -15,11 +19,25 @@ export class ShelterService {
 
   async findAll(params?: { condition?: ShelterCondition }) {
     const where = params?.condition ? { condition: params.condition } : {};
-    return this.prisma.shelter.findMany({ where });
+    return this.prisma.shelter.findMany({
+      where,
+      include: {
+        officer: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
   }
 
   async findById(id: number) {
-    const shelter = await this.prisma.shelter.findUnique({ where: { id } });
+    const shelter = await this.prisma.shelter.findUnique({
+      where: { id },
+      include: {
+        officer: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
     if (!shelter) {
       throw new NotFoundException(`Shelter with ID ${id} not found`);
     }
@@ -37,6 +55,32 @@ export class ShelterService {
   async delete(id: number) {
     await this.findById(id);
     return this.prisma.shelter.delete({ where: { id } });
+  }
+
+  async assignOfficer(shelterId: number, officerId: number) {
+    await this.findById(shelterId);
+
+    const officer = await this.prisma.user.findFirst({
+      where: { id: officerId, role: UserRole.SHELTER_OFFICER },
+    });
+    if (!officer) {
+      throw new BadRequestException('User bukan petugas shelter yang valid');
+    }
+
+    return this.prisma.shelter.update({
+      where: { id: shelterId },
+      data: { officerId },
+      include: { officer: { select: { id: true, name: true, email: true } } },
+    });
+  }
+
+  async unassignOfficer(shelterId: number) {
+    await this.findById(shelterId);
+    return this.prisma.shelter.update({
+      where: { id: shelterId },
+      data: { officerId: null },
+      include: { officer: { select: { id: true, name: true, email: true } } },
+    });
   }
 
   async updateOccupancy(id: number, currentOccupancy: number) {

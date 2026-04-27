@@ -23,6 +23,7 @@ import { WebsocketModule } from './websocket/websocket.module';
 import { EarthquakeAnalysisModule } from './earthquake-analysis/earthquake-analysis.module';
 import { BpbdRiskModule } from './bpbd-risk/bpbd-risk.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { OfficerModule } from './officer/officer.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     EarthquakeAnalysisModule,
     BpbdRiskModule,
     NotificationsModule,
+    OfficerModule,
   ],
   controllers: [AppController],
   providers: [

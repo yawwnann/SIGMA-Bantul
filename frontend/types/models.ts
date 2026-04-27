@@ -90,6 +90,12 @@ export interface Shelter {
   address?: string;
   condition: ShelterCondition;
   facilities?: string;
+  officerId?: number;
+  officer?: {
+    id: number;
+    name: string;
+    email: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -153,4 +159,30 @@ export interface DashboardStats {
   earthquakeCount: number;
   routeCount: number;
   latestEarthquake?: Earthquake;
+}
+
+export interface Officer {
+  id: number;
+  email: string;
+  name: string;
+  role: UserRole;
+  createdAt: string;
+  managedShelters?: Shelter[];
+}
+
+export interface OfficerStats {
+  totalShelters: number;
+  totalCapacity: number;
+  totalOccupancy: number;
+  occupancyRate: number;
+}
+
+export interface OfficerDashboardResponse {
+  officer: {
+    id: number;
+    name: string;
+    email: string;
+  };
+  shelters: Shelter[];
+  statistics: OfficerStats;
 }

@@ -21,7 +21,9 @@ async function main() {
   ];
 
   for (const tableName of tableNames) {
-    await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${tableName}" RESTART IDENTITY CASCADE;`);
+    await prisma.$executeRawUnsafe(
+      `TRUNCATE TABLE "${tableName}" RESTART IDENTITY CASCADE;`,
+    );
   }
 
   // 1. Create Users
@@ -46,7 +48,25 @@ async function main() {
     },
   });
 
-  console.log(`✅ Created ${2} users`);
+  const officer1 = await prisma.user.create({
+    data: {
+      email: 'petugas1@bantul.go.id',
+      password: hashedPassword,
+      name: 'Budi Santoso',
+      role: 'SHELTER_OFFICER',
+    },
+  });
+
+  const officer2 = await prisma.user.create({
+    data: {
+      email: 'petugas2@bantul.go.id',
+      password: hashedPassword,
+      name: 'Siti Nurhaliza',
+      role: 'SHELTER_OFFICER',
+    },
+  });
+
+  console.log(`✅ Created ${4} users (1 admin, 1 user, 2 officers)`);
 
   // 2. Create Earthquakes (30 historical earthquakes in Bantul area)
   console.log('🌍 Creating earthquake records...');
@@ -666,7 +686,9 @@ async function main() {
   // Road names are enriched via: npm run db:enrich-roads
   // Running those scripts will populate the Road table with 12,000+ segments from JALAN_LN_25K.geojson + NAMA_RUAS_JALAN.geojson
   const existingRoads = await prisma.road.count();
-  console.log(`🛣️  Road table: ${existingRoads} existing road segments (managed by import-roads script, not touched by seed).`);
+  console.log(
+    `🛣️  Road table: ${existingRoads} existing road segments (managed by import-roads script, not touched by seed).`,
+  );
 
   // 6. Create Public Facilities
   console.log('🏥 Creating public facilities...');
@@ -735,16 +757,22 @@ async function main() {
   const finalRoadCount = await prisma.road.count();
   console.log('✨ Seeding completed successfully!');
   console.log('\n📊 Summary:');
-  console.log(`   - Users: 2`);
+  console.log(`   - Users: 4 (1 admin, 1 user, 2 officers)`);
   console.log(`   - Earthquakes: ${earthquakes.length}`);
   console.log(`   - Hazard Zones: ${hazardZones.length}`);
   console.log(`   - Shelters: ${shelters.length}`);
-  console.log(`   - Roads: ${finalRoadCount} (not cleared — managed by import-roads script)`);
+  console.log(
+    `   - Roads: ${finalRoadCount} (not cleared — managed by import-roads script)`,
+  );
   console.log(`   - Public Facilities: ${facilities.length}`);
   console.log('');
   console.log('💡 If Roads table is empty, run:');
-  console.log('     npm run db:import-roads  (imports geometry from JALAN_LN_25K.geojson)');
-  console.log('     npm run db:enrich-roads  (adds names from NAMA_RUAS_JALAN.geojson)');
+  console.log(
+    '     npm run db:import-roads  (imports geometry from JALAN_LN_25K.geojson)',
+  );
+  console.log(
+    '     npm run db:enrich-roads  (adds names from NAMA_RUAS_JALAN.geojson)',
+  );
 }
 
 main()
