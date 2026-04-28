@@ -165,6 +165,12 @@ export default function Dashboard() {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    const handleClear = () => setSelectedEarthquake(null);
+    window.addEventListener("clearEarthquakeSelection", handleClear);
+    return () => window.removeEventListener("clearEarthquakeSelection", handleClear);
+  }, []);
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);

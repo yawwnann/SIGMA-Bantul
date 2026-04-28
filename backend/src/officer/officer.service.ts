@@ -9,6 +9,7 @@ import { CreateOfficerDto } from './dto/create-officer.dto';
 import { UpdateOfficerDto } from './dto/update-officer.dto';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { ShelterStatus } from '@prisma/client';
 
 @Injectable()
 export class OfficerService {
@@ -183,9 +184,22 @@ export class OfficerService {
       );
     }
 
-    return this.prisma.shelter.update({
-      where: { id: shelterId },
-      data: { currentOccupancy: occupancy },
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.shelter.update({
+        where: { id: shelterId },
+        data: { currentOccupancy: occupancy },
+      });
+
+      await tx.shelterLog.create({
+        data: {
+          shelterId,
+          officerId,
+          action: 'UPDATE_OCCUPANCY',
+          changes: { old: shelter.currentOccupancy, new: occupancy },
+        },
+      });
+
+      return updated;
     });
   }
 
@@ -204,9 +218,61 @@ export class OfficerService {
       throw new BadRequestException('Kondisi shelter tidak valid');
     }
 
-    return this.prisma.shelter.update({
+    const shelter = await this.prisma.shelter.findUnique({
       where: { id: shelterId },
-      data: { condition: condition as any },
+    });
+    if (!shelter) throw new NotFoundException('Shelter tidak ditemukan');
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.shelter.update({
+        where: { id: shelterId },
+        data: { condition: condition as any },
+      });
+
+      await tx.shelterLog.create({
+        data: {
+          shelterId,
+          officerId,
+          action: 'UPDATE_CONDITION',
+          changes: { old: shelter.condition, new: condition },
+        },
+      });
+
+      return updated;
+    });
+  }
+
+  async updateStatusByOfficer(
+    shelterId: number,
+    status: ShelterStatus,
+    officerId: number,
+  ) {
+    const isOwner = await this.validateOfficerOwnership(shelterId, officerId);
+    if (!isOwner) {
+      throw new BadRequestException('Anda tidak memiliki akses ke shelter ini');
+    }
+
+    const shelter = await this.prisma.shelter.findUnique({
+      where: { id: shelterId },
+    });
+    if (!shelter) throw new NotFoundException('Shelter tidak ditemukan');
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.shelter.update({
+        where: { id: shelterId },
+        data: { status },
+      });
+
+      await tx.shelterLog.create({
+        data: {
+          shelterId,
+          officerId,
+          action: 'UPDATE_STATUS',
+          changes: { old: shelter.status, new: status },
+        },
+      });
+
+      return updated;
     });
   }
 
@@ -234,6 +300,7 @@ export class OfficerService {
         capacity: true,
         currentOccupancy: true,
         condition: true,
+        status: true,
         geometry: true,
         createdAt: true,
         updatedAt: true,

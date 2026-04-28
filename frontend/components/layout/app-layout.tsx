@@ -10,7 +10,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { collapsed, toggleMobile } = useSidebar();
   const pathname = usePathname();
 
-  if (pathname.startsWith("/admin")) {
+  if (pathname.startsWith("/admin") || pathname.startsWith("/officer")) {
     return <div className="flex-1 w-full flex flex-col">{children}</div>;
   }
 

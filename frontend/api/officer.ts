@@ -36,6 +36,7 @@ export interface DashboardResponse {
     capacity: number;
     currentOccupancy: number;
     condition: string;
+    status: string;
     geometry: any;
   }>;
   statistics: OfficerStats;
@@ -110,6 +111,16 @@ export const officerApi = {
       `/officer/shelters/${shelterId}/condition`,
       {
         condition,
+      },
+    );
+    return response.data;
+  },
+
+  updateStatus: async (shelterId: number, status: string) => {
+    const response = await apiClient.patch(
+      `/officer/shelters/${shelterId}/status`,
+      {
+        status,
       },
     );
     return response.data;

@@ -8,13 +8,18 @@ import { authApi } from "@/api";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-import { LayoutDashboard, LogOut, ShieldAlert, UserCircle } from "lucide-react";
+import { LayoutDashboard, LogOut, ShieldAlert, UserCircle, Map } from "lucide-react";
 
 const menuItems = [
   {
     href: "/officer/dashboard",
     label: "Dashboard Saya",
     icon: LayoutDashboard,
+  },
+  {
+    href: "/officer/map",
+    label: "Monitoring Peta",
+    icon: Map,
   },
 ];
 
@@ -142,14 +147,16 @@ export default function OfficerLayout({
       </aside>
 
       {/* Main */}
-      <main className="flex-1 min-h-screen ">
-        <header className="h-16 bg-gray-900 border-b border-gray-800 px-6 flex items-center sticky top-0 z-40">
+      <main className="flex-1 min-h-screen md:pl-64 flex flex-col">
+        <header className="h-16 shrink-0 bg-gray-900 border-b border-gray-800 px-6 flex items-center sticky top-0 z-40">
           <h2 className="text-base font-semibold text-gray-100">
             {menuItems.find((item) => item.href === pathname)?.label ||
               "Dashboard Petugas"}
           </h2>
         </header>
-        <div className="p-6">{children}</div>
+        <div className={pathname === "/officer/map" ? "flex-1" : "p-6 flex-1"}>
+          {children}
+        </div>
       </main>
     </div>
   );

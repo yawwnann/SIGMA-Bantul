@@ -147,6 +147,12 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    const handleClear = () => setSelectedEarthquake(null);
+    window.addEventListener("clearEarthquakeSelection", handleClear);
+    return () => window.removeEventListener("clearEarthquakeSelection", handleClear);
+  }, []);
+
+  useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
     } else {

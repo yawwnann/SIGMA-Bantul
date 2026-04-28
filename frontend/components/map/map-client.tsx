@@ -179,6 +179,7 @@ export default function MapClient({
 
     // Add click handler for map
     mapRef.current.on("click", (e: L.LeafletMouseEvent) => {
+      window.dispatchEvent(new CustomEvent("clearEarthquakeSelection"));
       if (onLocationSelectRef.current) {
         onLocationSelectRef.current(e.latlng.lat, e.latlng.lng);
       }
@@ -470,7 +471,12 @@ export default function MapClient({
 
     if (!visibleLayers.earthquakes || earthquakes.length === 0) return;
 
-    earthquakes
+    const activeEqId = selectedEarthquake?.id;
+    const earthquakesToRender = activeEqId != null
+      ? earthquakes.filter(eq => eq.id === activeEqId)
+      : earthquakes;
+
+    earthquakesToRender
       .filter((eq) => eq.magnitude != null && eq.lat != null && eq.lon != null)
       .forEach((eq) => {
         // Konsep Radius: Red (Dampak Keras), Yellow (Menengah), Green (Terasa ringan)
@@ -590,7 +596,7 @@ export default function MapClient({
           }
         });
       });
-
+      const earthquakeToShow = selectedEarthquake ? earthquakes.filter(eq => eq.id === selectedEarthquake.id) : earthquakes;
     const hideRadiusHandler = () => {
       if (activeCircleRef.current) {
         activeCircleRef.current.eachLayer((layer) => {
@@ -609,7 +615,7 @@ export default function MapClient({
     return () => {
       window.removeEventListener("hideEarthquakeRadius", hideRadiusHandler);
     };
-  }, [earthquakes, visibleLayers.earthquakes]);
+  }, [earthquakes, visibleLayers.earthquakes, selectedEarthquake]);
 
   useEffect(() => {
     if (!mapRef.current || !hazardLayerGroupRef.current) return;
@@ -957,7 +963,7 @@ export default function MapClient({
       {isMapReady && mapInstance && (
         <BpbdRiskLayer map={mapInstance} visible={visibleLayers.bpbdRisk} />
       )}
-      <div className="absolute top-4 left-4 md:left-4 z-1000 flex flex-col items-start gap-2">
+      <div className="absolute top-4 left-4 md:left-4 z-[1000] flex flex-col items-start gap-2">
         <button
           onClick={(e) => {
             e.stopPropagation();

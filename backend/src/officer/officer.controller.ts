@@ -16,7 +16,7 @@ import { UpdateOfficerDto } from './dto/update-officer.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole } from '@prisma/client';
+import { UserRole, ShelterStatus } from '@prisma/client';
 
 // Admin-only officer management
 @Controller('officers')
@@ -104,6 +104,19 @@ export class OfficerDashboardController {
     return this.officerService.updateConditionByOfficer(
       shelterId,
       condition,
+      req.user.userId,
+    );
+  }
+
+  @Patch('shelters/:id/status')
+  updateStatus(
+    @Param('id', ParseIntPipe) shelterId: number,
+    @Body('status') status: ShelterStatus,
+    @Request() req: { user: { userId: number } },
+  ) {
+    return this.officerService.updateStatusByOfficer(
+      shelterId,
+      status,
       req.user.userId,
     );
   }

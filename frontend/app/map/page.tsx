@@ -386,10 +386,16 @@ export default function MapPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const handleClear = () => setSelectedEarthquake(null);
+    window.addEventListener("clearEarthquakeSelection", handleClear);
+    return () => window.removeEventListener("clearEarthquakeSelection", handleClear);
+  }, []);
+
   const wilayahStatus = getStatusWilayah(earthquakes);
 
   return (
-    <div className="flex h-screen">
+    <div className="flex w-full h-[calc(100vh-1rem)] md:h-full">
       <div className="flex-1 relative">
         <MapClient
           shelters={shelters}

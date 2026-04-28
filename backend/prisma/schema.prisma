@@ -50,6 +50,12 @@ enum ShelterCondition {
   DAMAGED
 }
 
+enum ShelterStatus {
+  ACTIVE
+  STANDBY
+  UNAVAILABLE
+}
+
 enum RouteType {
   PRIMARY
   ALTERNATIVE
@@ -112,6 +118,7 @@ model Shelter {
   geom             Unsupported("geometry(Point, 4326)")?
   address          String?
   condition        ShelterCondition
+  status           ShelterStatus    @default(ACTIVE)
   facilities       String?
   officerId        Int?
   officer          User?            @relation(fields: [officerId], references: [id], onDelete: SetNull)
@@ -129,6 +136,9 @@ model Road {
   vulnerability   RoadVulnerability
   length          Float?
   safe_cost       Float?
+  cost            Float?
+  length_m        Float?
+  reverse_cost    Float?
   source          Int?
   target          Int?
   bpbdRiskLevel   BpbdRiskLevel?
@@ -198,4 +208,13 @@ model PushSubscription {
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model ShelterLog {
+  id          Int      @id @default(autoincrement())
+  shelterId   Int
+  officerId   Int
+  action      String
+  changes     Json
+  createdAt   DateTime @default(now())
 }
