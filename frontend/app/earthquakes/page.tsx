@@ -57,8 +57,8 @@ function getMagnitudeLabel(magnitude: number): string {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 p-3 rounded-lg shadow-lg">
-        <p className="font-semibold text-slate-900 dark:text-gray-100 mb-1">
+      <div className="bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-3 rounded-lg shadow-lg">
+        <p className="font-semibold text-slate-900 dark:text-zinc-100 mb-1">
           {label}
         </p>
         <p className="text-orange-600 dark:text-orange-400 text-sm">
@@ -147,19 +147,22 @@ export default function EarthquakesPage() {
     }));
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-gray-950 py-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 py-8">
       <div className="container mx-auto px-4 ">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-gray-50">
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-zinc-50">
               Data Gempa Bumi
             </h1>
           </div>
-          <p className="text-slate-600 dark:text-gray-400">
+          <p className="text-slate-600 dark:text-zinc-400">
             Histori dan data gempa bumi dari BMKG untuk wilayah Bantul dan
             sekitarnya
           </p>
+          <div className="mt-3 text-xs italic text-slate-500 dark:text-slate-400">
+            *Sumber data gempa pada sistem ini berasal dari BMKG (Badan Meteorologi, Klimatologi, dan Geofisika) melalui layanan Data Gempabumi Terbuka BMKG.
+          </div>
         </div>
 
         {/* BENTO GRID: Stats & Line Chart */}
@@ -167,17 +170,17 @@ export default function EarthquakesPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6">
             {/* Left: 2x2 Stats Grid (4 columns width on desktop) */}
             <div className="lg:col-span-4 grid grid-cols-2 gap-4">
-              <Card className="border border-slate-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900 flex flex-col justify-center">
+              <Card className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900 flex flex-col justify-center">
                 <CardContent className="p-4 sm:pt-6">
                   <div className="flex flex-col items-start gap-2">
                     <div className="p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                       <Layers className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-slate-900 dark:text-gray-100 leading-none">
+                      <p className="text-2xl font-bold text-slate-900 dark:text-zinc-100 leading-none">
                         {stats.total}
                       </p>
-                      <p className="text-xs font-medium text-slate-500 dark:text-gray-500 mt-1 uppercase tracking-wider">
+                      <p className="text-xs font-medium text-slate-500 dark:text-zinc-500 mt-1 uppercase tracking-wider">
                         Total Gempa
                       </p>
                     </div>
@@ -185,7 +188,7 @@ export default function EarthquakesPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border border-slate-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900 flex flex-col justify-center">
+              <Card className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900 flex flex-col justify-center">
                 <CardContent className="p-4 sm:pt-6">
                   <div className="flex flex-col items-start gap-2">
                     <div className="p-2.5 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
@@ -195,7 +198,7 @@ export default function EarthquakesPage() {
                       <p className="text-2xl font-bold text-orange-600 dark:text-orange-500 leading-none">
                         {stats.highMagnitude}
                       </p>
-                      <p className="text-xs font-medium text-slate-500 dark:text-gray-500 mt-1 uppercase tracking-wider">
+                      <p className="text-xs font-medium text-slate-500 dark:text-zinc-500 mt-1 uppercase tracking-wider">
                         Magnitudo ≥ 5
                       </p>
                     </div>
@@ -203,17 +206,17 @@ export default function EarthquakesPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border border-slate-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900 flex flex-col justify-center">
+              <Card className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900 flex flex-col justify-center">
                 <CardContent className="p-4 sm:pt-6">
                   <div className="flex flex-col items-start gap-2">
                     <div className="p-2.5 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
                       <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-slate-900 dark:text-gray-100 leading-none">
+                      <p className="text-2xl font-bold text-slate-900 dark:text-zinc-100 leading-none">
                         {stats.avgMagnitude}
                       </p>
-                      <p className="text-xs font-medium text-slate-500 dark:text-gray-500 mt-1 uppercase tracking-wider">
+                      <p className="text-xs font-medium text-slate-500 dark:text-zinc-500 mt-1 uppercase tracking-wider">
                         Rata-rata Mag
                       </p>
                     </div>
@@ -221,20 +224,20 @@ export default function EarthquakesPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border border-slate-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900 flex flex-col justify-center">
+              <Card className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900 flex flex-col justify-center">
                 <CardContent className="p-4 sm:pt-6">
                   <div className="flex flex-col items-start gap-2">
                     <div className="p-2.5 bg-green-50 dark:bg-green-900/20 rounded-lg">
                       <Activity className="h-5 w-5 text-green-600 dark:text-green-400" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-slate-900 dark:text-gray-100 leading-none">
+                      <p className="text-2xl font-bold text-slate-900 dark:text-zinc-100 leading-none">
                         {stats.avgDepth}
-                        <span className="text-sm text-slate-500 dark:text-gray-500 ml-1">
+                        <span className="text-sm text-slate-500 dark:text-zinc-500 ml-1">
                           km
                         </span>
                       </p>
-                      <p className="text-xs font-medium text-slate-500 dark:text-gray-500 mt-1 uppercase tracking-wider">
+                      <p className="text-xs font-medium text-slate-500 dark:text-zinc-500 mt-1 uppercase tracking-wider">
                         Rata Kedalaman
                       </p>
                     </div>
@@ -244,10 +247,10 @@ export default function EarthquakesPage() {
             </div>
 
             {/* Right: Trend Chart (8 columns width on desktop) */}
-            <Card className="lg:col-span-8 border border-slate-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900 flex flex-col">
+            <Card className="lg:col-span-8 border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900 flex flex-col">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold text-slate-800 dark:text-gray-200 flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-slate-500 dark:text-gray-400" />
+                <CardTitle className="text-sm font-semibold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-slate-500 dark:text-zinc-400" />
                   Tren Magnitudo (30 Gempa Terakhir)
                 </CardTitle>
               </CardHeader>
@@ -298,8 +301,8 @@ export default function EarthquakesPage() {
         )}
 
         {/* Streamlined Filter Toolbar */}
-        <div className="bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-xl p-3 mb-6 flex flex-col sm:flex-row items-center gap-3 shadow-sm">
-          <div className="flex items-center gap-2 px-3 border-r border-slate-200 dark:border-gray-800 sm:w-auto w-full text-sm font-medium text-slate-700 dark:text-gray-300">
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3 mb-6 flex flex-col sm:flex-row items-center gap-3 shadow-sm">
+          <div className="flex items-center gap-2 px-3 border-r border-slate-200 dark:border-zinc-800 sm:w-auto w-full text-sm font-medium text-slate-700 dark:text-zinc-300">
             <Filter className="h-4 w-4 text-blue-600" />
             <span className="hidden sm:inline">Filter</span>
           </div>
@@ -311,7 +314,7 @@ export default function EarthquakesPage() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="pl-9 h-10 w-full border-slate-200 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="pl-9 h-10 w-full border-slate-200 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <span className="text-slate-400 hidden sm:block">-</span>
@@ -321,7 +324,7 @@ export default function EarthquakesPage() {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="pl-9 h-10 w-full border border-slate-200 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="pl-9 h-10 w-full border border-slate-200 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -329,7 +332,7 @@ export default function EarthquakesPage() {
               <select
                 value={regionFilter}
                 onChange={(e) => setRegionFilter(e.target.value)}
-                className="h-10 w-full border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-950 text-slate-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 px-3 cursor-pointer appearance-none"
+                className="h-10 w-full border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-slate-700 dark:text-zinc-100 rounded-lg focus:ring-2 focus:ring-blue-500 px-3 cursor-pointer appearance-none"
               >
                 <option value="Bantul">Khusus Bantul</option>
                 <option value="">Semua Wilayah</option>
@@ -354,7 +357,7 @@ export default function EarthquakesPage() {
                     fetchEarthquakes({ start: "", end: "", reg: "Bantul" });
                   }}
                   variant="outline"
-                  className="border-slate-200 dark:border-gray-800 dark:hover:bg-gray-800 dark:text-gray-300 hover:bg-slate-50 h-10 w-10 p-0 rounded-lg flex items-center justify-center shrink-0"
+                  className="border-slate-200 dark:border-zinc-800 dark:hover:bg-zinc-800 dark:text-zinc-300 hover:bg-slate-50 h-10 w-10 p-0 rounded-lg flex items-center justify-center shrink-0"
                   title="Reset Filter"
                 >
                   <RefreshCw className="h-4 w-4" />
@@ -418,17 +421,17 @@ export default function EarthquakesPage() {
                 .map((eq, index) => (
                   <Card
                     key={eq.id}
-                    className="border border-slate-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-all bg-white dark:bg-gray-900 overflow-hidden flex flex-col"
+                    className="border border-slate-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all bg-white dark:bg-zinc-900 overflow-hidden flex flex-col"
                   >
-                    <div className="flex flex-row items-stretch border-b border-slate-100 dark:border-gray-800">
+                    <div className="flex flex-row items-stretch border-b border-slate-100 dark:border-zinc-800">
                       {/* Magnitude Sidebar/Badge indicator */}
                       <div
                         className={`w-20 sm:w-24 flex flex-col items-center justify-center p-3 ${getMagnitudeColor(eq.magnitude)} shrink-0`}
                       >
-                        <div className="text-3xl font-bold text-white dark:text-gray-50 tracking-tighter">
+                        <div className="text-3xl font-bold text-white dark:text-zinc-50 tracking-tighter">
                           {eq.magnitude}
                         </div>
-                        <div className="text-[9px] uppercase tracking-widest font-semibold text-white/80 dark:text-gray-300">
+                        <div className="text-[9px] uppercase tracking-widest font-semibold text-white/80 dark:text-zinc-300">
                           Mag
                         </div>
                       </div>
@@ -447,18 +450,18 @@ export default function EarthquakesPage() {
                               Live
                             </Badge>
                           )}
-                          <span className="text-[10px] text-slate-400 dark:text-gray-500 ml-auto">
+                          <span className="text-[10px] text-slate-400 dark:text-zinc-500 ml-auto">
                             #{earthquakes.length - index}
                           </span>
                         </div>
                         <h3
-                          className="text-base font-bold text-slate-900 dark:text-gray-100 leading-tight mb-1 line-clamp-1"
+                          className="text-base font-bold text-slate-900 dark:text-zinc-100 leading-tight mb-1 line-clamp-1"
                           title={eq.location}
                         >
                           {eq.location}
                         </h3>
                         <p
-                          className="text-xs text-slate-500 dark:text-gray-400 flex items-center gap-1 line-clamp-1"
+                          className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-1 line-clamp-1"
                           title={eq.region}
                         >
                           <MapPin className="h-3 w-3 shrink-0" />
@@ -467,22 +470,22 @@ export default function EarthquakesPage() {
                       </div>
                     </div>
 
-                    <div className="p-3 sm:p-4 bg-slate-50/50 dark:bg-gray-950 flex flex-col gap-3">
+                    <div className="p-3 sm:p-4 bg-slate-50/50 dark:bg-zinc-950 flex flex-col gap-3">
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="flex items-center gap-2 px-2 border-l-2 border-slate-200 dark:border-gray-700">
+                        <div className="flex items-center gap-2 px-2 border-l-2 border-slate-200 dark:border-zinc-700">
                           <Clock className="h-4 w-4 text-blue-500 opacity-70 shrink-0" />
                           <div>
-                            <p className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider font-semibold">
+                            <p className="text-[10px] text-slate-500 dark:text-zinc-500 uppercase tracking-wider font-semibold">
                               Waktu
                             </p>
-                            <p className="text-xs font-medium text-slate-900 dark:text-gray-200">
+                            <p className="text-xs font-medium text-slate-900 dark:text-zinc-200">
                               {new Date(eq.time).toLocaleTimeString("id-ID", {
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })}{" "}
                               WIB
                             </p>
-                            <p className="text-[10px] text-slate-400 dark:text-gray-500 mt-0.5">
+                            <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-0.5">
                               {new Date(eq.time).toLocaleDateString("id-ID", {
                                 day: "numeric",
                                 month: "short",
@@ -491,13 +494,13 @@ export default function EarthquakesPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 px-2 border-l-2 border-slate-200 dark:border-gray-700">
+                        <div className="flex items-center gap-2 px-2 border-l-2 border-slate-200 dark:border-zinc-700">
                           <Activity className="h-4 w-4 text-green-500 opacity-70 shrink-0" />
                           <div>
-                            <p className="text-[10px] text-slate-500 dark:text-gray-500 uppercase tracking-wider font-semibold">
+                            <p className="text-[10px] text-slate-500 dark:text-zinc-500 uppercase tracking-wider font-semibold">
                               Kedalaman
                             </p>
-                            <p className="text-sm font-bold text-slate-900 dark:text-gray-200 mt-0.5">
+                            <p className="text-sm font-bold text-slate-900 dark:text-zinc-200 mt-0.5">
                               {eq.depth}{" "}
                               <span className="text-[10px] font-normal text-slate-500">
                                 km
@@ -526,10 +529,10 @@ export default function EarthquakesPage() {
 
             {/* Pagination Controls */}
             {Math.ceil(earthquakes.length / ITEMS_PER_PAGE) > 1 && (
-              <div className="flex items-center justify-center gap-4 mt-8 bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-xl p-3 shadow-sm">
+              <div className="flex items-center justify-center gap-4 mt-8 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-sm">
                 <Button
                   variant="outline"
-                  className="border-slate-200 dark:border-gray-700 dark:hover:bg-gray-800 dark:text-gray-300"
+                  className="border-slate-200 dark:border-zinc-700 dark:hover:bg-zinc-800 dark:text-zinc-300"
                   onClick={() =>
                     setCurrentPage((prev) => Math.max(prev - 1, 1))
                   }
@@ -537,13 +540,13 @@ export default function EarthquakesPage() {
                 >
                   Sebelumnya
                 </Button>
-                <div className="text-sm font-medium text-slate-700 dark:text-gray-400">
+                <div className="text-sm font-medium text-slate-700 dark:text-zinc-400">
                   Halaman {currentPage} dari{" "}
                   {Math.ceil(earthquakes.length / ITEMS_PER_PAGE)}
                 </div>
                 <Button
                   variant="outline"
-                  className="border-slate-200 dark:border-gray-700 dark:hover:bg-gray-800 dark:text-gray-300"
+                  className="border-slate-200 dark:border-zinc-700 dark:hover:bg-zinc-800 dark:text-zinc-300"
                   onClick={() =>
                     setCurrentPage((prev) =>
                       Math.min(

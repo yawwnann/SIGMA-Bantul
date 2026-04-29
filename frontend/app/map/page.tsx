@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
+import { useTheme } from "next-themes";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -116,6 +117,9 @@ export default function MapPage() {
   );
   const [calculatingRoute, setCalculatingRoute] = useState(false);
 
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   const handleCloseEarthquakeDetail = () => {
     setSelectedEarthquake(null);
     // Trigger event to hide radius circle
@@ -206,6 +210,7 @@ export default function MapPage() {
     } else if (!routeEnd) {
       setRouteEnd({ lat, lng });
       toast.success("Titik tujuan dipilih. Menghitung rute...");
+      setCalculatingRoute(true);
       // Auto calculate route
       setTimeout(async () => {
         try {
@@ -223,6 +228,8 @@ export default function MapPage() {
           console.error("Error calculating route:", error);
           toast.error("Gagal menghitung rute. Coba titik lain.");
           setRouteEnd(null);
+        } finally {
+          setCalculatingRoute(false);
         }
       }, 100);
     } else {
@@ -253,6 +260,7 @@ export default function MapPage() {
         console.log('User location:', { userLat, userLng });
         
         try {
+          setCalculatingRoute(true);
           toast.info("Menghitung rute terpendek...");
           const route = await roadApi.calculateRoute(
             userLat,
@@ -274,6 +282,8 @@ export default function MapPage() {
           toast.error(
             "Gagal menghitung rute. Pastikan lokasi Anda terhubung dengan jalan.",
           );
+        } finally {
+          setCalculatingRoute(false);
         }
       },
       (error) => {
@@ -397,6 +407,18 @@ export default function MapPage() {
   return (
     <div className="flex w-full h-[calc(100vh-1rem)] md:h-full">
       <div className="flex-1 relative">
+        {/* Loading Indicator Overlay */}
+        {calculatingRoute && (
+          <div className="absolute inset-0 z-[2000] bg-white/40 backdrop-blur-[2px] flex flex-col items-center justify-center rounded-xl transition-all duration-300">
+            <div className="bg-white/95 dark:bg-slate-900/95 px-8 py-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
+              <Loader2 className="h-12 w-12 animate-spin text-blue-600 dark:text-blue-500" />
+              <div className="text-center">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Menghitung Rute</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Mencari jalur tercepat dan teraman...</p>
+              </div>
+            </div>
+          </div>
+        )}
         <MapClient
           shelters={shelters}
           hazardZones={hazardZones}
@@ -666,6 +688,9 @@ export default function MapPage() {
                                   {earthquakes[0].location}
                                 </div>
                               )}
+                            <div className="text-[10px] text-slate-400 dark:text-slate-500 pt-2 border-t mt-2 italic text-center leading-tight">
+                              Sumber data gempa pada sistem ini berasal dari BMKG (Badan Meteorologi, Klimatologi, dan Geofisika) melalui layanan Data Gempabumi Terbuka BMKG.
+                            </div>
                           </div>
                         </CardContent>
                       </Card>

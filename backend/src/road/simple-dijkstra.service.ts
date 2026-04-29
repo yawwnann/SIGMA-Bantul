@@ -13,6 +13,7 @@ interface Edge {
   roadId: number;
   distance: number;
   cost: number;
+  coords: number[][];
 }
 
 interface Graph {
@@ -22,7 +23,21 @@ interface Graph {
 
 @Injectable()
 export class SimpleDijkstraService {
+  private cachedGraph: Graph | null = null;
+
   constructor(private prisma: PrismaService) {}
+
+  public clearCache() {
+    this.cachedGraph = null;
+  }
+
+  private async getGraph(): Promise<Graph> {
+    if (!this.cachedGraph) {
+      console.log('Building in-memory road graph for routing...');
+      this.cachedGraph = await this.buildGraph();
+    }
+    return this.cachedGraph;
+  }
 
   /**
    * Build graph from road network
@@ -80,6 +95,7 @@ export class SimpleDijkstraService {
         roadId: road.id,
         distance,
         cost,
+        coords: coords,
       };
       const edge2: Edge = {
         from: endId,
@@ -87,6 +103,7 @@ export class SimpleDijkstraService {
         roadId: road.id,
         distance,
         cost,
+        coords: [...coords].reverse(),
       };
 
       if (!edges.has(startId)) edges.set(startId, []);
@@ -293,29 +310,6 @@ export class SimpleDijkstraService {
     return { nodes, edges };
   }
 
-  /**
-   * Get road geometry by roadId
-   */
-  private async getRoadGeometry(roadId: number): Promise<number[][]> {
-    const road = await this.prisma.$queryRaw<any[]>`
-      SELECT ST_AsGeoJSON(geom)::json as geometry
-      FROM "Road"
-      WHERE id = ${roadId}
-    `;
-
-    if (road.length === 0 || !road[0].geometry) {
-      return [];
-    }
-
-    const geom = road[0].geometry;
-    if (geom.type === 'LineString') {
-      return geom.coordinates;
-    }
-    if (geom.type === 'MultiLineString' && geom.coordinates.length > 0) {
-      return geom.coordinates[0];
-    }
-    return [];
-  }
 
   /**
    * Calculate primary and alternative routes
@@ -327,8 +321,8 @@ export class SimpleDijkstraService {
     endLon: number,
   ) {
     try {
-      // Build original graph
-      const originalGraph = await this.buildGraph();
+      // Get cached graph or build it if not exists
+      const originalGraph = await this.getGraph();
 
       // Find nearest nodes
       const startNode = this.findNearestNode(
@@ -392,42 +386,9 @@ export class SimpleDijkstraService {
           const edges = originalGraph.edges.get(from) || [];
           const edge = edges.find((e) => e.to === to);
 
-          if (edge && edge.roadId) {
-            // Get the actual road geometry
-            const roadCoords = await this.getRoadGeometry(edge.roadId);
-
-            if (roadCoords.length > 0) {
-              // Check if we need to reverse the coordinates
-              const fromNode = originalGraph.nodes.get(from);
-              const firstCoord = roadCoords[0];
-              const lastCoord = roadCoords[roadCoords.length - 1];
-
-              // Calculate distances to determine direction
-              const distToFirst = this.haversineDistance(
-                fromNode.lat,
-                fromNode.lon,
-                firstCoord[1],
-                firstCoord[0],
-              );
-              const distToLast = this.haversineDistance(
-                fromNode.lat,
-                fromNode.lon,
-                lastCoord[1],
-                lastCoord[0],
-              );
-
-              // Add coordinates in correct direction
-              if (distToFirst < distToLast) {
-                // Use coordinates as-is
-                roadCoords.forEach((coord) => coordinates.push(coord));
-              } else {
-                // Reverse coordinates
-                roadCoords
-                  .slice()
-                  .reverse()
-                  .forEach((coord) => coordinates.push(coord));
-              }
-            }
+          if (edge && edge.coords) {
+            // Coordinate direction is already correct based on the edge direction built in buildGraph
+            edge.coords.forEach((coord) => coordinates.push(coord));
           }
         }
 

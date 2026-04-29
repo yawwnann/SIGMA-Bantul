@@ -117,14 +117,14 @@ export default function OfficerDashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
         <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
-        <p className="text-gray-400 text-sm">Memuat dashboard...</p>
+        <p className="text-zinc-400 text-sm">Memuat dashboard...</p>
       </div>
     );
   }
 
   if (!dashboard) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-gray-500">
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-zinc-500">
         <AlertCircle className="w-12 h-12 mb-4 opacity-50" />
         <p>Gagal memuat data dashboard</p>
       </div>
@@ -151,7 +151,7 @@ export default function OfficerDashboardPage() {
             <h1 className="text-2xl md:text-3xl font-extrabold text-white mb-1.5 tracking-tight drop-shadow-sm">
               Selamat Datang, {dashboard.officer.name}
             </h1>
-            <p className="text-sm md:text-base text-gray-300 font-medium tracking-wide">
+            <p className="text-sm md:text-base text-zinc-300 font-medium tracking-wide">
               Kelola shelter evakuasi yang menjadi tanggung jawab Anda secara real-time
             </p>
           </div>
@@ -160,11 +160,11 @@ export default function OfficerDashboardPage() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        <Card className="relative overflow-hidden bg-gray-900/40 backdrop-blur-xl border border-gray-800 hover:border-emerald-500/30 group hover:-translate-y-1 transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/10 rounded-2xl">
+        <Card className="relative overflow-hidden bg-zinc-900/40 backdrop-blur-xl border border-zinc-800 hover:border-emerald-500/30 group hover:-translate-y-1 transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/10 rounded-2xl">
           <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-2.5">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-2.5">
               <div className="p-2 bg-emerald-500/10 rounded-xl flex-shrink-0 border border-emerald-500/10 group-hover:bg-emerald-500/20 transition-colors">
                 <Home className="w-4 h-4 text-emerald-400" />
               </div>
@@ -175,15 +175,15 @@ export default function OfficerDashboardPage() {
             <div className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
               {stats.totalShelters}
             </div>
-            <p className="text-xs text-gray-500 mt-2 font-medium">Shelter yang dikelola</p>
+            <p className="text-xs text-zinc-500 mt-2 font-medium">Shelter yang dikelola</p>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden bg-gray-900/40 backdrop-blur-xl border border-gray-800 hover:border-blue-500/30 group hover:-translate-y-1 transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/10 rounded-2xl">
+        <Card className="relative overflow-hidden bg-zinc-900/40 backdrop-blur-xl border border-zinc-800 hover:border-blue-500/30 group hover:-translate-y-1 transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/10 rounded-2xl">
           <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-2.5">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-2.5">
               <div className="p-2 bg-blue-500/10 rounded-xl flex-shrink-0 border border-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
                 <Users className="w-4 h-4 text-blue-400" />
               </div>
@@ -194,15 +194,15 @@ export default function OfficerDashboardPage() {
             <div className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
               {stats.totalCapacity.toLocaleString()}
             </div>
-            <p className="text-xs text-gray-500 mt-2 font-medium">Orang (Maksimal)</p>
+            <p className="text-xs text-zinc-500 mt-2 font-medium">Orang (Maksimal)</p>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden bg-gray-900/40 backdrop-blur-xl border border-gray-800 hover:border-amber-500/30 group hover:-translate-y-1 transition-all duration-500 hover:shadow-2xl hover:shadow-amber-500/10 rounded-2xl">
+        <Card className="relative overflow-hidden bg-zinc-900/40 backdrop-blur-xl border border-zinc-800 hover:border-amber-500/30 group hover:-translate-y-1 transition-all duration-500 hover:shadow-2xl hover:shadow-amber-500/10 rounded-2xl">
           <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-2.5">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-2.5">
               <div className="p-2 bg-amber-500/10 rounded-xl flex-shrink-0 border border-amber-500/10 group-hover:bg-amber-500/20 transition-colors">
                 <TrendingUp className="w-4 h-4 text-amber-400" />
               </div>
@@ -213,7 +213,7 @@ export default function OfficerDashboardPage() {
             <div className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
               {occupancyPercentage.toFixed(1)}%
             </div>
-            <p className="text-xs text-gray-500 mt-2 font-medium">
+            <p className="text-xs text-zinc-500 mt-2 font-medium">
               {stats.totalOccupancy.toLocaleString()} /{" "}
               {stats.totalCapacity.toLocaleString()} terisi
             </p>
@@ -224,14 +224,14 @@ export default function OfficerDashboardPage() {
       {/* Shelter List */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="text-lg md:text-xl font-bold text-white tracking-tight flex items-center gap-2">
-          <Building2 className="w-5 h-5 text-gray-400" />
+          <Building2 className="w-5 h-5 text-zinc-400" />
           Shelter yang Dikelola
         </h2>
         <Button
           variant="outline"
           size="sm"
           onClick={fetchDashboard}
-          className="bg-gray-900/50 backdrop-blur-sm border-gray-800 text-gray-300 hover:bg-gray-800 hover:text-white transition-all rounded-xl shadow-sm hover:shadow-md"
+          className="bg-zinc-900/50 backdrop-blur-sm border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white transition-all rounded-xl shadow-sm hover:shadow-md"
         >
           <RefreshCw className="w-4 h-4 mr-2" />
           Perbarui Data
@@ -239,15 +239,15 @@ export default function OfficerDashboardPage() {
       </div>
 
       {dashboard.shelters.length === 0 ? (
-        <Card className="bg-gradient-to-br from-gray-900 to-gray-900/50 border-gray-800">
+        <Card className="bg-gradient-to-br from-zinc-900 to-zinc-900/50 border-zinc-800">
           <CardContent className="py-16 text-center">
-            <div className="p-4 bg-gray-800/50 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-              <Home className="w-10 h-10 text-gray-600" />
+            <div className="p-4 bg-zinc-800/50 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+              <Home className="w-10 h-10 text-zinc-600" />
             </div>
-            <p className="text-gray-400 text-lg font-medium mb-2">
+            <p className="text-zinc-400 text-lg font-medium mb-2">
               Belum Ada Shelter
             </p>
-            <p className="text-gray-500 text-sm">
+            <p className="text-zinc-500 text-sm">
               Belum ada shelter yang ditugaskan kepada Anda
             </p>
           </CardContent>
@@ -309,7 +309,7 @@ function ShelterCard({
   };
 
   return (
-    <Card className="group relative bg-gray-950/40 backdrop-blur-xl border border-gray-800/80 hover:border-emerald-500/40 transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/5 overflow-hidden rounded-2xl">
+    <Card className="group relative bg-zinc-950/40 backdrop-blur-xl border border-zinc-800/80 hover:border-emerald-500/40 transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/5 overflow-hidden rounded-2xl">
       <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/10 group-hover:via-emerald-500/30 to-transparent transition-all duration-500" />
       <CardHeader className="pb-5 relative z-10">
         <div className="flex items-start justify-between gap-3">
@@ -317,7 +317,7 @@ function ShelterCard({
             <CardTitle className="text-base md:text-lg font-bold text-white mb-1.5 truncate tracking-tight">
               {shelter.name}
             </CardTitle>
-            <div className="flex items-start gap-1.5 text-xs md:text-sm text-gray-400 font-medium">
+            <div className="flex items-start gap-1.5 text-xs md:text-sm text-zinc-400 font-medium">
               <MapPin className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-blue-400" />
               <span className="line-clamp-2">
                 {shelter.address || "Lokasi tidak tersedia"}
@@ -332,7 +332,7 @@ function ShelterCard({
             </Badge>
             <Badge
               variant="outline"
-              className="text-[10px] uppercase font-bold tracking-wider bg-gray-900/50 text-gray-300 border-gray-700/80 px-2 py-0.5 rounded-md shadow-inner"
+              className="text-[10px] uppercase font-bold tracking-wider bg-zinc-900/50 text-zinc-300 border-zinc-700/80 px-2 py-0.5 rounded-md shadow-inner"
             >
               {statusLabels[status] || status}
             </Badge>
@@ -343,12 +343,12 @@ function ShelterCard({
         {/* Occupancy Progress */}
         <div className="bg-black/30 rounded-xl p-4 border border-white/5 shadow-inner backdrop-blur-sm">
           <div className="flex items-center justify-between text-xs md:text-sm mb-3">
-            <span className="text-gray-400 font-medium tracking-wide">Tingkat Hunian</span>
+            <span className="text-zinc-400 font-medium tracking-wide">Tingkat Hunian</span>
             <span className="text-white font-bold tabular-nums bg-white/10 px-2.5 py-0.5 rounded-md text-xs">
               {parsedOccupancy} / {shelter.capacity} ({occupancyPercentage.toFixed(0)}%)
             </span>
           </div>
-          <div className="w-full bg-gray-800/80 rounded-full h-3 overflow-hidden shadow-inner flex">
+          <div className="w-full bg-zinc-800/80 rounded-full h-3 overflow-hidden shadow-inner flex">
             <div
               className={`h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(255,255,255,0.2)] ${
                 occupancyPercentage > 90
@@ -365,7 +365,7 @@ function ShelterCard({
         {/* Update Form */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <Label className="text-[11px] uppercase tracking-wider text-gray-500 mb-2 block font-bold">
+            <Label className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2 block font-bold">
               Penghuni Saat Ini
             </Label>
             <Input
@@ -375,14 +375,14 @@ function ShelterCard({
                 const val = e.target.value;
                 setOccupancy(val === "" ? "" : parseInt(val, 10));
               }}
-              className="bg-gray-950/50 border-gray-800 hover:border-gray-700 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 h-10 text-sm font-medium transition-all rounded-lg shadow-inner text-white"
+              className="bg-zinc-950/50 border-zinc-800 hover:border-zinc-700 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 h-10 text-sm font-medium transition-all rounded-lg shadow-inner text-white"
               min={0}
               max={shelter.capacity}
               disabled={updating}
             />
           </div>
           <div>
-            <Label className="text-[11px] uppercase tracking-wider text-gray-500 mb-2 block font-bold">
+            <Label className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2 block font-bold">
               Kondisi Shelter
             </Label>
             <Select
@@ -390,19 +390,19 @@ function ShelterCard({
               onValueChange={setCondition}
               disabled={updating}
             >
-              <SelectTrigger className="bg-gray-950/50 border-gray-800 hover:border-gray-700 focus:border-emerald-500/50 h-10 text-sm font-medium transition-all rounded-lg shadow-inner">
+              <SelectTrigger className="bg-zinc-950/50 border-zinc-800 hover:border-zinc-700 focus:border-emerald-500/50 h-10 text-sm font-medium transition-all rounded-lg shadow-inner">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-gray-950 border-gray-800 rounded-xl shadow-xl text-gray-200">
-                <SelectItem value="GOOD" className="focus:bg-gray-800 focus:text-white">Baik</SelectItem>
-                <SelectItem value="MODERATE" className="focus:bg-gray-800 focus:text-white">Sedang</SelectItem>
-                <SelectItem value="NEEDS_REPAIR" className="focus:bg-gray-800 focus:text-white">Perlu Perbaikan</SelectItem>
-                <SelectItem value="DAMAGED" className="focus:bg-gray-800 focus:text-white">Rusak</SelectItem>
+              <SelectContent className="bg-zinc-950 border-zinc-800 rounded-xl shadow-xl text-zinc-200">
+                <SelectItem value="GOOD" className="focus:bg-zinc-800 focus:text-white">Baik</SelectItem>
+                <SelectItem value="MODERATE" className="focus:bg-zinc-800 focus:text-white">Sedang</SelectItem>
+                <SelectItem value="NEEDS_REPAIR" className="focus:bg-zinc-800 focus:text-white">Perlu Perbaikan</SelectItem>
+                <SelectItem value="DAMAGED" className="focus:bg-zinc-800 focus:text-white">Rusak</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="sm:col-span-2">
-            <Label className="text-[11px] uppercase tracking-wider text-gray-500 mb-2 block font-bold">
+            <Label className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2 block font-bold">
               Status Operasional
             </Label>
             <Select
@@ -410,13 +410,13 @@ function ShelterCard({
               onValueChange={setStatus}
               disabled={updating}
             >
-              <SelectTrigger className="bg-gray-950/50 border-gray-800 hover:border-gray-700 focus:border-emerald-500/50 h-10 text-sm font-medium transition-all rounded-lg shadow-inner">
+              <SelectTrigger className="bg-zinc-950/50 border-zinc-800 hover:border-zinc-700 focus:border-emerald-500/50 h-10 text-sm font-medium transition-all rounded-lg shadow-inner">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-gray-950 border-gray-800 rounded-xl shadow-xl text-gray-200">
-                <SelectItem value="ACTIVE" className="focus:bg-gray-800 focus:text-white">Aktif (Menerima Pengungsi)</SelectItem>
-                <SelectItem value="STANDBY" className="focus:bg-gray-800 focus:text-white">Siaga (Persiapan)</SelectItem>
-                <SelectItem value="UNAVAILABLE" className="focus:bg-gray-800 focus:text-white">Tidak Tersedia</SelectItem>
+              <SelectContent className="bg-zinc-950 border-zinc-800 rounded-xl shadow-xl text-zinc-200">
+                <SelectItem value="ACTIVE" className="focus:bg-zinc-800 focus:text-white">Aktif (Menerima Pengungsi)</SelectItem>
+                <SelectItem value="STANDBY" className="focus:bg-zinc-800 focus:text-white">Siaga (Persiapan)</SelectItem>
+                <SelectItem value="UNAVAILABLE" className="focus:bg-zinc-800 focus:text-white">Tidak Tersedia</SelectItem>
               </SelectContent>
             </Select>
           </div>

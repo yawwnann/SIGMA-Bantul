@@ -122,7 +122,7 @@ export default function AdminOfficersPage() {
             <Shield className="h-6 w-6 text-blue-500" />
             Manajemen Petugas Shelter
           </h2>
-          <p className="text-gray-400 mt-1 text-sm">
+          <p className="text-zinc-400 mt-1 text-sm">
             Total {officers.length} petugas terdaftar dalam sistem.
           </p>
         </div>
@@ -134,21 +134,21 @@ export default function AdminOfficersPage() {
         </Button>
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-md">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-md">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-gray-950/50">
-              <TableRow className="border-b border-gray-800 hover:bg-transparent">
-                <TableHead className="font-semibold text-gray-400">
+            <TableHeader className="bg-zinc-950/50">
+              <TableRow className="border-b border-zinc-800 hover:bg-transparent">
+                <TableHead className="font-semibold text-zinc-400">
                   Nama
                 </TableHead>
-                <TableHead className="font-semibold text-gray-400">
+                <TableHead className="font-semibold text-zinc-400">
                   Email
                 </TableHead>
-                <TableHead className="font-semibold text-gray-400">
+                <TableHead className="font-semibold text-zinc-400">
                   Shelter Dikelola
                 </TableHead>
-                <TableHead className="font-semibold text-gray-400 text-right">
+                <TableHead className="font-semibold text-zinc-400 text-right">
                   Aksi
                 </TableHead>
               </TableRow>
@@ -158,7 +158,7 @@ export default function AdminOfficersPage() {
                 <TableRow>
                   <TableCell
                     colSpan={4}
-                    className="text-center py-12 text-gray-500"
+                    className="text-center py-12 text-zinc-500"
                   >
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
@@ -170,7 +170,7 @@ export default function AdminOfficersPage() {
                 <TableRow>
                   <TableCell
                     colSpan={4}
-                    className="text-center py-12 text-gray-500"
+                    className="text-center py-12 text-zinc-500"
                   >
                     <Shield className="w-8 h-8 opacity-20 mx-auto mb-3" />
                     Belum ada petugas terdaftar.
@@ -180,12 +180,12 @@ export default function AdminOfficersPage() {
                 officers.map((officer) => (
                   <TableRow
                     key={officer.id}
-                    className="border-b border-gray-800/50 hover:bg-gray-800/20 transition-colors"
+                    className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors"
                   >
-                    <TableCell className="font-medium text-gray-200">
+                    <TableCell className="font-medium text-zinc-200">
                       {officer.name}
                     </TableCell>
-                    <TableCell className="text-gray-400">
+                    <TableCell className="text-zinc-400">
                       <div className="flex items-center gap-1.5">
                         <Mail className="h-3 w-3 shrink-0" />
                         {officer.email}
@@ -194,7 +194,7 @@ export default function AdminOfficersPage() {
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className="bg-gray-800 font-medium border-gray-700 text-gray-300"
+                        className="bg-zinc-800 font-medium border-zinc-700 text-zinc-300"
                       >
                         {officer.managedShelters?.length || 0} Shelter
                       </Badge>
@@ -226,12 +226,12 @@ export default function AdminOfficersPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg bg-gray-900 text-gray-100 border-gray-800">
+        <DialogContent className="max-w-lg bg-zinc-900 text-zinc-100 border-zinc-800">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">
               {editingOfficer ? "Edit Petugas" : "Tambah Petugas Baru"}
             </DialogTitle>
-            <DialogDescription className="text-gray-500">
+            <DialogDescription className="text-zinc-500">
               {editingOfficer
                 ? "Perbarui informasi petugas shelter."
                 : "Buat akun baru untuk petugas shelter."}
@@ -239,7 +239,7 @@ export default function AdminOfficersPage() {
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid gap-2">
-              <Label htmlFor="name" className="text-gray-400">
+              <Label htmlFor="name" className="text-zinc-400">
                 Nama Lengkap
               </Label>
               <Input
@@ -249,11 +249,11 @@ export default function AdminOfficersPage() {
                   setFormData({ ...formData, name: e.target.value })
                 }
                 placeholder="Nama petugas"
-                className="bg-gray-950 border-gray-800 focus-visible:ring-blue-500"
+                className="bg-zinc-950 border-zinc-800 focus-visible:ring-blue-500"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="email" className="text-gray-400">
+              <Label htmlFor="email" className="text-zinc-400">
                 Email
               </Label>
               <Input
@@ -265,11 +265,11 @@ export default function AdminOfficersPage() {
                 }
                 placeholder="email@example.com"
                 disabled={!!editingOfficer}
-                className="bg-gray-950 border-gray-800 focus-visible:ring-blue-500 disabled:opacity-50"
+                className="bg-zinc-950 border-zinc-800 focus-visible:ring-blue-500 disabled:opacity-50"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password" className="text-gray-400">
+              <Label htmlFor="password" className="text-zinc-400">
                 Password {editingOfficer && "(kosongkan jika tidak diubah)"}
               </Label>
               <Input
@@ -280,7 +280,7 @@ export default function AdminOfficersPage() {
                   setFormData({ ...formData, password: e.target.value })
                 }
                 placeholder="Minimal 6 karakter"
-                className="bg-gray-950 border-gray-800 focus-visible:ring-blue-500"
+                className="bg-zinc-950 border-zinc-800 focus-visible:ring-blue-500"
               />
             </div>
           </div>
@@ -288,7 +288,7 @@ export default function AdminOfficersPage() {
             <Button
               variant="ghost"
               onClick={() => setIsDialogOpen(false)}
-              className="hover:bg-gray-800 hover:text-gray-100"
+              className="hover:bg-zinc-800 hover:text-zinc-100"
             >
               Batal
             </Button>

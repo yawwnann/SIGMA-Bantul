@@ -80,64 +80,79 @@ export class FrequencyAnalysisService {
     // Generate grid cells
     const grids = this.generateGrid(this.defaultBounds, grid_size);
 
-    // Build SQL query for frequency calculation
-    const results = await Promise.all(
-      grids.map(async (grid) => {
-        const whereConditions = [
-          `time >= '${start_date}'`,
-          `time <= '${end_date}'`,
-          `magnitude >= ${min_magnitude}`,
-        ];
+    // 1. Ambil semua gempa yang memenuhi kriteria filter dalam SATU kueri
+    const where: any = {
+      time: {
+        gte: new Date(start_date),
+        lte: new Date(end_date),
+      },
+      magnitude: {
+        gte: min_magnitude,
+      },
+    };
+    if (max_depth) {
+      where.depth = { lte: max_depth };
+    }
 
-        if (max_depth) {
-          whereConditions.push(`depth <= ${max_depth}`);
+    const earthquakes = await this.prisma.earthquake.findMany({
+      where,
+      select: { lat: true, lon: true },
+    });
+
+    // 2. Siapkan penampung untuk hitungan grid
+    const gridCounts = new Map<string, number>();
+    grids.forEach((g) => gridCounts.set(g.grid_id, 0));
+
+    // 3. Hitung jumlah gempa per grid murni di memori Node.js (Zero DB Query)
+    for (const eq of earthquakes) {
+      if (typeof eq.lat !== 'number' || typeof eq.lon !== 'number') continue;
+      
+      for (const grid of grids) {
+        if (
+          eq.lon >= grid.minLon &&
+          eq.lon < grid.maxLon &&
+          eq.lat >= grid.minLat &&
+          eq.lat < grid.maxLat
+        ) {
+          gridCounts.set(grid.grid_id, gridCounts.get(grid.grid_id)! + 1);
+          break; // Gempa hanya ada di 1 grid
         }
+      }
+    }
 
-        // Use PostGIS ST_Contains to check if earthquake is in grid
-        const countQuery = `
-          SELECT COUNT(*) as count
-          FROM "Earthquake"
-          WHERE ${whereConditions.join(' AND ')}
-          AND ST_Contains(
-            ST_GeomFromText('${grid.geometry}', 4326),
-            geom
-          )
-        `;
+    // 4. Bangun data hasil (termasuk GeoJSON polygon untuk di render)
+    const results = grids.map((grid) => {
+      const count = gridCounts.get(grid.grid_id) || 0;
+      
+      // Calculate center point
+      const centerLon = (grid.minLon + grid.maxLon) / 2;
+      const centerLat = (grid.minLat + grid.maxLat) / 2;
 
-        const result =
-          await this.prisma.$queryRawUnsafe<[{ count: bigint }]>(countQuery);
-        const count = Number(result[0]?.count || 0);
-
-        // Calculate center point
-        const centerLon = (grid.minLon + grid.maxLon) / 2;
-        const centerLat = (grid.minLat + grid.maxLat) / 2;
-
-        // Convert to GeoJSON
-        const geometry = {
-          type: 'Polygon',
-          coordinates: [
-            [
-              [grid.minLon, grid.minLat],
-              [grid.maxLon, grid.minLat],
-              [grid.maxLon, grid.maxLat],
-              [grid.minLon, grid.maxLat],
-              [grid.minLon, grid.minLat],
-            ],
+      // Convert to GeoJSON
+      const geometry = {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [grid.minLon, grid.minLat],
+            [grid.maxLon, grid.minLat],
+            [grid.maxLon, grid.maxLat],
+            [grid.minLon, grid.maxLat],
+            [grid.minLon, grid.minLat],
           ],
-        };
+        ],
+      };
 
-        return {
-          grid_id: grid.grid_id,
-          count,
-          level: this.classifyFrequency(count),
-          center: {
-            lat: centerLat,
-            lon: centerLon,
-          },
-          geometry,
-        };
-      }),
-    );
+      return {
+        grid_id: grid.grid_id,
+        count,
+        level: this.classifyFrequency(count),
+        center: {
+          lat: centerLat,
+          lon: centerLon,
+        },
+        geometry,
+      };
+    });
 
     // Calculate statistics
     const statistics = {

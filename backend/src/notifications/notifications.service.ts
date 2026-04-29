@@ -99,6 +99,7 @@ export class NotificationsService {
     let successCount = 0;
     let errorCount = 0;
     const errors: string[] = [];
+    const invalidIds: number[] = [];
 
     for (const sub of subscriptions) {
       const pushSub = {
@@ -118,16 +119,22 @@ export class NotificationsService {
         errors.push(errorMsg);
         this.logger.warn(errorMsg);
 
-        // Delete invalid/expired subscriptions
         if (
           err.statusCode === 410 ||
           err.statusCode === 404 ||
           err.statusCode === 401
         ) {
-          this.logger.log(`Deleting invalid subscription: ${sub.id}`);
-          await this.prisma.pushSubscription.delete({ where: { id: sub.id } });
+          this.logger.log(`Marking invalid subscription for deletion: ${sub.id}`);
+          invalidIds.push(sub.id);
         }
       }
+    }
+
+    if (invalidIds.length > 0) {
+      await this.prisma.pushSubscription.deleteMany({
+        where: { id: { in: invalidIds } },
+      });
+      this.logger.log(`Bulk deleted ${invalidIds.length} invalid subscriptions.`);
     }
 
     this.logger.log(
@@ -143,7 +150,7 @@ export class NotificationsService {
 
   async cleanupInvalidSubscriptions() {
     const subscriptions = await this.prisma.pushSubscription.findMany();
-    let deleted = 0;
+    const invalidIds: number[] = [];
 
     for (const sub of subscriptions) {
       // Try to ping the endpoint to see if it's valid
@@ -157,14 +164,19 @@ export class NotificationsService {
         );
       } catch (err: any) {
         if (err.statusCode === 410 || err.statusCode === 404) {
-          await this.prisma.pushSubscription.delete({ where: { id: sub.id } });
-          deleted++;
-          this.logger.log(`Deleted invalid subscription: ${sub.id}`);
+          invalidIds.push(sub.id);
         }
       }
     }
 
-    return { deleted };
+    if (invalidIds.length > 0) {
+      await this.prisma.pushSubscription.deleteMany({
+        where: { id: { in: invalidIds } },
+      });
+      this.logger.log(`Deleted ${invalidIds.length} invalid subscriptions`);
+    }
+
+    return { deleted: invalidIds.length };
   }
 
   async deleteSubscription(id: number) {

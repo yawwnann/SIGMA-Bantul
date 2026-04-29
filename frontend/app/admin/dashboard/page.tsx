@@ -71,19 +71,19 @@ export default function AdminDashboardPage() {
       <div className="py-2 animate-in fade-in duration-500">
         <div className="container mx-auto">
           <div className="flex flex-col gap-2 mb-8">
-            <div className="h-10 bg-gray-800 rounded w-64 animate-pulse" />
-            <div className="h-5 bg-gray-800 rounded w-96 animate-pulse" />
+            <div className="h-10 bg-zinc-800 rounded w-64 animate-pulse" />
+            <div className="h-5 bg-zinc-800 rounded w-96 animate-pulse" />
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
               <Card
                 key={i}
-                className="border border-gray-800 shadow-sm bg-gray-900/50"
+                className="border border-zinc-800 shadow-sm bg-zinc-900/50"
               >
                 <CardContent className="p-6">
-                  <div className="h-12 bg-gray-800 rounded-lg w-12 mb-4 animate-pulse" />
-                  <div className="h-8 bg-gray-800 rounded w-1/3 mb-2 animate-pulse" />
-                  <div className="h-4 bg-gray-800 rounded w-2/3 animate-pulse" />
+                  <div className="h-12 bg-zinc-800 rounded-lg w-12 mb-4 animate-pulse" />
+                  <div className="h-8 bg-zinc-800 rounded w-1/3 mb-2 animate-pulse" />
+                  <div className="h-4 bg-zinc-800 rounded w-2/3 animate-pulse" />
                 </CardContent>
               </Card>
             ))}
@@ -103,7 +103,7 @@ export default function AdminDashboardPage() {
           </div>
           Dashboard
         </h1>
-        <p className="text-gray-400 max-w-3xl text-xl mt-1">
+        <p className="text-zinc-400 max-w-3xl text-xl mt-1">
           Pantau pusat kendali operasi dan analitik krisis gempa bumi wilayah
           Kabupaten Bantul.
         </p>
@@ -135,7 +135,7 @@ export default function AdminDashboardPage() {
       {/* KPI Cards */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {/* Shelter Card */}
-        <Card className="border border-gray-800 bg-gray-900/40 relative overflow-hidden group hover:bg-gray-900/80 transition-all duration-300 hover:border-blue-500/30">
+        <Card className="border border-zinc-800 bg-zinc-900/40 relative overflow-hidden group hover:bg-zinc-900/80 transition-all duration-300 hover:border-blue-500/30">
           <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-transform duration-500">
             <Home className="w-40 h-40" />
           </div>
@@ -144,7 +144,7 @@ export default function AdminDashboardPage() {
               <Shield className="h-8 w-8 text-blue-500" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-base font-medium text-gray-400">
+              <h3 className="text-base font-medium text-zinc-400">
                 Total Shelter
               </h3>
               <div className="text-5xl font-bold tracking-tight text-white">
@@ -163,7 +163,7 @@ export default function AdminDashboardPage() {
         </Card>
 
         {/* Earthquake Card */}
-        <Card className="border border-gray-800 bg-gray-900/40 relative overflow-hidden group hover:bg-gray-900/80 transition-all duration-300 hover:border-emerald-500/30">
+        <Card className="border border-zinc-800 bg-zinc-900/40 relative overflow-hidden group hover:bg-zinc-900/80 transition-all duration-300 hover:border-emerald-500/30">
           <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-transform duration-500">
             <Activity className="w-40 h-40" />
           </div>
@@ -172,7 +172,7 @@ export default function AdminDashboardPage() {
               <Activity className="h-8 w-8 text-emerald-500" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-base font-medium text-gray-400">
+              <h3 className="text-base font-medium text-zinc-400">
                 Total Gempa
               </h3>
               <div className="text-5xl font-bold tracking-tight text-white">
@@ -191,7 +191,7 @@ export default function AdminDashboardPage() {
         </Card>
 
         {/* Routes Card */}
-        <Card className="border border-gray-800 bg-gray-900/40 relative overflow-hidden group hover:bg-gray-900/80 transition-all duration-300 hover:border-purple-500/30">
+        <Card className="border border-zinc-800 bg-zinc-900/40 relative overflow-hidden group hover:bg-zinc-900/80 transition-all duration-300 hover:border-purple-500/30">
           <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-transform duration-500">
             <Compass className="w-40 h-40" />
           </div>
@@ -200,7 +200,7 @@ export default function AdminDashboardPage() {
               <Compass className="h-8 w-8 text-purple-500" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-base font-medium text-gray-400">
+              <h3 className="text-base font-medium text-zinc-400">
                 Manajemen Evakuasi
               </h3>
               <div className="text-5xl font-bold tracking-tight text-white">
@@ -219,7 +219,7 @@ export default function AdminDashboardPage() {
         </Card>
 
         {/* Latest Earthquake Card */}
-        <Card className="border border-gray-800 bg-gradient-to-br from-gray-900/80 to-gray-900 relative overflow-hidden group hover:border-red-500/30 transition-all duration-300">
+        <Card className="border border-zinc-800 bg-gradient-to-br from-zinc-900/80 to-zinc-900 relative overflow-hidden group hover:border-red-500/30 transition-all duration-300">
           <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-transform duration-500">
             <ShieldAlert className="w-40 h-40 text-red-500" />
           </div>
@@ -228,7 +228,7 @@ export default function AdminDashboardPage() {
               <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20 shadow-inner shrink-0">
                 <Clock className="h-5 w-5 text-red-500 animate-pulse" />
               </div>
-              <h3 className="text-base font-medium text-gray-300">
+              <h3 className="text-base font-medium text-zinc-300">
                 Gempa Terbaru
               </h3>
             </div>
@@ -241,13 +241,13 @@ export default function AdminDashboardPage() {
                   </span>
                 </div>
                 <div className="space-y-2">
-                  <div className="flex items-start gap-2 text-base text-gray-300">
+                  <div className="flex items-start gap-2 text-base text-zinc-300">
                     <MapPin className="h-5 w-5 shrink-0 text-red-400 mt-0.5" />
                     <span className="leading-tight">
                       {stats.latestEarthquake.location}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-500 ml-7">
+                  <div className="flex items-center gap-2 text-sm text-zinc-500 ml-7">
                     <span>
                       {new Date(stats.latestEarthquake.time).toLocaleString(
                         "id-ID",
@@ -270,13 +270,13 @@ export default function AdminDashboardPage() {
       {/* Main Content Area */}
       <div className="grid gap-6 md:grid-cols-3">
         {/* Quick Actions Panel */}
-        <Card className="md:col-span-1 border border-gray-800 bg-gray-900/60 backdrop-blur-md shadow-xl rounded-2xl overflow-hidden">
-          <CardHeader className="border-b border-gray-800/50 bg-gray-900/50 pb-4">
+        <Card className="md:col-span-1 border border-zinc-800 bg-zinc-900/60 backdrop-blur-md shadow-xl rounded-2xl overflow-hidden">
+          <CardHeader className="border-b border-zinc-800/50 bg-zinc-900/50 pb-4">
             <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
               <Building className="h-5 w-5 text-blue-500" />
               Aksi Cepat
             </CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardDescription className="text-zinc-400">
               Pintasan menu manajemen sistem
             </CardDescription>
           </CardHeader>
@@ -284,7 +284,7 @@ export default function AdminDashboardPage() {
             <Link href="/admin/shelters" className="block group">
               <Button
                 variant="ghost"
-                className="w-full justify-between bg-gray-950/50 border border-gray-800/50 text-gray-300 hover:bg-blue-600 hover:text-white hover:border-blue-500 transition-all duration-300 h-12"
+                className="w-full justify-between bg-zinc-950/50 border border-zinc-800/50 text-zinc-300 hover:bg-blue-600 hover:text-white hover:border-blue-500 transition-all duration-300 h-12"
               >
                 <div className="flex items-center">
                   <Home className="mr-3 h-4 w-4" /> Manajemen Shelter
@@ -295,7 +295,7 @@ export default function AdminDashboardPage() {
             <Link href="/admin/facilities" className="block group">
               <Button
                 variant="ghost"
-                className="w-full justify-between bg-gray-950/50 border border-gray-800/50 text-gray-300 hover:bg-emerald-600 hover:text-white hover:border-emerald-500 transition-all duration-300 h-12"
+                className="w-full justify-between bg-zinc-950/50 border border-zinc-800/50 text-zinc-300 hover:bg-emerald-600 hover:text-white hover:border-emerald-500 transition-all duration-300 h-12"
               >
                 <div className="flex items-center">
                   <Building className="mr-3 h-4 w-4" /> Layanan Fasilitas
@@ -306,7 +306,7 @@ export default function AdminDashboardPage() {
             <Link href="/admin/routes" className="block group">
               <Button
                 variant="ghost"
-                className="w-full justify-between bg-gray-950/50 border border-gray-800/50 text-gray-300 hover:bg-purple-600 hover:text-white hover:border-purple-500 transition-all duration-300 h-12"
+                className="w-full justify-between bg-zinc-950/50 border border-zinc-800/50 text-zinc-300 hover:bg-purple-600 hover:text-white hover:border-purple-500 transition-all duration-300 h-12"
               >
                 <div className="flex items-center">
                   <Compass className="mr-3 h-4 w-4" /> Manajemen Evakuasi
@@ -314,9 +314,9 @@ export default function AdminDashboardPage() {
                 <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
               </Button>
             </Link>
-            <div className="h-px bg-gray-800 my-2" />
+            <div className="h-px bg-zinc-800 my-2" />
             <Link href="/map" className="block group">
-              <Button className="w-full justify-between bg-gray-100 text-gray-900 hover:bg-white hover:scale-[1.02] transition-all duration-300 shadow-xl h-12 font-semibold">
+              <Button className="w-full justify-between bg-zinc-100 text-zinc-900 hover:bg-white hover:scale-[1.02] transition-all duration-300 shadow-xl h-12 font-semibold">
                 <div className="flex items-center">
                   <Map className="mr-3 h-4 w-4" /> Buka Peta Analisis
                 </div>
@@ -327,13 +327,13 @@ export default function AdminDashboardPage() {
         </Card>
 
         {/* Spatial Stats Panel */}
-        <Card className="md:col-span-2 border border-gray-800 bg-gray-900/60 backdrop-blur-md shadow-xl rounded-2xl overflow-hidden flex flex-col">
-          <CardHeader className="border-b border-gray-800/50 bg-gray-900/50 pb-4">
+        <Card className="md:col-span-2 border border-zinc-800 bg-zinc-900/60 backdrop-blur-md shadow-xl rounded-2xl overflow-hidden flex flex-col">
+          <CardHeader className="border-b border-zinc-800/50 bg-zinc-900/50 pb-4">
             <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
               <Map className="h-5 w-5 text-emerald-500" />
               Distribusi Pemetaan Spasial
             </CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardDescription className="text-zinc-400">
               Ringkasan geospasial titik rawan dan evakuasi
             </CardDescription>
           </CardHeader>
@@ -393,7 +393,7 @@ export default function AdminDashboardPage() {
                         key={item.label}
                         className={`rounded-xl border ${item.border} ${item.bg} p-5 flex flex-col justify-between`}
                       >
-                        <span className="text-sm text-gray-400 font-medium">
+                        <span className="text-sm text-zinc-400 font-medium">
                           {item.label}
                         </span>
                         <div>
@@ -402,7 +402,7 @@ export default function AdminDashboardPage() {
                           >
                             {item.value.toLocaleString("id-ID")}
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-xs text-zinc-500 mt-1">
                             {item.sub}
                           </div>
                         </div>
@@ -412,7 +412,7 @@ export default function AdminDashboardPage() {
                 );
               })()
             ) : (
-              <div className="flex items-center justify-center h-full text-gray-600 text-sm">
+              <div className="flex items-center justify-center h-full text-zinc-600 text-sm">
                 Memuat data...
               </div>
             )}

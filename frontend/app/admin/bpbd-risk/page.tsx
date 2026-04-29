@@ -86,7 +86,7 @@ export default function BpbdRiskManagementPage() {
       case "LOW":
         return "bg-green-500";
       default:
-        return "bg-gray-500";
+        return "bg-zinc-500";
     }
   };
 

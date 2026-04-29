@@ -36,6 +36,7 @@ import {
   Layers,
   Moon,
   Sun,
+  Loader2,
 } from "lucide-react";
 import {
   LineChart,
@@ -81,6 +82,16 @@ export default function DashboardPage() {
   const [selectedEarthquake, setSelectedEarthquake] = useState<Earthquake | null>(null);
   const [routeStart, setRouteStart] = useState<{ lat: number; lng: number } | null>(null);
   const [routeEnd, setRouteEnd] = useState<{ lat: number; lng: number } | null>(null);
+  const [calculatingRoute, setCalculatingRoute] = useState(false);
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setCurrentTime(new Date());
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const fetchData = async () => {
     setLoading(true);
@@ -187,6 +198,7 @@ export default function DashboardPage() {
         const userLng = position.coords.longitude;
 
         try {
+          setCalculatingRoute(true);
           toast.info("Menghitung rute terpendek...");
           const route = await roadApi.calculateRoute(
             userLat,
@@ -205,6 +217,8 @@ export default function DashboardPage() {
         } catch (error) {
           console.error("Error calculating route:", error);
           toast.error("Gagal menghitung rute.");
+        } finally {
+          setCalculatingRoute(false);
         }
       },
       (error) => {
@@ -252,18 +266,34 @@ export default function DashboardPage() {
               Sistem Informasi Geografis Manajemen Krisis Gempa Bumi
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className="rounded-full"
-          >
-            {isDarkMode ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
+          <div className="flex items-center gap-4">
+            {/* Live Clock */}
+            {currentTime && (
+              <div className="hidden md:flex items-center gap-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm">
+                <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200 font-mono tracking-wider">
+                  {currentTime.toLocaleTimeString("id-ID", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  })}
+                </span>
+              </div>
             )}
-          </Button>
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="rounded-full"
+            >
+              {isDarkMode ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Main Grid */}
@@ -290,7 +320,19 @@ export default function DashboardPage() {
                 </Button>
               </CardHeader>
               <CardContent className="p-0">
-                <div className={`${isMapExpanded ? "h-[calc(100vh-12rem)]" : "h-[500px]"} transition-all duration-300`}>
+                <div className={`${isMapExpanded ? "h-[calc(100vh-12rem)]" : "h-[500px]"} transition-all duration-300 relative`}>
+                  {/* Loading Indicator Overlay */}
+                  {calculatingRoute && (
+                    <div className="absolute inset-0 z-[2000] bg-white/40 backdrop-blur-[2px] flex flex-col items-center justify-center rounded-b-xl transition-all duration-300">
+                      <div className="bg-white/95 dark:bg-slate-900/95 px-8 py-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
+                        <Loader2 className="h-12 w-12 animate-spin text-blue-600 dark:text-blue-500" />
+                        <div className="text-center">
+                          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Menghitung Rute</h3>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Mencari jalur tercepat dan teraman...</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <MapClient
                     shelters={shelters}
                     hazardZones={hazardZones}
@@ -422,6 +464,11 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                  <div className="mt-4 pt-3 border-t dark:border-slate-700">
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center italic">
+                      Sumber data gempa pada sistem ini berasal dari BMKG (Badan Meteorologi, Klimatologi, dan Geofisika) melalui layanan Data Gempabumi Terbuka BMKG.
+                    </p>
                   </div>
                 </CardContent>
               </Card>

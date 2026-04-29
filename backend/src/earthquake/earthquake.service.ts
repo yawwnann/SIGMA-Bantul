@@ -119,12 +119,18 @@ export class EarthquakeService {
     }
 
     const eq: BMKGAutoGempa = data.Infogempa.gempa;
+    
+    // Check if we already have this specific earthquake
+    const existing = await this.prisma.earthquake.findFirst({
+      where: { bmkgId: `auto_${eq.DateTime}` },
+    });
+
     const savedEarthquake = await this.upsertAutoGempa(eq);
 
     await this.redis.setJson('bmkg:latest', eq, 300);
 
-    // Send the saved earthquake from database (with proper field names), not raw BMKG data
-    if (savedEarthquake) {
+    // ONLY broadcast if it's a completely new earthquake
+    if (savedEarthquake && !existing) {
       this.earthquakeGateway.broadcastLatestEarthquake(savedEarthquake);
     }
 

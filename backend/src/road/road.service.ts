@@ -37,6 +37,7 @@ export class RoadService {
         );
       }
 
+      this.simpleDijkstra.clearCache();
       return allKeys.length;
     } catch (error) {
       this.logger.warn(`Failed to invalidate road cache: ${error.message}`);

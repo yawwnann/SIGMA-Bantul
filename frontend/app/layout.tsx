@@ -38,7 +38,7 @@ export default function RootLayout({
       <body
         className={
           inter.variable +
-          " font-sans min-h-screen antialiased bg-slate-100 dark:bg-gray-950 text-slate-900 dark:text-gray-50"
+          " font-sans min-h-screen antialiased bg-slate-100 dark:bg-zinc-950 text-slate-900 dark:text-zinc-50"
         }
       >
         <ThemeProvider

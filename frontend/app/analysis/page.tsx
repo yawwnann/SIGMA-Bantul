@@ -22,10 +22,10 @@ import {
 const FrequencyMap = dynamic(() => import("./components/frequency-map"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-gray-950">
+    <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-zinc-950">
       <div className="text-center">
-        <Layers className="h-12 w-12 text-slate-400 dark:text-gray-600 mx-auto mb-2 animate-pulse" />
-        <p className="text-sm text-slate-500 dark:text-gray-500">
+        <Layers className="h-12 w-12 text-slate-400 dark:text-zinc-600 mx-auto mb-2 animate-pulse" />
+        <p className="text-sm text-slate-500 dark:text-zinc-500">
           Loading map...
         </p>
       </div>
@@ -84,16 +84,16 @@ export default function AnalysisPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-gray-950 py-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 py-8">
       <div className="container mx-auto px-4 ">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-slate-900 dark:text-gray-50">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-slate-900 dark:text-zinc-50">
               Analisis Frekuensi Gempa
             </h1>
           </div>
-          <p className="text-slate-600 dark:text-gray-400">
+          <p className="text-slate-600 dark:text-zinc-400">
             Analisis spasial frekuensi kejadian gempa bumi berdasarkan data
             historis
           </p>
@@ -102,14 +102,14 @@ export default function AnalysisPage() {
         {/* Statistics Cards */}
         {data && !loading && (
           <div className="grid gap-4 md:grid-cols-4 mb-6">
-            <Card className="border border-slate-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900">
+            <Card className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-600 dark:text-gray-400">
+                    <p className="text-sm font-medium text-slate-600 dark:text-zinc-400">
                       Total Gempa
                     </p>
-                    <p className="text-3xl font-bold text-slate-900 dark:text-gray-100 mt-1">
+                    <p className="text-3xl font-bold text-slate-900 dark:text-zinc-100 mt-1">
                       {data.metadata.total_earthquakes}
                     </p>
                   </div>
@@ -120,11 +120,11 @@ export default function AnalysisPage() {
               </CardContent>
             </Card>
 
-            <Card className="border border-slate-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900">
+            <Card className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-600 dark:text-gray-400">
+                    <p className="text-sm font-medium text-slate-600 dark:text-zinc-400">
                       Area Frekuensi Tinggi
                     </p>
                     <p className="text-3xl font-bold text-red-600 dark:text-red-500 mt-1">
@@ -138,11 +138,11 @@ export default function AnalysisPage() {
               </CardContent>
             </Card>
 
-            <Card className="border border-slate-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900">
+            <Card className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-600 dark:text-gray-400">
+                    <p className="text-sm font-medium text-slate-600 dark:text-zinc-400">
                       Area Frekuensi Sedang
                     </p>
                     <p className="text-3xl font-bold text-amber-600 dark:text-amber-500 mt-1">
@@ -156,14 +156,14 @@ export default function AnalysisPage() {
               </CardContent>
             </Card>
 
-            <Card className="border border-slate-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900">
+            <Card className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-600 dark:text-gray-400">
+                    <p className="text-sm font-medium text-slate-600 dark:text-zinc-400">
                       Total Grid
                     </p>
-                    <p className="text-3xl font-bold text-slate-900 dark:text-gray-100 mt-1">
+                    <p className="text-3xl font-bold text-slate-900 dark:text-zinc-100 mt-1">
                       {data.metadata.total_grids}
                     </p>
                   </div>
@@ -177,9 +177,9 @@ export default function AnalysisPage() {
         )}
 
         {/* Filter Card */}
-        <Card className="border border-slate-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900 mb-6">
+        <Card className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900 mb-6">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-gray-100">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-zinc-100">
               <Filter className="h-5 w-5 text-purple-600" />
               Parameter Analisis
             </CardTitle>
@@ -187,31 +187,31 @@ export default function AnalysisPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="flex flex-col gap-2">
-                <Label className="text-sm font-medium text-slate-700 dark:text-gray-300">
+                <Label className="text-sm font-medium text-slate-700 dark:text-zinc-300">
                   Tanggal Mulai
                 </Label>
                 <Input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="border border-slate-200 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 rounded-lg"
+                  className="border border-slate-200 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 rounded-lg"
                 />
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label className="text-sm font-medium text-slate-700 dark:text-gray-300">
+                <Label className="text-sm font-medium text-slate-700 dark:text-zinc-300">
                   Tanggal Akhir
                 </Label>
                 <Input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="border border-slate-200 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 rounded-lg"
+                  className="border border-slate-200 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 rounded-lg"
                 />
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label className="text-sm font-medium text-slate-700 dark:text-gray-300">
+                <Label className="text-sm font-medium text-slate-700 dark:text-zinc-300">
                   Ukuran Grid (km)
                 </Label>
                 <div className="flex flex-wrap gap-2">
@@ -224,7 +224,7 @@ export default function AnalysisPage() {
                       className={
                         gridSize === size
                           ? "bg-purple-600 hover:bg-purple-700 text-white flex-1 min-w-[60px]"
-                          : "border-slate-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 flex-1 min-w-[60px]"
+                          : "border-slate-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 flex-1 min-w-[60px]"
                       }
                     >
                       {size}
@@ -234,7 +234,7 @@ export default function AnalysisPage() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label className="text-sm font-medium text-slate-700 dark:text-gray-300">
+                <Label className="text-sm font-medium text-slate-700 dark:text-zinc-300">
                   Magnitudo Min
                 </Label>
                 <Input
@@ -244,7 +244,7 @@ export default function AnalysisPage() {
                   step="0.1"
                   value={minMagnitude}
                   onChange={(e) => setMinMagnitude(Number(e.target.value))}
-                  className="border border-slate-200 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 rounded-lg"
+                  className="border border-slate-200 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 rounded-lg"
                 />
               </div>
 
@@ -260,7 +260,7 @@ export default function AnalysisPage() {
                   <Button
                     onClick={handleReset}
                     variant="outline"
-                    className="border-slate-200 dark:border-gray-700 dark:text-gray-300 dark:bg-gray-900 dark:hover:bg-gray-800 hover:bg-slate-50"
+                    className="border-slate-200 dark:border-zinc-700 dark:text-zinc-300 dark:bg-zinc-900 dark:hover:bg-zinc-800 hover:bg-slate-50"
                   >
                     Reset
                   </Button>
@@ -271,23 +271,23 @@ export default function AnalysisPage() {
         </Card>
 
         {/* Map Section */}
-        <Card className="border border-slate-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900">
+        <Card className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900">
           <CardHeader className="pb-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-gray-100">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-zinc-100">
                 <MapPin className="h-5 w-5 text-purple-600" />
                 Peta Frekuensi Gempa
               </CardTitle>
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <label className="flex items-center gap-2 cursor-pointer bg-slate-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-gray-700">
+                <label className="flex items-center gap-2 cursor-pointer bg-slate-100 dark:bg-zinc-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700">
                   <input
                     type="checkbox"
                     className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-600"
                     checked={showBpbdLayer}
                     onChange={(e) => setShowBpbdLayer(e.target.checked)}
                   />
-                  <span className="text-sm font-medium text-slate-700 dark:text-gray-300">
+                  <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">
                     Data Risiko BPBD
                   </span>
                 </label>
@@ -296,19 +296,19 @@ export default function AnalysisPage() {
                   <div className="flex flex-wrap items-center gap-3 mt-2 sm:mt-0">
                     <div className="flex items-center gap-1.5">
                       <div className="w-3 h-3 bg-green-500 rounded"></div>
-                      <span className="text-xs text-slate-600 dark:text-gray-400">
+                      <span className="text-xs text-slate-600 dark:text-zinc-400">
                         Rendah (0-2)
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-4 h-4 bg-amber-500 rounded"></div>
-                      <span className="text-sm text-slate-600 dark:text-gray-400">
+                      <span className="text-sm text-slate-600 dark:text-zinc-400">
                         Sedang (3-5)
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-4 h-4 bg-red-500 rounded"></div>
-                      <span className="text-sm text-slate-600 dark:text-gray-400">
+                      <span className="text-sm text-slate-600 dark:text-zinc-400">
                         Tinggi (&gt;5)
                       </span>
                     </div>
@@ -318,15 +318,15 @@ export default function AnalysisPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="h-[600px] rounded-lg overflow-hidden border border-slate-200 dark:border-gray-800/50">
+            <div className="h-[600px] rounded-lg overflow-hidden border border-slate-200 dark:border-zinc-800/50">
               {loading ? (
-                <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-gray-950">
+                <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-zinc-950">
                   <div className="text-center">
                     <Layers className="h-12 w-12 text-purple-400 mx-auto mb-3 animate-pulse" />
-                    <p className="text-sm font-medium text-slate-700 dark:text-gray-300">
+                    <p className="text-sm font-medium text-slate-700 dark:text-zinc-300">
                       Menganalisis data...
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-gray-500 mt-1">
+                    <p className="text-xs text-slate-500 dark:text-zinc-500 mt-1">
                       Mohon tunggu sebentar
                     </p>
                   </div>
@@ -352,8 +352,8 @@ export default function AnalysisPage() {
                   showBpbdLayer={showBpbdLayer}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-gray-950">
-                  <p className="text-sm text-slate-500 dark:text-gray-400">
+                <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-zinc-950">
+                  <p className="text-sm text-slate-500 dark:text-zinc-400">
                     Klik tombol Analisis untuk memulai
                   </p>
                 </div>

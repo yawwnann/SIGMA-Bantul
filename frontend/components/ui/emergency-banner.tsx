@@ -149,7 +149,7 @@ export function EmergencyBanner(props: any) {
   return (
     <Suspense
       fallback={
-        <div className="mb-6 h-20 bg-slate-100 dark:bg-gray-800 animate-pulse rounded-lg" />
+        <div className="mb-6 h-20 bg-slate-100 dark:bg-zinc-800 animate-pulse rounded-lg" />
       }
     >
       <EmergencyBannerInner {...props} />

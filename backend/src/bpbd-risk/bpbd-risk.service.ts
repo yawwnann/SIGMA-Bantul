@@ -139,26 +139,29 @@ export class BpbdRiskService {
     let errors = 0;
     let skipped = 0;
 
+    // 1. Fetch all existing zones to avoid N+1 read
+    const existingZones = await this.prisma.bpbdRiskZone.findMany({
+      select: { kecamatan: true, desa: true },
+    });
+    const existingKeys = new Set(
+      existingZones.map((z) => `${z.kecamatan}-${z.desa}`),
+    );
+
+    const queries = [];
+
     for (const [key, zone] of uniqueZones) {
-      try {
-        const riskLevel = this.mapRiskLevel(zone.bahaya);
-        const name = `${zone.kecamatan} - ${zone.desa}`;
+      const riskLevel = this.mapRiskLevel(zone.bahaya);
+      const name = `${zone.kecamatan} - ${zone.desa}`;
 
-        // Check if already exists
-        const existing = await this.prisma.bpbdRiskZone.findFirst({
-          where: {
-            kecamatan: zone.kecamatan,
-            desa: zone.desa,
-          },
-        });
+      // Check if already exists in memory
+      if (existingKeys.has(key)) {
+        skipped++;
+        continue;
+      }
 
-        if (existing) {
-          skipped++;
-          continue;
-        }
-
-        // Insert using raw SQL for PostGIS geometry
-        await this.prisma.$executeRaw`
+      // Add to transaction array
+      queries.push(
+        this.prisma.$executeRaw`
           INSERT INTO "BpbdRiskZone" (
             kecamatan,
             desa,
@@ -194,13 +197,19 @@ export class BpbdRiskService {
             NOW(),
             NOW()
           )
-        `;
+        `
+      );
+    }
 
-        imported++;
-        this.logger.log(`Imported: ${name} (${riskLevel})`);
+    // Execute all inserts in a single transaction
+    if (queries.length > 0) {
+      try {
+        await this.prisma.$transaction(queries);
+        imported += queries.length;
+        this.logger.log(`Successfully batch inserted ${queries.length} zones.`);
       } catch (error) {
-        errors++;
-        this.logger.error(`Error importing ${key}:`, error.message);
+        errors += queries.length;
+        this.logger.error('Error during bulk import transaction:', error.message);
       }
     }
 

@@ -83,14 +83,14 @@ export function Sidebar() {
 
       <div
         className={cn(
-          "fixed left-0 top-0 h-screen flex flex-col bg-white dark:bg-gray-950 border-r border-slate-200 dark:border-gray-800 z-50 transition-all duration-300",
+          "fixed left-0 top-0 h-screen flex flex-col bg-white dark:bg-zinc-950 border-r border-slate-200 dark:border-zinc-800 z-50 transition-all duration-300",
           collapsed ? "md:w-[80px]" : "md:w-64",
           "w-64",
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
         )}
       >
         <div
-          className={`relative flex items-center border-b border-slate-200 dark:border-gray-800 py-5 transition-all duration-300 ${collapsed ? "justify-center" : "px-6"}`}
+          className={`relative flex items-center border-b border-slate-200 dark:border-zinc-800 py-5 transition-all duration-300 ${collapsed ? "justify-center" : "px-6"}`}
         >
           <div className="flex items-center gap-3">
             <div className="relative h-10 w-10 flex items-center justify-center shrink-0">
@@ -108,10 +108,10 @@ export function Sidebar() {
 
             {!collapsed && (
               <div className="overflow-hidden whitespace-nowrap opacity-100 transition-opacity duration-300">
-                <h1 className="text-lg font-bold text-slate-900 dark:text-gray-50 tracking-tight">
+                <h1 className="text-lg font-bold text-slate-900 dark:text-zinc-50 tracking-tight">
                   SIGMA Bantul
                 </h1>
-                <p className="text-[10px] text-slate-500 dark:text-gray-400 uppercase tracking-wider">
+                <p className="text-[10px] text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                   SIG Manajemen Bencana
                 </p>
               </div>
@@ -120,7 +120,7 @@ export function Sidebar() {
 
           <button
             onClick={toggleSidebar}
-            className="hidden md:flex absolute -right-3 top-7 h-6 w-6 items-center justify-center rounded-full border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm hover:bg-slate-100 dark:hover:bg-gray-800 text-slate-500 dark:text-gray-400 z-50 transition-colors"
+            className="hidden md:flex absolute -right-3 top-7 h-6 w-6 items-center justify-center rounded-full border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 z-50 transition-colors"
             title={collapsed ? "Perluas Sidebar" : "Perkecil Sidebar"}
           >
             {collapsed ? (
@@ -152,8 +152,8 @@ export function Sidebar() {
                   "group flex items-center rounded-lg py-2.5 transition-colors overflow-hidden whitespace-nowrap",
                   collapsed ? "justify-center px-0" : "gap-3 px-3 relative",
                   isActive
-                    ? "bg-blue-600 dark:bg-gray-900/50 text-white"
-                    : "text-slate-700 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-gray-900/50 hover:text-slate-900 dark:hover:text-gray-50",
+                    ? "bg-blue-600 dark:bg-zinc-900/50 text-white"
+                    : "text-slate-700 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-900/50 hover:text-slate-900 dark:hover:text-zinc-50",
                 )}
                 title={collapsed ? item.title : ""}
               >
@@ -172,7 +172,7 @@ export function Sidebar() {
 
           {!collapsed && (
             <div className="mt-6 mb-2 px-3">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-gray-500">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
                 Admin
               </span>
             </div>
@@ -183,7 +183,7 @@ export function Sidebar() {
               if (window.innerWidth < 768) toggleMobile();
             }}
             className={cn(
-              "flex items-center rounded-lg py-2.5 text-sm font-medium text-slate-700 dark:text-gray-400 transition-all duration-200 hover:bg-slate-100 dark:hover:bg-gray-900/50 hover:text-slate-900 dark:hover:text-gray-50 overflow-hidden whitespace-nowrap",
+              "flex items-center rounded-lg py-2.5 text-sm font-medium text-slate-700 dark:text-zinc-400 transition-all duration-200 hover:bg-slate-100 dark:hover:bg-zinc-900/50 hover:text-slate-900 dark:hover:text-zinc-50 overflow-hidden whitespace-nowrap",
               collapsed ? "justify-center px-0 mt-6" : "gap-3 px-3",
             )}
             title={collapsed ? "Login Admin" : ""}
@@ -194,7 +194,7 @@ export function Sidebar() {
         </nav>
 
         <div
-          className={`border-t border-slate-200 dark:border-gray-800 py-4 transition-all ${collapsed ? "px-2" : "px-3"}`}
+          className={`border-t border-slate-200 dark:border-zinc-800 py-4 transition-all ${collapsed ? "px-2" : "px-3"}`}
         >
           {collapsed ? (
             <div
@@ -222,13 +222,13 @@ export function Sidebar() {
           )}
         </div>
 
-        <div className="border-t border-slate-200 dark:border-gray-800 px-3 py-4 flex flex-col gap-4">
+        <div className="border-t border-slate-200 dark:border-zinc-800 px-3 py-4 flex flex-col gap-4">
           {/* Notification Toggle */}
           <div
             className={`flex items-center ${collapsed ? "justify-center" : "justify-between px-3"}`}
           >
             {!collapsed && (
-              <span className="text-xs font-semibold text-slate-500 dark:text-gray-400">
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">
                 Notifikasi
               </span>
             )}
@@ -240,17 +240,17 @@ export function Sidebar() {
             className={`flex items-center ${collapsed ? "justify-center" : "justify-between px-3"}`}
           >
             {!collapsed && (
-              <span className="text-xs font-semibold text-slate-500 dark:text-gray-400">
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">
                 Tema Tampilan
               </span>
             )}
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="shrink-0 p-2 rounded-full border border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-900 hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors"
+              className="shrink-0 p-2 rounded-full border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
               title={collapsed ? "Toggle Tema" : ""}
             >
               {mounted && theme === "dark" ? (
-                <Sun className="h-4 w-4 text-gray-400" />
+                <Sun className="h-4 w-4 text-zinc-400" />
               ) : mounted && theme !== "dark" ? (
                 <Moon className="h-4 w-4 text-slate-600" />
               ) : (

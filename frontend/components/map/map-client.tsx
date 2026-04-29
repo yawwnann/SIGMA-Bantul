@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Shelter, HazardZone, Earthquake, PublicFacility } from "@/types";
@@ -9,6 +9,7 @@ import { Filter, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import "leaflet-providers";
 import { BpbdRiskLayer } from "./bpbd-risk-layer";
+import { debounce } from "@/lib/utils";
 
 interface MapClientProps {
   shelters: Shelter[];
@@ -132,7 +133,12 @@ export default function MapClient({
   const [isMapReady, setIsMapReady] = useState(false);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const { resolvedTheme } = useTheme();
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+
+  useEffect(() => {
+    setIsDarkMode(resolvedTheme === "dark");
+  }, [resolvedTheme]);
 
   useEffect(() => {
     const fetchBoundary = async () => {
@@ -302,7 +308,6 @@ export default function MapClient({
     if (
       boundaryLayerRef.current &&
       !calculatedRoute &&
-      !selectedEarthquake &&
       !selectedLocation
     ) {
       mapRef.current.fitBounds(boundaryLayerRef.current.getBounds(), {
@@ -313,7 +318,6 @@ export default function MapClient({
     bantulBoundary,
     visibleLayers.boundary,
     calculatedRoute,
-    selectedEarthquake,
     selectedLocation,
   ]);
 
@@ -347,8 +351,17 @@ export default function MapClient({
           shelter.capacity - (shelter.currentOccupancy ?? 0),
         );
 
+        const isDark = isDarkMode;
+        const bgMain = isDark ? "#030712" : "#ffffff";
+        const bgCard = isDark ? "#111827" : "#f8fafc";
+        const bgInput = isDark ? "#1f2937" : "#f1f5f9";
+        const textMain = isDark ? "#f1f5f9" : "#0f172a";
+        const textMuted = isDark ? "#9ca3af" : "#64748b";
+        const textLabel = isDark ? "#6b7280" : "#475569";
+        const border = isDark ? "rgba(255,255,255,0.07)" : "#e2e8f0";
+
         const popupContent = `
-          <div style="width:260px;background:#030712;color:#f1f5f9;border-radius:12px;overflow:hidden;font-family:system-ui,sans-serif;">
+          <div style="width:260px;background:${bgMain};color:${textMain};border-radius:12px;overflow:hidden;font-family:system-ui,sans-serif;border:1px solid ${border};">
             <!-- Badge -->
             <div style="padding:12px 14px 8px;">
               <span style="display:inline-block;background:${badgeColor.bg};color:${badgeColor.text};font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:0.03em;">${badgeColor.label}</span>
@@ -357,7 +370,7 @@ export default function MapClient({
             <!-- Title & Address -->
             <div style="padding:0 14px 10px;">
               <div style="font-size:15px;font-weight:700;line-height:1.3;margin-bottom:5px;">${shelter.name}</div>
-              <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:#94a3b8;">
+              <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:${textMuted};">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                 ${shelter.address || "Bantul, DIY"}
               </div>
@@ -365,17 +378,17 @@ export default function MapClient({
 
             <!-- Capacity Grid -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 10px;">
-              <div style="background:#111827;border-radius:8px;padding:10px;">
+              <div style="background:${bgCard};border-radius:8px;padding:10px;">
                 <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                  <span style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">KAPASITAS</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${textLabel}" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <span style="font-size:9px;color:${textLabel};font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">KAPASITAS</span>
                 </div>
                 <div style="font-size:22px;font-weight:800;">${shelter.capacity}</div>
               </div>
-              <div style="background:#111827;border-radius:8px;padding:10px;">
+              <div style="background:${bgCard};border-radius:8px;padding:10px;">
                 <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                  <span style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">TERSEDIA</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${textLabel}" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                  <span style="font-size:9px;color:${textLabel};font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">TERSEDIA</span>
                 </div>
                 <div style="font-size:22px;font-weight:800;">${available}</div>
               </div>
@@ -383,12 +396,12 @@ export default function MapClient({
 
             <!-- Details -->
             <div style="padding:0 14px 12px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 8px;margin-bottom:4px;background:#111827;border-radius:6px;">
-                <span style="font-size:12px;color:#9ca3af;">Jenis Fasilitas</span>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 8px;margin-bottom:4px;background:${bgCard};border-radius:6px;">
+                <span style="font-size:12px;color:${textMuted};">Jenis Fasilitas</span>
                 <span style="font-size:12px;font-weight:600;">Ruang Publik</span>
               </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 8px;background:#111827;border-radius:6px;">
-                <span style="font-size:12px;color:#9ca3af;">Jam Operasional</span>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 8px;background:${bgCard};border-radius:6px;">
+                <span style="font-size:12px;color:${textMuted};">Jam Operasional</span>
                 <span style="font-size:12px;font-weight:600;">24 Jam (Siaga)</span>
               </div>
             </div>
@@ -411,8 +424,8 @@ export default function MapClient({
           minWidth: 260,
           className: "custom-shelter-popup",
           closeButton: true,
-          autoPan: true,
-          autoPanPadding: [50, 50],
+          autoPan: false,
+          offset: [160, 100],
         });
 
         popup.on("popupopen", () => {
@@ -433,7 +446,7 @@ export default function MapClient({
         });
       }
     });
-  }, [shelters, visibleLayers.shelters, resolvedTheme]);
+  }, [shelters, visibleLayers.shelters, isDarkMode]);
 
   useEffect(() => {
     if (!mapRef.current || !facilityLayerGroupRef.current) return;
@@ -450,6 +463,10 @@ export default function MapClient({
         Array.isArray(coords.coordinates) &&
         coords.coordinates.length >= 2
       ) {
+        const popupOptions = {
+          autoPan: false,
+          offset: [160, 60] as L.PointTuple
+        };
         L.marker([coords.coordinates[1], coords.coordinates[0]], {
           icon: createFacilityIcon(facility.type),
         }).addTo(facilityLayerGroupRef.current!).bindPopup(`
@@ -458,7 +475,7 @@ export default function MapClient({
               <p class="text-sm">Jenis: ${facility.type}</p>
               ${facility.address ? `<p class="text-sm">Alamat: ${facility.address}</p>` : ""}
             </div>
-          `);
+          `, popupOptions);
       }
     });
   }, [facilities, visibleLayers.facilities]);
@@ -544,7 +561,7 @@ export default function MapClient({
               </div>
               <div style="
                 margin-top: 4px;
-                background: rgba(24, 24, 27, 0.85); /* gray-900 with opacity */
+                background: rgba(24, 24, 27, 0.85); /* zinc-900 with opacity */
                 backdrop-filter: blur(4px);
                 padding: 3px 8px;
                 border-radius: 12px;
@@ -656,58 +673,58 @@ export default function MapClient({
   }, [hazardZones, visibleLayers.hazardZones]);
 
   useEffect(() => {
-    if (!mapRef.current || !selectedEarthquake) return;
+    if (!mapRef.current) return;
 
-    const { lat, lon, id } = selectedEarthquake;
-    if (lat == null || lon == null) return;
+    const map = mapRef.current;
+    const currentZoom = map.getZoom();
 
-    // 1. Zoom/Pan to earthquake
-    const currentZoom = mapRef.current.getZoom();
-    const targetZoom = Math.max(currentZoom, 12);
-    mapRef.current.flyTo([lat, lon], targetZoom, {
-      duration: 1.5,
-    });
+    if (selectedEarthquake) {
+      const { lat, lon, id } = selectedEarthquake;
+      if (lat == null || lon == null) return;
 
-    // 2. Show impact radius circles
-    // Hide previous if exists
-    if (activeCircleRef.current) {
-      activeCircleRef.current.eachLayer((layer) => {
-        const pathLayer = layer as L.Path;
-        if (pathLayer.setStyle) {
-          pathLayer.setStyle({ fillOpacity: 0, weight: 0, opacity: 0 });
-        }
+      const targetZoom = Math.max(currentZoom, 12);
+      mapRef.current.flyTo([lat, lon], targetZoom, {
+        duration: 1.5,
       });
-    }
 
-    // Find and show current circles
-    const radiusGroup = earthquakeCirclesRef.current.get(id);
-    if (radiusGroup) {
-      radiusGroup.eachLayer((layer) => {
-        if (layer instanceof L.Circle) {
-          const circleLayer = layer as L.Circle;
-          const color = (circleLayer.options as Record<string, unknown>)
-            .color as string;
-          if (color === "#dc2626")
-            circleLayer.setStyle({
-              fillOpacity: 0.25,
-              weight: 2,
-              opacity: 0.8,
-            });
-          else if (color === "#eab308")
-            circleLayer.setStyle({
-              fillOpacity: 0.15,
-              weight: 2,
-              opacity: 0.6,
-            });
-          else if (color === "#22c55e")
-            circleLayer.setStyle({
-              fillOpacity: 0.1,
-              weight: 1.5,
-              opacity: 0.4,
-            });
-        }
-      });
-      activeCircleRef.current = radiusGroup;
+      if (activeCircleRef.current) {
+        activeCircleRef.current.eachLayer((layer) => {
+          const pathLayer = layer as L.Path;
+          if (pathLayer.setStyle) {
+            pathLayer.setStyle({ fillOpacity: 0, weight: 0, opacity: 0 });
+          }
+        });
+      }
+
+      const radiusGroup = earthquakeCirclesRef.current.get(id);
+      if (radiusGroup) {
+        radiusGroup.eachLayer((layer) => {
+          if (layer instanceof L.Circle) {
+            const circleLayer = layer as L.Circle;
+            const color = (circleLayer.options as Record<string, unknown>)
+              .color as string;
+            if (color === "#dc2626")
+              circleLayer.setStyle({
+                fillOpacity: 0.25,
+                weight: 2,
+                opacity: 0.8,
+              });
+            else if (color === "#eab308")
+              circleLayer.setStyle({
+                fillOpacity: 0.15,
+                weight: 2,
+                opacity: 0.6,
+              });
+            else if (color === "#22c55e")
+              circleLayer.setStyle({
+                fillOpacity: 0.1,
+                weight: 1.5,
+                opacity: 0.4,
+              });
+          }
+        });
+        activeCircleRef.current = radiusGroup;
+      }
     }
   }, [selectedEarthquake]);
 
@@ -781,31 +798,45 @@ export default function MapClient({
     if (!visibleLayers.roads) return;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const roadStyle = (feature: any) => {
+      const type = feature?.properties?.type || "LOCAL";
+      const condition = feature?.properties?.condition || "GOOD";
+
+      let color = "#94a3b8";
+      if (type === "NATIONAL") color = "#ef4444";
+      else if (type === "PROVINCIAL") color = "#f97316";
+      else if (type === "REGIONAL") color = "#eab308";
+
+      let opacity = 0.7;
+      if (condition === "POOR") opacity = 0.5;
+      else if (condition === "MODERATE") opacity = 0.6;
+
+      let weight = 2;
+      if (type === "NATIONAL") weight = 4;
+      else if (type === "PROVINCIAL") weight = 3;
+
+      return {
+        color,
+        weight,
+        opacity,
+      };
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     roadLayerRef.current = L.geoJSON(roadNetwork as any, {
-      style: (feature) => {
-        const type = feature?.properties?.type || "LOCAL";
-        const condition = feature?.properties?.condition || "GOOD";
-
-        let color = "#94a3b8";
-        if (type === "NATIONAL") color = "#ef4444";
-        else if (type === "PROVINCIAL") color = "#f97316";
-        else if (type === "REGIONAL") color = "#eab308";
-
-        let opacity = 0.7;
-        if (condition === "POOR") opacity = 0.5;
-        else if (condition === "MODERATE") opacity = 0.6;
-
-        let weight = 2;
-        if (type === "NATIONAL") weight = 4;
-        else if (type === "PROVINCIAL") weight = 3;
-
-        return {
-          color,
-          weight,
-          opacity,
-        };
-      },
+      style: roadStyle,
+      bubblingMouseEvents: false,
     })
+      .on("mouseover", (e: L.LeafletMouseEvent) => {
+        const layer = e.target as L.Path;
+        layer.setStyle({ weight: (layer.options.weight || 2) + 2 });
+      })
+      .on("mouseout", (e: L.LeafletMouseEvent) => {
+        const layer = e.target as L.Path;
+        if (roadLayerRef.current) {
+          roadLayerRef.current.resetStyle(layer);
+        }
+      })
       .addTo(mapRef.current)
       .bindPopup((layer) => {
         const geoLayer = layer as L.GeoJSON;
@@ -969,7 +1000,7 @@ export default function MapClient({
             e.stopPropagation();
             setIsFilterOpen(!isFilterOpen);
           }}
-          className="bg-white/95 dark:bg-gray-950/90 backdrop-blur-md rounded-lg shadow-lg border border-slate-200 dark:border-gray-800/60 p-2.5 text-slate-700 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-2"
+          className="bg-white/95 dark:bg-zinc-950/90 backdrop-blur-md rounded-lg shadow-lg border border-slate-200 dark:border-zinc-800/60 p-2.5 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2"
         >
           {isFilterOpen ? (
             <X className="w-4 h-4" />
@@ -982,106 +1013,106 @@ export default function MapClient({
         </button>
 
         {isFilterOpen && (
-          <div className="bg-white/95 dark:bg-gray-950/90 backdrop-blur-md rounded-xl shadow-2xl border border-slate-200 dark:border-gray-800/60 p-4 w-45 transition-all animate-in fade-in slide-in-from-top-2">
-            <h3 className="font-bold text-[11px] uppercase tracking-wider mb-3 text-slate-800 dark:text-gray-200 border-b border-slate-100 dark:border-gray-800/50 pb-2">
+          <div className="bg-white/95 dark:bg-zinc-950/90 backdrop-blur-md rounded-xl shadow-2xl border border-slate-200 dark:border-zinc-800/60 p-4 w-45 transition-all animate-in fade-in slide-in-from-top-2">
+            <h3 className="font-bold text-[11px] uppercase tracking-wider mb-3 text-slate-800 dark:text-zinc-200 border-b border-slate-100 dark:border-zinc-800/50 pb-2">
               Layer Aktif
             </h3>
             <div className="space-y-3">
               <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-gray-400 dark:group-hover:text-gray-100 transition-colors">
+                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
                   Batas Wilayah
                 </span>
                 <input
                   type="checkbox"
                   checked={visibleLayers.boundary}
                   onChange={() => toggleLayer("boundary")}
-                  className="rounded border-slate-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-gray-900"
+                  className="rounded border-slate-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
                 />
               </label>
               <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-gray-400 dark:group-hover:text-gray-100 transition-colors">
+                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
                   Shelter
                 </span>
                 <input
                   type="checkbox"
                   checked={visibleLayers.shelters}
                   onChange={() => toggleLayer("shelters")}
-                  className="rounded border-slate-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-gray-900"
+                  className="rounded border-slate-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
                 />
               </label>
               <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-gray-400 dark:group-hover:text-gray-100 transition-colors">
+                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
                   Zona Rawan
                 </span>
                 <input
                   type="checkbox"
                   checked={visibleLayers.hazardZones}
                   onChange={() => toggleLayer("hazardZones")}
-                  className="rounded border-slate-300 dark:border-gray-700 text-orange-600 focus:ring-orange-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-gray-900"
+                  className="rounded border-slate-300 dark:border-zinc-700 text-orange-600 focus:ring-orange-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
                 />
               </label>
               <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-gray-400 dark:group-hover:text-gray-100 transition-colors">
+                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
                   Titik Gempa
                 </span>
                 <input
                   type="checkbox"
                   checked={visibleLayers.earthquakes}
                   onChange={() => toggleLayer("earthquakes")}
-                  className="rounded border-slate-300 dark:border-gray-700 text-red-600 focus:ring-red-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-gray-900"
+                  className="rounded border-slate-300 dark:border-zinc-700 text-red-600 focus:ring-red-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
                 />
               </label>
               <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-gray-400 dark:group-hover:text-gray-100 transition-colors">
+                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
                   Fasilitas
                 </span>
                 <input
                   type="checkbox"
                   checked={visibleLayers.facilities}
                   onChange={() => toggleLayer("facilities")}
-                  className="rounded border-slate-300 dark:border-gray-700 text-green-600 focus:ring-green-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-gray-900"
+                  className="rounded border-slate-300 dark:border-zinc-700 text-green-600 focus:ring-green-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
                 />
               </label>
               <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-gray-400 dark:group-hover:text-gray-100 transition-colors">
+                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
                   List Jalan
                 </span>
                 <input
                   type="checkbox"
                   checked={visibleLayers.roads}
                   onChange={() => toggleLayer("roads")}
-                  className="rounded border-slate-300 dark:border-gray-700 text-slate-600 focus:ring-slate-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-gray-900"
+                  className="rounded border-slate-300 dark:border-zinc-700 text-slate-600 focus:ring-slate-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
                 />
               </label>
               <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-gray-400 dark:group-hover:text-gray-100 transition-colors">
+                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
                   Zona BPBD
                 </span>
                 <input
                   type="checkbox"
                   checked={visibleLayers.bpbdRisk}
                   onChange={() => toggleLayer("bpbdRisk")}
-                  className="rounded border-slate-300 dark:border-gray-700 text-amber-600 focus:ring-amber-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-gray-900"
+                  className="rounded border-slate-300 dark:border-zinc-700 text-amber-600 focus:ring-amber-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
                 />
               </label>
             </div>
 
             {visibleLayers.bpbdRisk && (
-              <div className="mt-4 pt-4 border-t border-slate-200 dark:border-gray-800/60">
-                <h4 className="text-[10px] uppercase font-bold text-slate-700 dark:text-gray-400 mb-2 tracking-wider">
+              <div className="mt-4 pt-4 border-t border-slate-200 dark:border-zinc-800/60">
+                <h4 className="text-[10px] uppercase font-bold text-slate-700 dark:text-zinc-400 mb-2 tracking-wider">
                   Legenda BPBD
                 </h4>
-                <div className="space-y-2.5 text-xs text-slate-600 dark:text-gray-300">
+                <div className="space-y-2.5 text-xs text-slate-600 dark:text-zinc-300">
                   <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 bg-[#10b981] rounded border border-white dark:border-gray-900 shadow-sm"></div>
+                    <div className="w-4 h-4 bg-[#10b981] rounded border border-white dark:border-zinc-900 shadow-sm"></div>
                     <span className="font-medium">Risiko Rendah</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 bg-[#f59e0b] rounded border border-white dark:border-gray-900 shadow-sm"></div>
+                    <div className="w-4 h-4 bg-[#f59e0b] rounded border border-white dark:border-zinc-900 shadow-sm"></div>
                     <span className="font-medium">Risiko Sedang</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 bg-[#ef4444] rounded border border-white dark:border-gray-900 shadow-sm"></div>
+                    <div className="w-4 h-4 bg-[#ef4444] rounded border border-white dark:border-zinc-900 shadow-sm"></div>
                     <span className="font-medium">Risiko Tinggi</span>
                   </div>
                 </div>
@@ -1089,13 +1120,13 @@ export default function MapClient({
             )}
 
             {visibleLayers.earthquakes && earthquakes.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-slate-200 dark:border-gray-800/60">
-                <h4 className="text-[10px] uppercase font-bold text-slate-700 dark:text-gray-400 mb-2 tracking-wider">
+              <div className="mt-4 pt-4 border-t border-slate-200 dark:border-zinc-800/60">
+                <h4 className="text-[10px] uppercase font-bold text-slate-700 dark:text-zinc-400 mb-2 tracking-wider">
                   Legenda Gempa
                 </h4>
-                <div className="space-y-2.5 text-xs text-slate-600 dark:text-gray-300">
+                <div className="space-y-2.5 text-xs text-slate-600 dark:text-zinc-300">
                   <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 bg-red-600 rounded-full border border-white dark:border-gray-900 shadow-sm"></div>
+                    <div className="w-2.5 h-2.5 bg-red-600 rounded-full border border-white dark:border-zinc-900 shadow-sm"></div>
                     <span className="font-medium">Pusat gempa</span>
                   </div>
                   <div className="flex items-center gap-3">
@@ -1114,8 +1145,9 @@ export default function MapClient({
           padding: 0;
           border-radius: 12px;
           overflow: hidden;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
         }
         .custom-shelter-popup .leaflet-popup-content {
           margin: 0;
@@ -1125,14 +1157,14 @@ export default function MapClient({
           display: none;
         }
         .custom-shelter-popup .leaflet-popup-close-button {
-          color: #94a3b8 !important;
+          color: #64748b !important;
           font-size: 18px !important;
           top: 8px !important;
           right: 8px !important;
           z-index: 10;
         }
         .custom-shelter-popup .leaflet-popup-close-button:hover {
-          color: #f1f5f9 !important;
+          color: #0f172a !important;
         }
         .custom-popup .leaflet-popup-content-wrapper {
           border-radius: 12px;

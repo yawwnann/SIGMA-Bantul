@@ -120,21 +120,24 @@ export class EvacuationService {
     const topRoutes = scoredRoutes.slice(0, maxResults);
 
     const routesToSave: RouteScore[] = [];
-    for (const route of topRoutes) {
-      await this.prisma.evacuationRoute.create({
-        data: {
-          name: `Route ${route.roadName} (Score: ${route.score})`,
-          geometry:
-            route.geometry as import('@prisma/client').Prisma.JsonObject,
-          type,
-          score: route.score,
-          startLat,
-          startLon,
-          endLat,
-          endLon,
-        },
-      });
+    const bulkData = topRoutes.map((route) => {
       routesToSave.push(route);
+      return {
+        name: `Route ${route.roadName} (Score: ${route.score})`,
+        geometry: route.geometry as import('@prisma/client').Prisma.JsonObject,
+        type,
+        score: route.score,
+        startLat,
+        startLon,
+        endLat,
+        endLon,
+      };
+    });
+
+    if (bulkData.length > 0) {
+      await this.prisma.evacuationRoute.createMany({
+        data: bulkData,
+      });
     }
 
     await this.redis.setJson(cacheKey, routesToSave, 3600);

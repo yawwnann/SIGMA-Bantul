@@ -154,7 +154,7 @@ export default function AdminFacilitiesPage() {
             <Building className="h-6 w-6 text-emerald-500" />
             Manajemen Fasilitas Umum
           </h2>
-          <p className="text-gray-400 mt-1 text-sm">
+          <p className="text-zinc-400 mt-1 text-sm">
             Total {facilities.length} fasilitas terdaftar dalam pangkalan data.
           </p>
         </div>
@@ -167,7 +167,7 @@ export default function AdminFacilitiesPage() {
       </div>
 
       {/* Toolbar / Layout Spacing */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-center justify-between shadow-sm">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-center justify-between shadow-sm">
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shrink-0">
             <Filter className="w-5 h-5 text-emerald-400" />
@@ -176,10 +176,10 @@ export default function AdminFacilitiesPage() {
             value={filterType}
             onValueChange={(v) => setFilterType(v || "all")}
           >
-            <SelectTrigger className="w-full sm:w-[200px] h-10 bg-gray-950 border-gray-800 text-gray-200">
+            <SelectTrigger className="w-full sm:w-[200px] h-10 bg-zinc-950 border-zinc-800 text-zinc-200">
               <SelectValue placeholder="Semua Jenis Fasilitas" />
             </SelectTrigger>
-            <SelectContent className="bg-gray-900 border-gray-800 text-gray-200">
+            <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
               <SelectItem value="all">Semua Jenis</SelectItem>
               <SelectItem value="HOSPITAL">Rumah Sakit</SelectItem>
               <SelectItem value="SCHOOL">Sekolah</SelectItem>
@@ -193,27 +193,27 @@ export default function AdminFacilitiesPage() {
         </div>
 
         {loading && (
-          <div className="text-sm text-gray-500 animate-pulse">
+          <div className="text-sm text-zinc-500 animate-pulse">
             Memuat data...
           </div>
         )}
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-md">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-md">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-gray-950/50">
-              <TableRow className="border-b border-gray-800 hover:bg-transparent">
-                <TableHead className="font-semibold text-gray-400">
+            <TableHeader className="bg-zinc-950/50">
+              <TableRow className="border-b border-zinc-800 hover:bg-transparent">
+                <TableHead className="font-semibold text-zinc-400">
                   Nama Fasilitas
                 </TableHead>
-                <TableHead className="font-semibold text-gray-400">
+                <TableHead className="font-semibold text-zinc-400">
                   Jenis Fasilitas
                 </TableHead>
-                <TableHead className="font-semibold text-gray-400">
+                <TableHead className="font-semibold text-zinc-400">
                   Alamat Geografis
                 </TableHead>
-                <TableHead className="font-semibold text-gray-400 text-right">
+                <TableHead className="font-semibold text-zinc-400 text-right">
                   Aksi
                 </TableHead>
               </TableRow>
@@ -223,7 +223,7 @@ export default function AdminFacilitiesPage() {
                 <TableRow>
                   <TableCell
                     colSpan={4}
-                    className="text-center py-12 text-gray-500"
+                    className="text-center py-12 text-zinc-500"
                   >
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-3"></div>
@@ -235,7 +235,7 @@ export default function AdminFacilitiesPage() {
                 <TableRow>
                   <TableCell
                     colSpan={4}
-                    className="text-center py-12 text-gray-500"
+                    className="text-center py-12 text-zinc-500"
                   >
                     <MapIcon className="w-8 h-8 opacity-20 mx-auto mb-3" />
                     Tidak ada data fasilitas yang dikelola.
@@ -245,20 +245,20 @@ export default function AdminFacilitiesPage() {
                 facilities.map((facility) => (
                   <TableRow
                     key={facility.id}
-                    className="border-b border-gray-800/50 hover:bg-gray-800/20 transition-colors"
+                    className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors"
                   >
-                    <TableCell className="font-medium text-gray-200">
+                    <TableCell className="font-medium text-zinc-200">
                       {facility.name}
                     </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className="bg-gray-800 font-medium border-gray-700 text-gray-300"
+                        className="bg-zinc-800 font-medium border-zinc-700 text-zinc-300"
                       >
                         {facilityTypeLabels[facility.type] || facility.type}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-gray-400">
+                    <TableCell className="text-zinc-400">
                       <div className="flex items-center gap-1.5">
                         <MapPin className="h-3 w-3 shrink-0" />{" "}
                         {facility.address || "Area Tidak Diketahui"}
@@ -291,12 +291,12 @@ export default function AdminFacilitiesPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-md bg-gray-900 text-gray-100 border-gray-800">
+        <DialogContent className="max-w-md bg-zinc-900 text-zinc-100 border-zinc-800">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">
               {editingFacility ? "Edit Fasilitas" : "Tambah Fasilitas"}
             </DialogTitle>
-            <DialogDescription className="text-gray-500">
+            <DialogDescription className="text-zinc-500">
               {editingFacility
                 ? "Perbarui metadata fasilitas di bawah ini"
                 : "Tambah fasilitas umum baru"}
@@ -304,7 +304,7 @@ export default function AdminFacilitiesPage() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name" className="text-gray-400">
+              <Label htmlFor="name" className="text-zinc-400">
                 Nama Fasilitas
               </Label>
               <Input
@@ -314,11 +314,11 @@ export default function AdminFacilitiesPage() {
                   setFormData({ ...formData, name: e.target.value })
                 }
                 placeholder="Cth: RSUD Panembahan Senopati"
-                className="bg-gray-950 border-gray-800 focus-visible:ring-emerald-500"
+                className="bg-zinc-950 border-zinc-800 focus-visible:ring-emerald-500"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="type" className="text-gray-400">
+              <Label htmlFor="type" className="text-zinc-400">
                 Jenis Fasilitas
               </Label>
               <Select
@@ -327,10 +327,10 @@ export default function AdminFacilitiesPage() {
                   setFormData({ ...formData, type: value || "HOSPITAL" })
                 }
               >
-                <SelectTrigger className="bg-gray-950 border-gray-800 focus:ring-emerald-500">
+                <SelectTrigger className="bg-zinc-950 border-zinc-800 focus:ring-emerald-500">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-900 border-gray-800 text-gray-100">
+                <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
                   <SelectItem value="HOSPITAL">Rumah Sakit</SelectItem>
                   <SelectItem value="SCHOOL">Sekolah</SelectItem>
                   <SelectItem value="VILLAGE_OFFICE">Kantor Desa</SelectItem>
@@ -342,7 +342,7 @@ export default function AdminFacilitiesPage() {
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="address" className="text-gray-400">
+              <Label htmlFor="address" className="text-zinc-400">
                 Alamat Lengkap
               </Label>
               <Input
@@ -352,12 +352,12 @@ export default function AdminFacilitiesPage() {
                   setFormData({ ...formData, address: e.target.value })
                 }
                 placeholder="Alamat fasilitas"
-                className="bg-gray-950 border-gray-800 focus-visible:ring-emerald-500"
+                className="bg-zinc-950 border-zinc-800 focus-visible:ring-emerald-500"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="lat" className="text-gray-400">
+                <Label htmlFor="lat" className="text-zinc-400">
                   Latitude
                 </Label>
                 <Input
@@ -371,11 +371,11 @@ export default function AdminFacilitiesPage() {
                       lat: parseFloat(e.target.value),
                     })
                   }
-                  className="bg-gray-950 border-gray-800 font-mono text-sm"
+                  className="bg-zinc-950 border-zinc-800 font-mono text-sm"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="lon" className="text-gray-400">
+                <Label htmlFor="lon" className="text-zinc-400">
                   Longitude
                 </Label>
                 <Input
@@ -389,7 +389,7 @@ export default function AdminFacilitiesPage() {
                       lon: parseFloat(e.target.value),
                     })
                   }
-                  className="bg-gray-950 border-gray-800 font-mono text-sm"
+                  className="bg-zinc-950 border-zinc-800 font-mono text-sm"
                 />
               </div>
             </div>
@@ -398,7 +398,7 @@ export default function AdminFacilitiesPage() {
             <Button
               variant="ghost"
               onClick={() => setIsDialogOpen(false)}
-              className="hover:bg-gray-800 hover:text-gray-100"
+              className="hover:bg-zinc-800 hover:text-zinc-100"
             >
               Batal
             </Button>

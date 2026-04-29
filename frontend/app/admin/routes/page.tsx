@@ -347,13 +347,13 @@ function RoadDrawingEditor({
   return (
     <div className="flex flex-col h-full">
       {/* Drawing toolbar */}
-      <div className="flex items-center gap-3 px-4 py-2.5 bg-gray-950 border-b border-gray-800 shrink-0">
+      <div className="flex items-center gap-3 px-4 py-2.5 bg-zinc-950 border-b border-zinc-800 shrink-0">
         <div className="flex items-center gap-2 text-blue-400 text-sm">
           <MousePointerClick className="w-4 h-4 shrink-0" />
           <span className="font-medium">Klik peta untuk menambah titik</span>
         </div>
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="text-xs text-gray-500 mr-2">{ptCount} titik</span>
+          <span className="text-xs text-zinc-500 mr-2">{ptCount} titik</span>
           <Button
             type="button"
             variant="ghost"
@@ -388,12 +388,12 @@ function RoadDrawingEditor({
         {/* Empty state overlay */}
         {ptCount === 0 && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-            <div className="bg-gray-900/85 backdrop-blur-sm border border-gray-700/60 rounded-2xl px-6 py-5 text-center shadow-xl">
+            <div className="bg-zinc-900/85 backdrop-blur-sm border border-zinc-700/60 rounded-2xl px-6 py-5 text-center shadow-xl">
               <MousePointerClick className="w-9 h-9 text-blue-400 mx-auto mb-3" />
-              <p className="text-gray-200 text-sm font-semibold">
+              <p className="text-zinc-200 text-sm font-semibold">
                 Mulai menggambar jalur
               </p>
-              <p className="text-gray-500 text-xs mt-1">
+              <p className="text-zinc-500 text-xs mt-1">
                 Klik minimal 2 titik pada peta
               </p>
             </div>
@@ -502,19 +502,19 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
       />
 
       {/* Modal */}
-      <div className="relative z-10 flex flex-col bg-gray-900 m-4 rounded-2xl overflow-hidden shadow-2xl border border-gray-800 w-full max-w-6xl">
+      <div className="relative z-10 flex flex-col bg-zinc-900 m-4 rounded-2xl overflow-hidden shadow-2xl border border-zinc-800 w-full max-w-6xl">
         {/* ── Header ── */}
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-800 bg-gray-950/60 shrink-0">
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-zinc-800 bg-zinc-950/60 shrink-0">
           <div className="h-10 w-10 rounded-xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center">
             <Pencil className="w-5 h-5 text-blue-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-base font-bold text-gray-100">
+            <h2 className="text-base font-bold text-zinc-100">
               {editingRoute
                 ? "Edit Manajemen Evakuasi"
                 : "Tambah Manajemen Evakuasi Baru"}
             </h2>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-zinc-500 mt-0.5">
               {editingRoute
                 ? "Gambar ulang atau ubah metadata jalur yang dipilih."
                 : "Klik titik-titik di peta untuk menggambar jalur, lalu isi informasi di panel kanan."}
@@ -522,7 +522,7 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
           </div>
           <button
             onClick={onClose}
-            className="h-8 w-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-100 hover:bg-gray-800 transition-colors"
+            className="h-8 w-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -534,7 +534,7 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
           style={{ height: "calc(100vh - 12rem)" }}
         >
           {/* Left: Map */}
-          <div className="flex-1 min-w-0 flex flex-col border-r border-gray-800">
+          <div className="flex-1 min-w-0 flex flex-col border-r border-zinc-800">
             <RoadDrawingEditor
               editorKey={editorKey}
               initialCoords={drawCoords}
@@ -544,18 +544,18 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
           </div>
 
           {/* Right: Form panel */}
-          <div className="w-80 shrink-0 flex flex-col bg-gray-900">
+          <div className="w-80 shrink-0 flex flex-col bg-zinc-900">
             {/* Status pill */}
             <div className="px-5 pt-5">
               <div
                 className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-sm ${
                   drawCoords.length >= 2
                     ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400"
-                    : "bg-gray-800/50 border-gray-700/50 text-gray-500"
+                    : "bg-zinc-800/50 border-zinc-700/50 text-zinc-500"
                 }`}
               >
                 <CheckCircle2
-                  className={`w-4 h-4 shrink-0 ${drawCoords.length >= 2 ? "text-emerald-400" : "text-gray-600"}`}
+                  className={`w-4 h-4 shrink-0 ${drawCoords.length >= 2 ? "text-emerald-400" : "text-zinc-600"}`}
                 />
                 <span className="text-xs font-medium">
                   {drawCoords.length === 0
@@ -571,7 +571,7 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
               {/* Nama */}
               <div className="space-y-2">
-                <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                <Label className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">
                   Nama Jalan{" "}
                   <span className="text-red-400 normal-case tracking-normal">
                     *
@@ -583,13 +583,13 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
                     setFormData({ ...formData, name: e.target.value })
                   }
                   placeholder="Cth: Jl. Parangtritis Km 5"
-                  className="bg-gray-950 border-gray-700 focus-visible:ring-blue-500 text-sm text-gray-100 placeholder:text-gray-600"
+                  className="bg-zinc-950 border-zinc-700 focus-visible:ring-blue-500 text-sm text-zinc-100 placeholder:text-zinc-600"
                 />
               </div>
 
               {/* Tipe */}
               <div className="space-y-2">
-                <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                <Label className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">
                   Tipe Jalan
                 </Label>
                 <Select
@@ -598,10 +598,10 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
                     setFormData({ ...formData, type: v as RoadType })
                   }
                 >
-                  <SelectTrigger className="bg-gray-950 border-gray-700 text-sm text-gray-100">
+                  <SelectTrigger className="bg-zinc-950 border-zinc-700 text-sm text-zinc-100">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-900 border-gray-700 text-gray-100">
+                  <SelectContent className="bg-zinc-900 border-zinc-700 text-zinc-100">
                     <SelectItem value="NATIONAL">
                       🛣️ Tingkat Nasional
                     </SelectItem>
@@ -616,7 +616,7 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
 
               {/* Kondisi */}
               <div className="space-y-2">
-                <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                <Label className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">
                   Kondisi Fisik
                 </Label>
                 <Select
@@ -625,27 +625,27 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
                     setFormData({ ...formData, condition: v as RoadCondition })
                   }
                 >
-                  <SelectTrigger className="bg-gray-950 border-gray-700 text-sm text-gray-100">
+                  <SelectTrigger className="bg-zinc-950 border-zinc-700 text-sm text-zinc-100">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-900 border-gray-700 text-gray-100">
+                  <SelectContent className="bg-zinc-900 border-zinc-700 text-zinc-100">
                     <SelectItem value="GOOD">✅ Sangat Baik</SelectItem>
                     <SelectItem value="MODERATE">🟡 Sedang</SelectItem>
                     <SelectItem value="POOR">🟠 Kondisi Buruk</SelectItem>
                     <SelectItem value="DAMAGED">🔴 Rusak Berat</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-[11px] text-gray-600">
+                <p className="text-[11px] text-zinc-600">
                   Warna garis mengikuti kondisi yang dipilih
                 </p>
               </div>
 
               {/* Kerentanan - READ ONLY (dihitung otomatis dari zona BPBD) */}
               <div className="space-y-2">
-                <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                <Label className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">
                   Kerentanan Bencana
                 </Label>
-                <div className="bg-gray-950/50 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-gray-100">
+                <div className="bg-zinc-950/50 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-100">
                   <Badge
                     className={vulnerabilityColors[formData.vulnerability]}
                   >
@@ -660,7 +660,7 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
 
               {/* Panjang */}
               <div className="space-y-2">
-                <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                <Label className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">
                   Panjang Estimasi (m)
                 </Label>
                 <Input
@@ -673,13 +673,13 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
                     })
                   }
                   placeholder="0"
-                  className="bg-gray-950 border-gray-700 text-sm text-gray-100 placeholder:text-gray-600"
+                  className="bg-zinc-950 border-zinc-700 text-sm text-zinc-100 placeholder:text-zinc-600"
                 />
               </div>
             </div>
 
             {/* Footer buttons */}
-            <div className="shrink-0 px-5 py-4 border-t border-gray-800 bg-gray-950/50 space-y-2">
+            <div className="shrink-0 px-5 py-4 border-t border-zinc-800 bg-zinc-950/50 space-y-2">
               <Button
                 onClick={handleSave}
                 disabled={
@@ -701,12 +701,12 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
               <Button
                 variant="ghost"
                 onClick={onClose}
-                className="w-full text-gray-400 hover:text-gray-100 hover:bg-gray-800 h-9 text-sm"
+                className="w-full text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 h-9 text-sm"
               >
                 Batal
               </Button>
               {drawCoords.length < 2 && (
-                <p className="text-center text-[11px] text-gray-600">
+                <p className="text-center text-[11px] text-zinc-600">
                   ⚠️ Minimal 2 titik pada peta diperlukan
                 </p>
               )}
@@ -792,10 +792,10 @@ export default function AdminRoutesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-gray-100 flex items-center gap-2">
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-100 flex items-center gap-2">
             <Route className="h-6 w-6 text-blue-500" /> Manajemen Evakuasi
           </h2>
-          <p className="text-gray-400 mt-1 text-sm">
+          <p className="text-zinc-400 mt-1 text-sm">
             Total {totalItems} ruas jalan terdaftar dalam sistem.
           </p>
         </div>
@@ -808,7 +808,7 @@ export default function AdminRoutesPage() {
       </div>
 
       {/* Toolbar */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-center justify-between">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shrink-0">
             <Filter className="w-5 h-5 text-blue-400" />
@@ -817,10 +817,10 @@ export default function AdminRoutesPage() {
             value={filterType}
             onValueChange={(v) => setFilterType(v || "all")}
           >
-            <SelectTrigger className="w-full sm:w-[200px] h-10 bg-gray-950 border-gray-800 text-gray-200">
+            <SelectTrigger className="w-full sm:w-[200px] h-10 bg-zinc-950 border-zinc-800 text-zinc-200">
               <SelectValue placeholder="Semua Jenis Jalan" />
             </SelectTrigger>
-            <SelectContent className="bg-gray-900 border-gray-800 text-gray-200">
+            <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
               <SelectItem value="all">Semua Jenis</SelectItem>
               <SelectItem value="NATIONAL">Nasional</SelectItem>
               <SelectItem value="PROVINCIAL">Provinsi</SelectItem>
@@ -830,34 +830,34 @@ export default function AdminRoutesPage() {
           </Select>
         </div>
         {loading && (
-          <div className="text-sm text-gray-500 animate-pulse">
+          <div className="text-sm text-zinc-500 animate-pulse">
             Memuat data...
           </div>
         )}
       </div>
 
       {/* Table */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-md">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-md">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-gray-950/50">
-              <TableRow className="border-b border-gray-800 hover:bg-transparent">
-                <TableHead className="font-semibold text-gray-400">
+            <TableHeader className="bg-zinc-950/50">
+              <TableRow className="border-b border-zinc-800 hover:bg-transparent">
+                <TableHead className="font-semibold text-zinc-400">
                   Nama Jalan
                 </TableHead>
-                <TableHead className="font-semibold text-gray-400">
+                <TableHead className="font-semibold text-zinc-400">
                   Jenis
                 </TableHead>
-                <TableHead className="font-semibold text-gray-400">
+                <TableHead className="font-semibold text-zinc-400">
                   Kondisi
                 </TableHead>
-                <TableHead className="font-semibold text-gray-400">
+                <TableHead className="font-semibold text-zinc-400">
                   Kerentanan
                 </TableHead>
-                <TableHead className="font-semibold text-gray-400 text-right">
+                <TableHead className="font-semibold text-zinc-400 text-right">
                   L (m)
                 </TableHead>
-                <TableHead className="font-semibold text-gray-400 text-right">
+                <TableHead className="font-semibold text-zinc-400 text-right">
                   Aksi
                 </TableHead>
               </TableRow>
@@ -867,7 +867,7 @@ export default function AdminRoutesPage() {
                 <TableRow>
                   <TableCell
                     colSpan={6}
-                    className="text-center py-12 text-gray-500"
+                    className="text-center py-12 text-zinc-500"
                   >
                     <div className="flex flex-col items-center">
                       <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
@@ -879,7 +879,7 @@ export default function AdminRoutesPage() {
                 <TableRow>
                   <TableCell
                     colSpan={6}
-                    className="text-center py-12 text-gray-500"
+                    className="text-center py-12 text-zinc-500"
                   >
                     <MapIcon className="w-8 h-8 opacity-20 mx-auto mb-3" />
                     Tidak ada jalur evakuasi.
@@ -889,15 +889,15 @@ export default function AdminRoutesPage() {
                 routes.map((route) => (
                   <TableRow
                     key={route.id}
-                    className="border-b border-gray-800/50 hover:bg-gray-800/20 transition-colors"
+                    className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors"
                   >
-                    <TableCell className="font-medium text-gray-200">
+                    <TableCell className="font-medium text-zinc-200">
                       {route.name}
                     </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className="bg-gray-800 font-normal border-gray-700 text-gray-300"
+                        className="bg-zinc-800 font-normal border-zinc-700 text-zinc-300"
                       >
                         {roadTypeLabels[route.type] || route.type}
                       </Badge>
@@ -916,7 +916,7 @@ export default function AdminRoutesPage() {
                           route.vulnerability}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right text-gray-400 font-mono text-sm">
+                    <TableCell className="text-right text-zinc-400 font-mono text-sm">
                       {route.length
                         ? Math.round(route.length).toLocaleString()
                         : "-"}
@@ -960,10 +960,10 @@ export default function AdminRoutesPage() {
         </div>
 
         {totalPages > 1 && (
-          <div className="border-t border-gray-800 bg-gray-950/30 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-gray-500">
+          <div className="border-t border-zinc-800 bg-zinc-950/30 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-zinc-500">
               Menampilkan{" "}
-              <span className="font-medium text-gray-300">{routes.length}</span>{" "}
+              <span className="font-medium text-zinc-300">{routes.length}</span>{" "}
               baris · halaman {currentPage}
             </p>
             <div className="flex items-center gap-2">
@@ -972,11 +972,11 @@ export default function AdminRoutesPage() {
                 size="sm"
                 onClick={() => fetchRoutes(currentPage - 1)}
                 disabled={currentPage <= 1 || loading}
-                className="border-gray-800 bg-gray-900 text-gray-300 hover:bg-gray-800"
+                className="border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
               >
                 <ChevronLeft className="w-4 h-4 mr-1" /> Prev
               </Button>
-              <span className="text-sm font-medium text-gray-400">
+              <span className="text-sm font-medium text-zinc-400">
                 {currentPage} / {totalPages}
               </span>
               <Button
@@ -984,7 +984,7 @@ export default function AdminRoutesPage() {
                 size="sm"
                 onClick={() => fetchRoutes(currentPage + 1)}
                 disabled={currentPage >= totalPages || loading}
-                className="border-gray-800 bg-gray-900 text-gray-300 hover:bg-gray-800"
+                className="border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
               >
                 Next <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
@@ -1001,21 +1001,21 @@ export default function AdminRoutesPage() {
           if (!open) setMapRoad(null);
         }}
       >
-        <DialogContent className="!max-w-3xl w-full bg-gray-900 text-gray-100 border-gray-800 p-0 overflow-hidden gap-0">
-          <DialogHeader className="px-6 pt-5 pb-3 border-b border-gray-800">
+        <DialogContent className="!max-w-3xl w-full bg-zinc-900 text-zinc-100 border-zinc-800 p-0 overflow-hidden gap-0">
+          <DialogHeader className="px-6 pt-5 pb-3 border-b border-zinc-800">
             <div className="flex items-start gap-4">
               <div className="flex-1 min-w-0">
-                <DialogTitle className="text-lg font-bold text-gray-100 flex items-center gap-2">
+                <DialogTitle className="text-lg font-bold text-zinc-100 flex items-center gap-2">
                   <Navigation className="w-5 h-5 text-emerald-400 shrink-0" />{" "}
                   Lokasi Jalan di Peta
                 </DialogTitle>
                 {mapRoad && (
                   <DialogDescription className="mt-1 flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-gray-300 truncate">
+                    <span className="font-medium text-zinc-300 truncate">
                       {mapRoad.name}
                     </span>
-                    <span className="text-gray-600">·</span>
-                    <span className="text-gray-500">
+                    <span className="text-zinc-600">·</span>
+                    <span className="text-zinc-500">
                       {roadTypeLabels[mapRoad.type]}
                     </span>
                     <Badge
@@ -1038,32 +1038,32 @@ export default function AdminRoutesPage() {
               )}
             </div>
           </DialogHeader>
-          <div className="w-full h-[440px] relative bg-gray-950">
+          <div className="w-full h-[440px] relative bg-zinc-950">
             {isMapOpen && mapRoad?.geometry ? (
               <RoadMapViewer road={mapRoad} />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-600">
+              <div className="w-full h-full flex items-center justify-center text-zinc-600">
                 <MapIcon className="w-10 h-10 opacity-20" />
               </div>
             )}
           </div>
           {mapRoad && (
-            <div className="px-6 py-3 border-t border-gray-800 bg-gray-950/60 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-gray-500">
+            <div className="px-6 py-3 border-t border-zinc-800 bg-zinc-950/60 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-zinc-500">
               <span>
-                <span className="text-gray-400 font-medium">ID:</span> #
+                <span className="text-zinc-400 font-medium">ID:</span> #
                 {mapRoad.id}
               </span>
               {mapRoad.length && (
                 <span>
-                  <span className="text-gray-400 font-medium">Panjang:</span>{" "}
+                  <span className="text-zinc-400 font-medium">Panjang:</span>{" "}
                   {Math.round(mapRoad.length).toLocaleString()} m
                 </span>
               )}
               <span>
-                <span className="text-gray-400 font-medium">Kerentanan:</span>{" "}
+                <span className="text-zinc-400 font-medium">Kerentanan:</span>{" "}
                 {vulnerabilityLabels[mapRoad.vulnerability]}
               </span>
-              <span className="ml-auto italic text-gray-600">
+              <span className="ml-auto italic text-zinc-600">
                 Warna garis = kondisi fisik
               </span>
             </div>

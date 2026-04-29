@@ -175,7 +175,7 @@ export default function AdminLoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
-                className="bg-gray-950 border-gray-700 text-gray-100 h-11"
+                className="bg-zinc-950 border-zinc-700 text-zinc-100 h-11"
               />
             </div>
 
@@ -198,7 +198,7 @@ export default function AdminLoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLoading}
-                  className="bg-gray-950 border-gray-700 text-gray-100 h-11 pr-10"
+                  className="bg-zinc-950 border-zinc-700 text-zinc-100 h-11 pr-10"
                   placeholder="••••••••"
                 />
                 <button

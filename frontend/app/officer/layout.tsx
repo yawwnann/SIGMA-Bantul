@@ -62,7 +62,7 @@ export default function OfficerLayout({
 
   if (!checked) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -71,10 +71,10 @@ export default function OfficerLayout({
   if (!authed) return null;
 
   return (
-    <div className="dark min-h-screen w-full flex bg-gray-950 text-gray-50">
+    <div className="dark min-h-screen w-full flex bg-zinc-950 text-zinc-50">
       {/* Sidebar */}
-      <aside className="hidden md:flex w-64 bg-gray-950 border-r border-gray-800 flex-col fixed inset-y-0 left-0 z-50 shadow-xl">
-        <div className="h-16 px-6 border-b border-gray-800 flex items-center gap-3">
+      <aside className="hidden md:flex w-64 bg-zinc-950 border-r border-zinc-800 flex-col fixed inset-y-0 left-0 z-50 shadow-xl">
+        <div className="h-16 px-6 border-b border-zinc-800 flex items-center gap-3">
           <div className="p-1.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
             <Image
               src="/logo.png"
@@ -85,17 +85,17 @@ export default function OfficerLayout({
             />
           </div>
           <div>
-            <h1 className="text-base font-bold text-gray-50 tracking-tight leading-none">
+            <h1 className="text-base font-bold text-zinc-50 tracking-tight leading-none">
               SIGMA Bantul
             </h1>
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium mt-1 leading-none">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mt-1 leading-none">
               Petugas Shelter
             </p>
           </div>
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-          <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-4 px-2">
+          <div className="text-[11px] font-semibold text-zinc-500 uppercase tracking-widest mb-4 px-2">
             Menu Petugas
           </div>
           {menuItems.map((item) => {
@@ -108,11 +108,11 @@ export default function OfficerLayout({
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                   isActive
                     ? "bg-emerald-600 font-semibold text-white shadow-md shadow-emerald-900/20"
-                    : "text-gray-400 hover:bg-gray-800/80 hover:text-gray-100"
+                    : "text-zinc-400 hover:bg-zinc-800/80 hover:text-zinc-100"
                 }`}
               >
                 <Icon
-                  className={`w-5 h-5 ${isActive ? "text-white" : "text-gray-500"}`}
+                  className={`w-5 h-5 ${isActive ? "text-white" : "text-zinc-500"}`}
                 />
                 <span>{item.label}</span>
               </Link>
@@ -120,16 +120,16 @@ export default function OfficerLayout({
           })}
         </nav>
 
-        <div className="p-4 border-t border-gray-800 bg-gray-900/50">
+        <div className="p-4 border-t border-zinc-800 bg-zinc-900/50">
           <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="w-9 h-9 rounded-full bg-gray-800 flex items-center justify-center border border-gray-700">
-              <UserCircle className="w-5 h-5 text-gray-400" />
+            <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700">
+              <UserCircle className="w-5 h-5 text-zinc-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-gray-500 font-medium leading-tight">
+              <p className="text-xs text-zinc-500 font-medium leading-tight">
                 Petugas Shelter
               </p>
-              <p className="text-sm font-semibold text-gray-200 truncate leading-tight">
+              <p className="text-sm font-semibold text-zinc-200 truncate leading-tight">
                 {user?.name || "Officer"}
               </p>
             </div>
@@ -138,7 +138,7 @@ export default function OfficerLayout({
             variant="outline"
             size="sm"
             onClick={handleLogout}
-            className="w-full bg-gray-900 border-gray-700 text-gray-400 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-colors justify-start px-3"
+            className="w-full bg-zinc-900 border-zinc-700 text-zinc-400 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-colors justify-start px-3"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Logout
@@ -148,8 +148,8 @@ export default function OfficerLayout({
 
       {/* Main */}
       <main className="flex-1 min-h-screen md:pl-64 flex flex-col">
-        <header className="h-16 shrink-0 bg-gray-900 border-b border-gray-800 px-6 flex items-center sticky top-0 z-40">
-          <h2 className="text-base font-semibold text-gray-100">
+        <header className="h-16 shrink-0 bg-zinc-900 border-b border-zinc-800 px-6 flex items-center sticky top-0 z-40">
+          <h2 className="text-base font-semibold text-zinc-100">
             {menuItems.find((item) => item.href === pathname)?.label ||
               "Dashboard Petugas"}
           </h2>
