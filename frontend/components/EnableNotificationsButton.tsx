@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, BellOff, Loader2 } from "lucide-react";
+import { Bell, BellOff, Loader2, AlertTriangle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -32,7 +32,7 @@ export function EnableNotificationsButton() {
 
       if (result === "granted") {
         toast.success("Notifikasi diaktifkan! Refresh halaman untuk menghubungkan ke server.", {
-          icon: "🔔",
+          icon: <Bell className="w-4 h-4" />,
           duration: 5000,
         });
         
@@ -42,12 +42,12 @@ export function EnableNotificationsButton() {
         }, 2000);
       } else if (result === "denied") {
         toast.error("Izin notifikasi ditolak. Silakan ubah di pengaturan browser.", {
-          icon: "⚠️",
+          icon: <AlertTriangle className="w-4 h-4 text-amber-500" />,
           duration: 5000,
         });
       } else {
         toast.info("Izin notifikasi belum diberikan", {
-          icon: "ℹ️",
+          icon: <Info className="w-4 h-4 text-blue-500" />,
         });
       }
     } catch (error) {

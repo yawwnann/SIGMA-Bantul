@@ -26,6 +26,11 @@ export const metadata: Metadata = {
     "shelter",
     "BPBD",
   ],
+  manifest: "/manifest.json",
+};
+
+export const viewport = {
+  themeColor: "#09090b",
 };
 
 export default function RootLayout({

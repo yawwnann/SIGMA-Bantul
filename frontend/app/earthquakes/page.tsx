@@ -100,7 +100,7 @@ export default function EarthquakesPage() {
             : overrides?.reg !== undefined
               ? overrides.reg
               : regionFilter,
-        limit: 100, // Fetch more data at once for local pagination
+        limit: 100, 
       });
       setEarthquakes(data.data);
       setCurrentPage(1);

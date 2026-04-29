@@ -408,13 +408,17 @@ export default function MapPage() {
     <div className="flex w-full h-[calc(100vh-1rem)] md:h-full">
       <div className="flex-1 relative">
         {/* Loading Indicator Overlay */}
-        {calculatingRoute && (
-          <div className="absolute inset-0 z-[2000] bg-white/40 backdrop-blur-[2px] flex flex-col items-center justify-center rounded-xl transition-all duration-300">
+        {(calculatingRoute || gettingLocation) && (
+          <div className="absolute inset-0 z-[2000] bg-white/40 dark:bg-black/60 backdrop-blur-[4px] flex flex-col items-center justify-center rounded-xl transition-all duration-300">
             <div className="bg-white/95 dark:bg-slate-900/95 px-8 py-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
               <Loader2 className="h-12 w-12 animate-spin text-blue-600 dark:text-blue-500" />
               <div className="text-center">
-                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Menghitung Rute</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Mencari jalur tercepat dan teraman...</p>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                  {gettingLocation ? "Mencari Lokasi Anda" : "Menghitung Rute"}
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  {gettingLocation ? "Sedang melacak posisi GPS..." : "Mencari jalur tercepat dan teraman..."}
+                </p>
               </div>
             </div>
           </div>

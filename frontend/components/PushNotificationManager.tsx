@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import apiClient from "@/api/client";
 import { toast } from "sonner";
+import { Bell, AlertTriangle } from "lucide-react";
 
 // Use the public key from backend .env - MUST match exactly!
 const publicVapidKey =
@@ -57,7 +58,7 @@ export function PushNotificationManager() {
             existingSub,
           );
           if (response) {
-            toast.success("Notifikasi darurat telah aktif.", { icon: "🔔" });
+            toast.success("Notifikasi darurat telah aktif.", { icon: <Bell className="w-4 h-4" /> });
           }
           return;
         }
@@ -70,7 +71,7 @@ export function PushNotificationManager() {
           toast.error(
             "Izin notifikasi ditolak. Silakan aktifkan di pengaturan browser.",
             {
-              icon: "⚠️",
+              icon: <AlertTriangle className="w-4 h-4 text-amber-500" />,
               duration: 5000,
             },
           );
@@ -99,7 +100,7 @@ export function PushNotificationManager() {
         console.log("Subscription saved to backend:", response);
 
         if (response) {
-          toast.success("Notifikasi darurat telah aktif!", { icon: "🔔" });
+          toast.success("Notifikasi darurat telah aktif!", { icon: <Bell className="w-4 h-4" /> });
         }
       } catch (err) {
         console.error("Error setting up push notifications:", err);
@@ -112,7 +113,7 @@ export function PushNotificationManager() {
         // Check for specific error types
         if (err instanceof Error) {
           if (err.message.includes("Permission denied")) {
-            toast.error("Izin notifikasi ditolak.", { icon: "⚠️" });
+            toast.error("Izin notifikasi ditolak.", { icon: <AlertTriangle className="w-4 h-4 text-red-500" /> });
           } else if (
             err.name === "NetworkError" ||
             err.message.includes("Network Error")
@@ -134,19 +135,14 @@ export function PushNotificationManager() {
     // Dengarkan pesan "PUSH_RECEIVED" langsung dari ServiceWorker jika web sedang aktif/terbuka
     const handleSWMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === "PUSH_RECEIVED") {
-        toast(event.data.title, {
+        toast.error(event.data.title, {
           description: event.data.body,
           action: {
             label: "Lihat Cepat",
             onClick: () => window.open(event.data.url, "_blank"),
           },
           duration: 10000,
-          icon: "⚠️",
-          style: {
-            background: "#fee2e2",
-            color: "#991b1b",
-            border: "1px solid #f87171",
-          },
+          icon: <AlertTriangle className="w-5 h-5 text-red-500" />,
         });
       }
     };

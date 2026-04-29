@@ -34,7 +34,7 @@ export class NotificationsController {
   @Get('test')
   async sendTestNotification() {
     const result = await this.notifService.broadcastEarthquakeAlert(
-      '🔔 TEST - Peringatan Gempa',
+      'TEST - Peringatan Gempa',
       'Notifikasi darurat berhasil diaktifkan! Klik untuk melihat detail.',
       'true',
     );

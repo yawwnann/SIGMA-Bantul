@@ -23,6 +23,7 @@ import {
   Maximize2,
   Minimize2,
   Navigation,
+  AlertTriangle,
   X,
   Layers,
   Footprints,
@@ -230,7 +231,8 @@ export default function Dashboard() {
 
       if (isInsideBantul) {
         // Gempa di dalam wilayah Bantul → tampilkan dengan tombol rute evakuasi
-        toast.error(`🚨 Gempa M${newEq.magnitude} di ${newEq.location}`, {
+        toast.error(`Gempa M${newEq.magnitude} di ${newEq.location}`, {
+          icon: <AlertTriangle className="w-5 h-5 text-red-600" />,
           description: `Kedalaman: ${newEq.depth} km · Dalam wilayah Bantul`,
           duration: 10000,
           action: {
@@ -610,7 +612,20 @@ export default function Dashboard() {
   const wilayahStatus = getStatusWilayah(earthquakes);
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 min-h-screen space-y-6 max-w-[1600px] mx-auto">
+    <>
+      {/* Global Loading Overlay for Routing */}
+      {gettingLocation && (
+        <div className="fixed inset-0 z-[9999] bg-zinc-950/80 backdrop-blur-sm flex flex-col items-center justify-center text-white animate-in fade-in duration-300">
+          <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl flex flex-col items-center shadow-2xl max-w-sm text-center">
+            <Loader2 className="w-16 h-16 text-blue-500 animate-spin mb-6" />
+            <h2 className="text-xl font-bold mb-2">Mencari Rute Evakuasi...</h2>
+            <p className="text-zinc-400 text-sm">
+              Sedang melacak lokasi Anda dan menghitung rute teraman menuju shelter terdekat. Mohon tunggu sebentar.
+            </p>
+          </div>
+        </div>
+      )}
+      <div className="p-4 md:p-6 lg:p-8 min-h-screen space-y-6 max-w-[1600px] mx-auto">
       {/* Top Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -1353,5 +1368,6 @@ export default function Dashboard() {
         </Card>
       </div>
     </div>
+    </>
   );
 }

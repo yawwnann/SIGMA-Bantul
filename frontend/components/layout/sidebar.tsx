@@ -76,14 +76,14 @@ export function Sidebar() {
       {/* Mobile Overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/50 z-[2000] md:hidden"
           onClick={toggleMobile}
         />
       )}
 
       <div
         className={cn(
-          "fixed left-0 top-0 h-screen flex flex-col bg-white dark:bg-zinc-950 border-r border-slate-200 dark:border-zinc-800 z-50 transition-all duration-300",
+          "fixed left-0 top-0 h-screen flex flex-col bg-white dark:bg-zinc-950 border-r border-slate-200 dark:border-zinc-800 z-[2001] transition-all duration-300",
           collapsed ? "md:w-[80px]" : "md:w-64",
           "w-64",
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",

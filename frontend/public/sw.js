@@ -128,3 +128,8 @@ self.addEventListener("notificationclick", function (event) {
 self.addEventListener("notificationclose", function (event) {
   console.log("[SW] Notification closed");
 });
+
+
+// Satisfy PWA requirement for installability
+self.addEventListener('fetch', (event) => {});
+
