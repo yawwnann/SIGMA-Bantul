@@ -26,6 +26,17 @@ function calculateDistance(
   return R * c;
 }
 
+// Calculate impact radius based on magnitude
+function calculateImpactRadius(magnitude: number): number {
+  // Formula: R = Magnitude^2.5 * 1.5 km
+  return Math.pow(magnitude, 2.5) * 1.5;
+}
+
+// Check if location is within Bantul administrative boundary
+function isWithinBantul(lat: number, lng: number): boolean {
+  return lat >= -8.05 && lat <= -7.75 && lng >= 110.15 && lng <= 110.55;
+}
+
 function EmergencyBannerInner({
   userLat,
   userLon,
@@ -56,22 +67,32 @@ function EmergencyBannerInner({
 
   useEffect(() => {
     if (latestEq && userLat && userLon) {
+      const userLatNum = parseFloat(userLat);
+      const userLonNum = parseFloat(userLon);
       const dist = calculateDistance(
-        parseFloat(userLat),
-        parseFloat(userLon),
+        userLatNum,
+        userLonNum,
         latestEq.lat,
         latestEq.lon,
       );
 
-      // Dampak radius berdasarkan magnitudo
-      const impactRadius = Math.pow(latestEq.magnitude, 2.5) * 1.5;
+      // Check if earthquake is within Bantul boundary
+      const eqInBantul = isWithinBantul(latestEq.lat, latestEq.lon);
+
+      // Calculate impact radius based on magnitude
+      const impactRadius = calculateImpactRadius(latestEq.magnitude);
 
       let newZone: "RED" | "YELLOW" | "GREEN" = "GREEN";
-      if (dist <= impactRadius) {
+
+      // Hybrid approach: consider both administrative boundary and impact radius
+      if (eqInBantul || dist <= impactRadius) {
+        // RED: Earthquake in Bantul OR user within impact radius
         newZone = "RED";
       } else if (dist <= impactRadius * 3) {
+        // YELLOW: User within extended warning zone (3x impact radius)
         newZone = "YELLOW";
       }
+      // GREEN: User outside all danger zones
 
       setZone(newZone);
       onZoneCalculated(newZone, latestEq);

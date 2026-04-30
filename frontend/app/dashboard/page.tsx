@@ -64,6 +64,56 @@ const MapClient = dynamic(
   },
 );
 
+// --- Constants ---
+// Bantul center coordinates (approximate)
+const BANTUL_LAT = -7.8878;
+const BANTUL_LON = 110.3289;
+
+// --- Helper Functions ---
+function calculateDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function isWithinBantul(lat: number, lng: number): boolean {
+  return lat >= -8.05 && lat <= -7.75 && lng >= 110.15 && lng <= 110.55;
+}
+
+// Calculate impact radius based on magnitude
+function calculateImpactRadius(magnitude: number): number {
+  // Formula: R = Magnitude^2.5 * 1.5 km
+  return Math.pow(magnitude, 2.5) * 1.5;
+}
+
+// Check if location is threatened by earthquake
+function isThreatened(
+  userLat: number,
+  userLng: number,
+  eqLat: number,
+  eqLon: number,
+  magnitude: number,
+): boolean {
+  const distance = calculateDistance(userLat, userLng, eqLat, eqLon);
+  const impactRadius = calculateImpactRadius(magnitude);
+
+  // Threatened if within impact radius
+  return distance <= impactRadius;
+}
+
 export default function DashboardPage() {
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;
@@ -79,9 +129,15 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [isMapExpanded, setIsMapExpanded] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [selectedEarthquake, setSelectedEarthquake] = useState<Earthquake | null>(null);
-  const [routeStart, setRouteStart] = useState<{ lat: number; lng: number } | null>(null);
-  const [routeEnd, setRouteEnd] = useState<{ lat: number; lng: number } | null>(null);
+  const [selectedEarthquake, setSelectedEarthquake] =
+    useState<Earthquake | null>(null);
+  const [routeStart, setRouteStart] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+  const [routeEnd, setRouteEnd] = useState<{ lat: number; lng: number } | null>(
+    null,
+  );
   const [calculatingRoute, setCalculatingRoute] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
@@ -140,13 +196,65 @@ export default function DashboardPage() {
 
     const unsubscribeEarthquake = socketService.onNewEarthquake(
       (newEarthquake) => {
-        toast.error(
-          `Gempa Baru! M${newEarthquake.magnitude} - ${newEarthquake.location}`,
-          {
-            description: `Kedalaman: ${newEarthquake.depth} km`,
-            duration: 10000,
-          },
+        const isInsideBantul = isWithinBantul(
+          newEarthquake.lat,
+          newEarthquake.lon,
         );
+        const distance = calculateDistance(
+          newEarthquake.lat,
+          newEarthquake.lon,
+          BANTUL_LAT,
+          BANTUL_LON,
+        );
+
+        // Check if user location is threatened (if available)
+        let userThreatened = false;
+        if (selectedLocation) {
+          userThreatened = isThreatened(
+            selectedLocation.lat,
+            selectedLocation.lng,
+            newEarthquake.lat,
+            newEarthquake.lon,
+            newEarthquake.magnitude,
+          );
+        }
+
+        // Determine threat level
+        const shouldTriggerEmergency = isInsideBantul || userThreatened;
+
+        if (shouldTriggerEmergency) {
+          // High threat - show error toast with emergency action
+          const locationDesc = isInsideBantul
+            ? "Dalam wilayah Bantul"
+            : `Jarak ${distance.toFixed(1)}km dari Bantul`;
+
+          toast.error(
+            `Gempa M${newEarthquake.magnitude} di ${newEarthquake.location}`,
+            {
+              icon: <AlertTriangle className="w-5 h-5 text-red-600" />,
+              description: `Kedalaman: ${newEarthquake.depth} km · ${locationDesc}`,
+              duration: 10000,
+              action: {
+                label: "Lihat Rute Evakuasi",
+                onClick: () =>
+                  (window.location.href = "/evacuation?emergency=true"),
+              },
+            },
+          );
+        } else {
+          // Low threat - show warning toast with map view
+          toast.warning(`Terjadi gempa di ${newEarthquake.location}`, {
+            description: `M${newEarthquake.magnitude} · Kedalaman: ${newEarthquake.depth} km · ${distance.toFixed(1)}km dari Bantul`,
+            duration: 10000,
+            action: {
+              label: "Lihat di Peta",
+              onClick: () => {
+                setSelectedEarthquake(newEarthquake);
+              },
+            },
+          });
+        }
+
         setEarthquakes((prev) => [newEarthquake, ...prev.slice(0, 99)]);
       },
     );
@@ -160,7 +268,8 @@ export default function DashboardPage() {
   useEffect(() => {
     const handleClear = () => setSelectedEarthquake(null);
     window.addEventListener("clearEarthquakeSelection", handleClear);
-    return () => window.removeEventListener("clearEarthquakeSelection", handleClear);
+    return () =>
+      window.removeEventListener("clearEarthquakeSelection", handleClear);
   }, []);
 
   useEffect(() => {
@@ -229,32 +338,62 @@ export default function DashboardPage() {
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 60000,
-      }
+      },
     );
   };
 
   // Prepare chart data
-  const chartData = earthquakes.slice(0, 30).reverse().map((eq, index) => ({
-    name: new Date(eq.time).toLocaleDateString("id-ID", { day: "2-digit", month: "short" }),
-    magnitude: eq.magnitude,
-    depth: eq.depth,
-  }));
+  const chartData = earthquakes
+    .slice(0, 30)
+    .reverse()
+    .map((eq, index) => ({
+      name: new Date(eq.time).toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "short",
+      }),
+      magnitude: eq.magnitude,
+      depth: eq.depth,
+    }));
 
   const magnitudeDistribution = [
-    { range: "< 3.0", count: earthquakes.filter(eq => eq.magnitude < 3).length },
-    { range: "3.0-4.0", count: earthquakes.filter(eq => eq.magnitude >= 3 && eq.magnitude < 4).length },
-    { range: "4.0-5.0", count: earthquakes.filter(eq => eq.magnitude >= 4 && eq.magnitude < 5).length },
-    { range: "5.0-6.0", count: earthquakes.filter(eq => eq.magnitude >= 5 && eq.magnitude < 6).length },
-    { range: "> 6.0", count: earthquakes.filter(eq => eq.magnitude >= 6).length },
+    {
+      range: "< 3.0",
+      count: earthquakes.filter((eq) => eq.magnitude < 3).length,
+    },
+    {
+      range: "3.0-4.0",
+      count: earthquakes.filter((eq) => eq.magnitude >= 3 && eq.magnitude < 4)
+        .length,
+    },
+    {
+      range: "4.0-5.0",
+      count: earthquakes.filter((eq) => eq.magnitude >= 4 && eq.magnitude < 5)
+        .length,
+    },
+    {
+      range: "5.0-6.0",
+      count: earthquakes.filter((eq) => eq.magnitude >= 5 && eq.magnitude < 6)
+        .length,
+    },
+    {
+      range: "> 6.0",
+      count: earthquakes.filter((eq) => eq.magnitude >= 6).length,
+    },
   ];
 
   const latestEarthquake = earthquakes[0];
-  const avgMagnitude = earthquakes.length > 0
-    ? (earthquakes.reduce((sum, eq) => sum + eq.magnitude, 0) / earthquakes.length).toFixed(2)
-    : "0";
+  const avgMagnitude =
+    earthquakes.length > 0
+      ? (
+          earthquakes.reduce((sum, eq) => sum + eq.magnitude, 0) /
+          earthquakes.length
+        ).toFixed(2)
+      : "0";
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? "dark bg-slate-900" : "bg-slate-50"}`}>
+    <div
+      className={`min-h-screen transition-colors duration-300 ${isDarkMode ? "dark bg-slate-900" : "bg-slate-50"}`}
+    >
       <div className="p-4 lg:p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -299,7 +438,9 @@ export default function DashboardPage() {
         {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Map Section */}
-          <div className={`${isMapExpanded ? "lg:col-span-3" : "lg:col-span-2"} transition-all duration-300`}>
+          <div
+            className={`${isMapExpanded ? "lg:col-span-3" : "lg:col-span-2"} transition-all duration-300`}
+          >
             <Card className="border-0 shadow-xl dark:bg-slate-800 dark:border-slate-700 overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between pb-3">
                 <CardTitle className="flex items-center gap-2 dark:text-white">
@@ -320,15 +461,21 @@ export default function DashboardPage() {
                 </Button>
               </CardHeader>
               <CardContent className="p-0">
-                <div className={`${isMapExpanded ? "h-[calc(100vh-12rem)]" : "h-[500px]"} transition-all duration-300 relative`}>
+                <div
+                  className={`${isMapExpanded ? "h-[calc(100vh-12rem)]" : "h-[500px]"} transition-all duration-300 relative`}
+                >
                   {/* Loading Indicator Overlay */}
                   {calculatingRoute && (
                     <div className="absolute inset-0 z-[2000] bg-white/40 backdrop-blur-[2px] flex flex-col items-center justify-center rounded-b-xl transition-all duration-300">
                       <div className="bg-white/95 dark:bg-slate-900/95 px-8 py-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
                         <Loader2 className="h-12 w-12 animate-spin text-blue-600 dark:text-blue-500" />
                         <div className="text-center">
-                          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Menghitung Rute</h3>
-                          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Mencari jalur tercepat dan teraman...</p>
+                          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                            Menghitung Rute
+                          </h3>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                            Mencari jalur tercepat dan teraman...
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -416,12 +563,17 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                           <Clock className="h-4 w-4" />
                           <span>
-                            {new Date(latestEarthquake.time).toLocaleString("id-ID")}
+                            {new Date(latestEarthquake.time).toLocaleString(
+                              "id-ID",
+                            )}
                           </span>
                         </div>
                         <div className="pt-2 border-t dark:border-slate-700">
                           <span className="text-slate-600 dark:text-slate-400">
-                            Kedalaman: <strong className="text-slate-900 dark:text-white">{latestEarthquake.depth} km</strong>
+                            Kedalaman:{" "}
+                            <strong className="text-slate-900 dark:text-white">
+                              {latestEarthquake.depth} km
+                            </strong>
                           </span>
                         </div>
                       </div>
@@ -433,7 +585,9 @@ export default function DashboardPage() {
               {/* Recent Earthquakes List */}
               <Card className="border-0 shadow-lg dark:bg-slate-800 dark:border-slate-700">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm dark:text-white">Riwayat Gempa</CardTitle>
+                  <CardTitle className="text-sm dark:text-white">
+                    Riwayat Gempa
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 max-h-[300px] overflow-y-auto">
@@ -467,7 +621,9 @@ export default function DashboardPage() {
                   </div>
                   <div className="mt-4 pt-3 border-t dark:border-slate-700">
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center italic">
-                      Sumber data gempa pada sistem ini berasal dari BMKG (Badan Meteorologi, Klimatologi, dan Geofisika) melalui layanan Data Gempabumi Terbuka BMKG.
+                      Sumber data gempa pada sistem ini berasal dari BMKG (Badan
+                      Meteorologi, Klimatologi, dan Geofisika) melalui layanan
+                      Data Gempabumi Terbuka BMKG.
                     </p>
                   </div>
                 </CardContent>
@@ -482,20 +638,46 @@ export default function DashboardPage() {
             {/* Magnitude Trend */}
             <Card className="border-0 shadow-xl dark:bg-slate-800 dark:border-slate-700">
               <CardHeader>
-                <CardTitle className="text-base dark:text-white">Tren Magnitudo (30 Hari Terakhir)</CardTitle>
+                <CardTitle className="text-base dark:text-white">
+                  Tren Magnitudo (30 Hari Terakhir)
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={250}>
                   <AreaChart data={chartData}>
                     <defs>
-                      <linearGradient id="colorMagnitude" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                      <linearGradient
+                        id="colorMagnitude"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#ef4444"
+                          stopOpacity={0.8}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#ef4444"
+                          stopOpacity={0}
+                        />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#e2e8f0"} />
-                    <XAxis dataKey="name" stroke={isDarkMode ? "#94a3b8" : "#64748b"} fontSize={12} />
-                    <YAxis stroke={isDarkMode ? "#94a3b8" : "#64748b"} fontSize={12} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={isDarkMode ? "#334155" : "#e2e8f0"}
+                    />
+                    <XAxis
+                      dataKey="name"
+                      stroke={isDarkMode ? "#94a3b8" : "#64748b"}
+                      fontSize={12}
+                    />
+                    <YAxis
+                      stroke={isDarkMode ? "#94a3b8" : "#64748b"}
+                      fontSize={12}
+                    />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: isDarkMode ? "#1e293b" : "#ffffff",
@@ -519,14 +701,26 @@ export default function DashboardPage() {
             {/* Magnitude Distribution */}
             <Card className="border-0 shadow-xl dark:bg-slate-800 dark:border-slate-700">
               <CardHeader>
-                <CardTitle className="text-base dark:text-white">Distribusi Magnitudo</CardTitle>
+                <CardTitle className="text-base dark:text-white">
+                  Distribusi Magnitudo
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={magnitudeDistribution}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#e2e8f0"} />
-                    <XAxis dataKey="range" stroke={isDarkMode ? "#94a3b8" : "#64748b"} fontSize={12} />
-                    <YAxis stroke={isDarkMode ? "#94a3b8" : "#64748b"} fontSize={12} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={isDarkMode ? "#334155" : "#e2e8f0"}
+                    />
+                    <XAxis
+                      dataKey="range"
+                      stroke={isDarkMode ? "#94a3b8" : "#64748b"}
+                      fontSize={12}
+                    />
+                    <YAxis
+                      stroke={isDarkMode ? "#94a3b8" : "#64748b"}
+                      fontSize={12}
+                    />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: isDarkMode ? "#1e293b" : "#ffffff",

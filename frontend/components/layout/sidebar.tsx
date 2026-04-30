@@ -11,7 +11,6 @@ import {
   Activity,
   Route,
   BookOpen,
-  Shield,
   BarChart3,
   Moon,
   Sun,
@@ -76,17 +75,19 @@ export function Sidebar() {
       {/* Mobile Overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-[2000] md:hidden"
+          className="fixed inset-0 bg-black/50 z-[999] md:hidden"
           onClick={toggleMobile}
         />
       )}
 
       <div
         className={cn(
-          "fixed left-0 top-0 h-screen flex flex-col bg-white dark:bg-zinc-950 border-r border-slate-200 dark:border-zinc-800 z-[2001] transition-all duration-300",
+          "fixed left-0 top-0 h-screen flex flex-col bg-white dark:bg-zinc-950 border-r border-slate-200 dark:border-zinc-800 transition-all duration-300",
           collapsed ? "md:w-[80px]" : "md:w-64",
           "w-64",
-          mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+          mobileOpen
+            ? "translate-x-0 z-[1000]"
+            : "-translate-x-full md:translate-x-0 md:z-[100]",
         )}
       >
         <div
@@ -169,28 +170,6 @@ export function Sidebar() {
               </Link>
             );
           })}
-
-          {!collapsed && (
-            <div className="mt-6 mb-2 px-3">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                Admin
-              </span>
-            </div>
-          )}
-          <Link
-            href="/admin/login"
-            onClick={() => {
-              if (window.innerWidth < 768) toggleMobile();
-            }}
-            className={cn(
-              "flex items-center rounded-lg py-2.5 text-sm font-medium text-slate-700 dark:text-zinc-400 transition-all duration-200 hover:bg-slate-100 dark:hover:bg-zinc-900/50 hover:text-slate-900 dark:hover:text-zinc-50 overflow-hidden whitespace-nowrap",
-              collapsed ? "justify-center px-0 mt-6" : "gap-3 px-3",
-            )}
-            title={collapsed ? "Login Admin" : ""}
-          >
-            <Shield className="shrink-0 h-5 w-5" />
-            {!collapsed && <span>Login Admin</span>}
-          </Link>
         </nav>
 
         <div
@@ -232,7 +211,7 @@ export function Sidebar() {
                 Notifikasi
               </span>
             )}
-            <EnableNotificationsButton />
+            <EnableNotificationsButton collapsed={collapsed} />
           </div>
 
           {/* Theme Toggle */}

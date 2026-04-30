@@ -49,6 +49,11 @@ const MapClient = dynamic(
   },
 );
 
+// --- Constants ---
+// Bantul center coordinates (approximate)
+const BANTUL_LAT = -7.8878;
+const BANTUL_LON = 110.3289;
+
 function calculateDistance(
   lat1: number,
   lon1: number,
@@ -86,6 +91,31 @@ function getStatusWilayah(earthquakes: Earthquake[]): {
     return { status: "Waspada", color: "text-orange-600" };
   }
   return { status: "Siaga", color: "text-yellow-600" };
+}
+
+function isWithinBantul(lat: number, lng: number): boolean {
+  return lat >= -8.05 && lat <= -7.75 && lng >= 110.15 && lng <= 110.55;
+}
+
+// Calculate impact radius based on magnitude
+function calculateImpactRadius(magnitude: number): number {
+  // Formula: R = Magnitude^2.5 * 1.5 km
+  return Math.pow(magnitude, 2.5) * 1.5;
+}
+
+// Check if location is threatened by earthquake
+function isThreatened(
+  userLat: number,
+  userLng: number,
+  eqLat: number,
+  eqLon: number,
+  magnitude: number,
+): boolean {
+  const distance = calculateDistance(userLat, userLng, eqLat, eqLon);
+  const impactRadius = calculateImpactRadius(magnitude);
+
+  // Threatened if within impact radius
+  return distance <= impactRadius;
 }
 
 export default function MapPage() {
@@ -242,9 +272,17 @@ export default function MapPage() {
   };
 
   // Function to calculate route to shelter (called from popup)
-  const calculateRouteToShelter = async (shelterLat: number, shelterLng: number, shelterName: string) => {
-    console.log('calculateRouteToShelter called with:', { shelterLat, shelterLng, shelterName });
-    
+  const calculateRouteToShelter = async (
+    shelterLat: number,
+    shelterLng: number,
+    shelterName: string,
+  ) => {
+    console.log("calculateRouteToShelter called with:", {
+      shelterLat,
+      shelterLng,
+      shelterName,
+    });
+
     // Get current location first
     if (!navigator.geolocation) {
       toast.error("Geolocation tidak didukung oleh browser ini");
@@ -252,13 +290,13 @@ export default function MapPage() {
     }
 
     toast.info("Mendapatkan lokasi Anda...");
-    
+
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
-        console.log('User location:', { userLat, userLng });
-        
+        console.log("User location:", { userLat, userLng });
+
         try {
           setCalculatingRoute(true);
           toast.info("Menghitung rute terpendek...");
@@ -268,12 +306,12 @@ export default function MapPage() {
             shelterLat,
             shelterLng,
           );
-          
-          console.log('Route calculated:', route);
+
+          console.log("Route calculated:", route);
           setCalculatedRoute(route);
           setRouteStart({ lat: userLat, lng: userLng });
           setRouteEnd({ lat: shelterLat, lng: shelterLng });
-          
+
           toast.success(
             `Rute ke ${shelterName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km, Waktu: ${route.properties.totalTime.toFixed(1)} menit`,
           );
@@ -288,13 +326,15 @@ export default function MapPage() {
       },
       (error) => {
         console.error("Geolocation error:", error);
-        toast.error("Gagal mendapatkan lokasi Anda. Pastikan GPS aktif dan izin lokasi diberikan.");
+        toast.error(
+          "Gagal mendapatkan lokasi Anda. Pastikan GPS aktif dan izin lokasi diberikan.",
+        );
       },
       {
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 60000,
-      }
+      },
     );
   };
 
@@ -373,13 +413,65 @@ export default function MapPage() {
 
     const unsubscribeEarthquake = socketService.onNewEarthquake(
       (newEarthquake) => {
-        toast.error(
-          `Gempa Baru! M${newEarthquake.magnitude} - ${newEarthquake.location}`,
-          {
-            description: `Kedalaman: ${newEarthquake.depth} km`,
-            duration: 10000,
-          },
+        const isInsideBantul = isWithinBantul(
+          newEarthquake.lat,
+          newEarthquake.lon,
         );
+        const distance = calculateDistance(
+          newEarthquake.lat,
+          newEarthquake.lon,
+          BANTUL_LAT,
+          BANTUL_LON,
+        );
+
+        // Check if user location is threatened (if available)
+        let userThreatened = false;
+        if (selectedLocation) {
+          userThreatened = isThreatened(
+            selectedLocation.lat,
+            selectedLocation.lng,
+            newEarthquake.lat,
+            newEarthquake.lon,
+            newEarthquake.magnitude,
+          );
+        }
+
+        // Determine threat level
+        const shouldTriggerEmergency = isInsideBantul || userThreatened;
+
+        if (shouldTriggerEmergency) {
+          // High threat - show error toast with emergency action
+          const locationDesc = isInsideBantul
+            ? "Dalam wilayah Bantul"
+            : `Jarak ${distance.toFixed(1)}km dari Bantul`;
+
+          toast.error(
+            `Gempa M${newEarthquake.magnitude} di ${newEarthquake.location}`,
+            {
+              icon: <AlertTriangle className="w-5 h-5 text-red-600" />,
+              description: `Kedalaman: ${newEarthquake.depth} km · ${locationDesc}`,
+              duration: 10000,
+              action: {
+                label: "Lihat Rute Evakuasi",
+                onClick: () =>
+                  (window.location.href = "/evacuation?emergency=true"),
+              },
+            },
+          );
+        } else {
+          // Low threat - show warning toast with map view
+          toast.warning(`Terjadi gempa di ${newEarthquake.location}`, {
+            description: `M${newEarthquake.magnitude} · Kedalaman: ${newEarthquake.depth} km · ${distance.toFixed(1)}km dari Bantul`,
+            duration: 10000,
+            action: {
+              label: "Lihat di Peta",
+              onClick: () => {
+                setSelectedEarthquake(newEarthquake);
+              },
+            },
+          });
+        }
+
         setEarthquakes((prev) => [newEarthquake, ...prev.slice(0, 9)]);
       },
     );
@@ -399,7 +491,8 @@ export default function MapPage() {
   useEffect(() => {
     const handleClear = () => setSelectedEarthquake(null);
     window.addEventListener("clearEarthquakeSelection", handleClear);
-    return () => window.removeEventListener("clearEarthquakeSelection", handleClear);
+    return () =>
+      window.removeEventListener("clearEarthquakeSelection", handleClear);
   }, []);
 
   const wilayahStatus = getStatusWilayah(earthquakes);
@@ -417,7 +510,9 @@ export default function MapPage() {
                   {gettingLocation ? "Mencari Lokasi Anda" : "Menghitung Rute"}
                 </h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  {gettingLocation ? "Sedang melacak posisi GPS..." : "Mencari jalur tercepat dan teraman..."}
+                  {gettingLocation
+                    ? "Sedang melacak posisi GPS..."
+                    : "Mencari jalur tercepat dan teraman..."}
                 </p>
               </div>
             </div>
@@ -693,7 +788,10 @@ export default function MapPage() {
                                 </div>
                               )}
                             <div className="text-[10px] text-slate-400 dark:text-slate-500 pt-2 border-t mt-2 italic text-center leading-tight">
-                              Sumber data gempa pada sistem ini berasal dari BMKG (Badan Meteorologi, Klimatologi, dan Geofisika) melalui layanan Data Gempabumi Terbuka BMKG.
+                              Sumber data gempa pada sistem ini berasal dari
+                              BMKG (Badan Meteorologi, Klimatologi, dan
+                              Geofisika) melalui layanan Data Gempabumi Terbuka
+                              BMKG.
                             </div>
                           </div>
                         </CardContent>
@@ -889,7 +987,7 @@ export default function MapPage() {
                                 calculateRouteToShelter(
                                   coords.coordinates[1],
                                   coords.coordinates[0],
-                                  shelter.name
+                                  shelter.name,
                                 );
                               }}
                               className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm"

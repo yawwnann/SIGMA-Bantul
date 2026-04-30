@@ -15,9 +15,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <main
-      className={`flex-1 min-h-screen flex flex-col overflow-auto transition-all duration-300 ${collapsed ? "md:pl-[80px]" : "md:pl-64"}`}
-    >
+    <div className="flex-1 flex flex-col min-h-screen">
       {/* Mobile Top Bar */}
       <div className="md:hidden flex flex-none items-center justify-between p-4 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 sticky top-0 z-30">
         <div className="flex items-center gap-3">
@@ -42,8 +40,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      {/* Page Content */}
-      <div className="flex-1 overflow-auto">{children}</div>
-    </main>
+      {/* Page Content with proper margin for sidebar */}
+      <main
+        className={`flex-1 transition-all duration-300 ${
+          collapsed ? "md:ml-[80px]" : "md:ml-64"
+        }`}
+      >
+        {children}
+      </main>
+    </div>
   );
 }

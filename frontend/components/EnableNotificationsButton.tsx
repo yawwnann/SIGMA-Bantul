@@ -5,8 +5,14 @@ import { Bell, BellOff, Loader2, AlertTriangle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-export function EnableNotificationsButton() {
-  const [permission, setPermission] = useState<NotificationPermission | null>(null);
+export function EnableNotificationsButton({
+  collapsed = false,
+}: {
+  collapsed?: boolean;
+}) {
+  const [permission, setPermission] = useState<NotificationPermission | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
 
@@ -31,20 +37,26 @@ export function EnableNotificationsButton() {
       setPermission(result);
 
       if (result === "granted") {
-        toast.success("Notifikasi diaktifkan! Refresh halaman untuk menghubungkan ke server.", {
-          icon: <Bell className="w-4 h-4" />,
-          duration: 5000,
-        });
-        
+        toast.success(
+          "Notifikasi diaktifkan! Refresh halaman untuk menghubungkan ke server.",
+          {
+            icon: <Bell className="w-4 h-4" />,
+            duration: 5000,
+          },
+        );
+
         // Reload to trigger PushNotificationManager
         setTimeout(() => {
           window.location.reload();
         }, 2000);
       } else if (result === "denied") {
-        toast.error("Izin notifikasi ditolak. Silakan ubah di pengaturan browser.", {
-          icon: <AlertTriangle className="w-4 h-4 text-amber-500" />,
-          duration: 5000,
-        });
+        toast.error(
+          "Izin notifikasi ditolak. Silakan ubah di pengaturan browser.",
+          {
+            icon: <AlertTriangle className="w-4 h-4 text-amber-500" />,
+            duration: 5000,
+          },
+        );
       } else {
         toast.info("Izin notifikasi belum diberikan", {
           icon: <Info className="w-4 h-4 text-blue-500" />,
@@ -66,12 +78,13 @@ export function EnableNotificationsButton() {
     return (
       <Button
         variant="outline"
-        size="sm"
-        className="text-green-600 border-green-200 bg-green-50 hover:bg-green-100"
+        size={collapsed ? "icon" : "sm"}
+        className="text-green-600 border-green-200 bg-green-50 hover:bg-green-100 shrink-0"
         disabled
+        title={collapsed ? "Notifikasi Aktif" : ""}
       >
-        <Bell className="w-4 h-4 mr-2" />
-        Notifikasi Aktif
+        <Bell className="w-4 h-4" />
+        {!collapsed && <span className="ml-2">Notifikasi Aktif</span>}
       </Button>
     );
   }
@@ -80,14 +93,17 @@ export function EnableNotificationsButton() {
     return (
       <Button
         variant="outline"
-        size="sm"
-        className="text-red-600 border-red-200 bg-red-50"
+        size={collapsed ? "icon" : "sm"}
+        className="text-red-600 border-red-200 bg-red-50 shrink-0"
         onClick={() => {
-          toast.info("Buka Settings > Privacy > Notifications untuk mengaktifkan");
+          toast.info(
+            "Buka Settings > Privacy > Notifications untuk mengaktifkan",
+          );
         }}
+        title={collapsed ? "Notifikasi Diblokir" : ""}
       >
-        <BellOff className="w-4 h-4 mr-2" />
-        Notifikasi Diblokir
+        <BellOff className="w-4 h-4" />
+        {!collapsed && <span className="ml-2">Notifikasi Diblokir</span>}
       </Button>
     );
   }
@@ -95,16 +111,18 @@ export function EnableNotificationsButton() {
   return (
     <Button
       variant="outline"
-      size="sm"
+      size={collapsed ? "icon" : "sm"}
       onClick={handleEnableNotifications}
       disabled={isLoading}
+      className="shrink-0"
+      title={collapsed ? "Aktifkan Notifikasi" : ""}
     >
       {isLoading ? (
-        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        <Loader2 className="w-4 h-4 animate-spin" />
       ) : (
-        <Bell className="w-4 h-4 mr-2" />
+        <Bell className="w-4 h-4" />
       )}
-      Aktifkan Notifikasi
+      {!collapsed && <span className="ml-2">Aktifkan Notifikasi</span>}
     </Button>
   );
 }

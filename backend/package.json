@@ -32,7 +32,9 @@
     "db:fix-length": "ts-node scripts/fix-road-length.ts",
     "db:fix-topology": "ts-node scripts/fix-road-topology.ts",
     "db:fix-safe-cost": "ts-node scripts/fix-safe-cost.ts",
-    "db:fix-all-roads": "ts-node scripts/fix-all-roads.ts"
+    "db:fix-all-roads": "ts-node scripts/fix-all-roads.ts",
+    "db:clean-earthquakes": "ts-node scripts/clean-earthquakes.ts",
+    "db:clean-earthquakes-advanced": "ts-node scripts/clean-earthquakes-advanced.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
