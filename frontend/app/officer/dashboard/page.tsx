@@ -138,28 +138,29 @@ export default function OfficerDashboardPage() {
       : 0;
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Welcome Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-900/60 via-emerald-800/30 to-transparent border border-emerald-500/20 shadow-2xl shadow-emerald-900/20 rounded-2xl p-6 md:p-8 backdrop-blur-xl">
+      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-900/60 via-emerald-800/30 to-transparent border border-emerald-500/20 shadow-2xl shadow-emerald-900/20 rounded-2xl p-4 md:p-6 lg:p-8 backdrop-blur-xl">
         <div className="absolute -top-20 -right-20 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl mix-blend-screen animate-pulse duration-10000" />
         <div className="absolute -bottom-10 left-10 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl opacity-50" />
-        <div className="relative flex items-start md:items-center gap-4 md:gap-6">
-          <div className="p-3 md:p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 flex-shrink-0 shadow-inner">
-            <Building2 className="w-8 h-8 md:w-10 md:h-10 text-emerald-400 drop-shadow-md" />
+        <div className="relative flex items-start md:items-center gap-3 md:gap-4 lg:gap-6">
+          <div className="p-2.5 md:p-3 lg:p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 flex-shrink-0 shadow-inner">
+            <Building2 className="w-7 h-7 md:w-8 md:h-8 lg:w-10 lg:h-10 text-emerald-400 drop-shadow-md" />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-white mb-1.5 tracking-tight drop-shadow-sm">
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-white mb-1 md:mb-1.5 tracking-tight drop-shadow-sm">
               Selamat Datang, {dashboard.officer.name}
             </h1>
-            <p className="text-sm md:text-base text-zinc-300 font-medium tracking-wide">
-              Kelola shelter evakuasi yang menjadi tanggung jawab Anda secara real-time
+            <p className="text-xs md:text-sm lg:text-base text-zinc-300 font-medium tracking-wide">
+              Kelola shelter evakuasi yang menjadi tanggung jawab Anda secara
+              real-time
             </p>
           </div>
         </div>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5">
         <Card className="relative overflow-hidden bg-zinc-900/40 backdrop-blur-xl border border-zinc-800 hover:border-emerald-500/30 group hover:-translate-y-1 transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/10 rounded-2xl">
           <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -175,7 +176,9 @@ export default function OfficerDashboardPage() {
             <div className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
               {stats.totalShelters}
             </div>
-            <p className="text-xs text-zinc-500 mt-2 font-medium">Shelter yang dikelola</p>
+            <p className="text-xs text-zinc-500 mt-2 font-medium">
+              Shelter yang dikelola
+            </p>
           </CardContent>
         </Card>
 
@@ -194,7 +197,9 @@ export default function OfficerDashboardPage() {
             <div className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
               {stats.totalCapacity.toLocaleString()}
             </div>
-            <p className="text-xs text-zinc-500 mt-2 font-medium">Orang (Maksimal)</p>
+            <p className="text-xs text-zinc-500 mt-2 font-medium">
+              Orang (Maksimal)
+            </p>
           </CardContent>
         </Card>
 
@@ -223,18 +228,19 @@ export default function OfficerDashboardPage() {
 
       {/* Shelter List */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h2 className="text-lg md:text-xl font-bold text-white tracking-tight flex items-center gap-2">
-          <Building2 className="w-5 h-5 text-zinc-400" />
+        <h2 className="text-base md:text-lg lg:text-xl font-bold text-white tracking-tight flex items-center gap-2">
+          <Building2 className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" />
           Shelter yang Dikelola
         </h2>
         <Button
           variant="outline"
           size="sm"
           onClick={fetchDashboard}
-          className="bg-zinc-900/50 backdrop-blur-sm border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white transition-all rounded-xl shadow-sm hover:shadow-md"
+          className="bg-zinc-900/50 backdrop-blur-sm border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white transition-all rounded-xl shadow-sm hover:shadow-md text-xs md:text-sm"
         >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Perbarui Data
+          <RefreshCw className="w-3.5 h-3.5 md:w-4 md:h-4 mr-2" />
+          <span className="hidden sm:inline">Perbarui Data</span>
+          <span className="sm:hidden">Refresh</span>
         </Button>
       </div>
 
@@ -253,7 +259,7 @@ export default function OfficerDashboardPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 2xl:grid-cols-2 gap-4 md:gap-5">
           {dashboard.shelters.map((shelter) => (
             <ShelterCard
               key={shelter.id}
@@ -285,7 +291,9 @@ function ShelterCard({
   onUpdateCondition,
   onUpdateStatus,
 }: ShelterCardProps) {
-  const [occupancy, setOccupancy] = useState<number | "">(shelter.currentOccupancy);
+  const [occupancy, setOccupancy] = useState<number | "">(
+    shelter.currentOccupancy,
+  );
   const [condition, setCondition] = useState(shelter.condition);
   const [status, setStatus] = useState(shelter.status || "ACTIVE");
 
@@ -343,9 +351,12 @@ function ShelterCard({
         {/* Occupancy Progress */}
         <div className="bg-black/30 rounded-xl p-4 border border-white/5 shadow-inner backdrop-blur-sm">
           <div className="flex items-center justify-between text-xs md:text-sm mb-3">
-            <span className="text-zinc-400 font-medium tracking-wide">Tingkat Hunian</span>
+            <span className="text-zinc-400 font-medium tracking-wide">
+              Tingkat Hunian
+            </span>
             <span className="text-white font-bold tabular-nums bg-white/10 px-2.5 py-0.5 rounded-md text-xs">
-              {parsedOccupancy} / {shelter.capacity} ({occupancyPercentage.toFixed(0)}%)
+              {parsedOccupancy} / {shelter.capacity} (
+              {occupancyPercentage.toFixed(0)}%)
             </span>
           </div>
           <div className="w-full bg-zinc-800/80 rounded-full h-3 overflow-hidden shadow-inner flex">
@@ -394,10 +405,30 @@ function ShelterCard({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-zinc-950 border-zinc-800 rounded-xl shadow-xl text-zinc-200">
-                <SelectItem value="GOOD" className="focus:bg-zinc-800 focus:text-white">Baik</SelectItem>
-                <SelectItem value="MODERATE" className="focus:bg-zinc-800 focus:text-white">Sedang</SelectItem>
-                <SelectItem value="NEEDS_REPAIR" className="focus:bg-zinc-800 focus:text-white">Perlu Perbaikan</SelectItem>
-                <SelectItem value="DAMAGED" className="focus:bg-zinc-800 focus:text-white">Rusak</SelectItem>
+                <SelectItem
+                  value="GOOD"
+                  className="focus:bg-zinc-800 focus:text-white"
+                >
+                  Baik
+                </SelectItem>
+                <SelectItem
+                  value="MODERATE"
+                  className="focus:bg-zinc-800 focus:text-white"
+                >
+                  Sedang
+                </SelectItem>
+                <SelectItem
+                  value="NEEDS_REPAIR"
+                  className="focus:bg-zinc-800 focus:text-white"
+                >
+                  Perlu Perbaikan
+                </SelectItem>
+                <SelectItem
+                  value="DAMAGED"
+                  className="focus:bg-zinc-800 focus:text-white"
+                >
+                  Rusak
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -414,9 +445,24 @@ function ShelterCard({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-zinc-950 border-zinc-800 rounded-xl shadow-xl text-zinc-200">
-                <SelectItem value="ACTIVE" className="focus:bg-zinc-800 focus:text-white">Aktif (Menerima Pengungsi)</SelectItem>
-                <SelectItem value="STANDBY" className="focus:bg-zinc-800 focus:text-white">Siaga (Persiapan)</SelectItem>
-                <SelectItem value="UNAVAILABLE" className="focus:bg-zinc-800 focus:text-white">Tidak Tersedia</SelectItem>
+                <SelectItem
+                  value="ACTIVE"
+                  className="focus:bg-zinc-800 focus:text-white"
+                >
+                  Aktif (Menerima Pengungsi)
+                </SelectItem>
+                <SelectItem
+                  value="STANDBY"
+                  className="focus:bg-zinc-800 focus:text-white"
+                >
+                  Siaga (Persiapan)
+                </SelectItem>
+                <SelectItem
+                  value="UNAVAILABLE"
+                  className="focus:bg-zinc-800 focus:text-white"
+                >
+                  Tidak Tersedia
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -32,15 +32,19 @@ interface MapClientProps {
 
 const BANTUL_CENTER: [number, number] = [-7.888, 110.33];
 
-function createShelterIcon(condition: string) {
+function createShelterIcon(condition: string, availabilityColor?: string) {
+  // Use availability color if provided, otherwise use condition color
   const color =
-    condition === "GOOD"
+    availabilityColor ||
+    (condition === "GOOD"
       ? "#22c55e"
       : condition === "MODERATE"
         ? "#eab308"
-        : "#ef4444";
-  const shadowColor =
-    condition === "GOOD"
+        : "#ef4444");
+
+  const shadowColor = availabilityColor
+    ? `${availabilityColor}66` // Add alpha to hex color
+    : condition === "GOOD"
       ? "rgba(34, 197, 94, 0.4)"
       : condition === "MODERATE"
         ? "rgba(234, 179, 8, 0.4)"
@@ -135,6 +139,8 @@ export default function MapClient({
   const { resolvedTheme } = useTheme();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const [selectedShelter, setSelectedShelter] = useState<Shelter | null>(null);
+  const onShelterClickRef = useRef<((shelter: Shelter) => void) | null>(null);
 
   useEffect(() => {
     setIsDarkMode(resolvedTheme === "dark");
@@ -160,6 +166,9 @@ export default function MapClient({
     onLocationSelectRef.current = onLocationSelect;
     onEarthquakeClickRef.current = onEarthquakeClick;
     onCalculateRouteRef.current = onCalculateRoute;
+    onShelterClickRef.current = (shelter: Shelter) => {
+      setSelectedShelter(shelter);
+    };
   }, [onLocationSelect, onEarthquakeClick, onCalculateRoute]);
 
   useEffect(() => {
@@ -305,11 +314,7 @@ export default function MapClient({
       },
     }).addTo(mapRef.current);
 
-    if (
-      boundaryLayerRef.current &&
-      !calculatedRoute &&
-      !selectedLocation
-    ) {
+    if (boundaryLayerRef.current && !calculatedRoute && !selectedLocation) {
       mapRef.current.fitBounds(boundaryLayerRef.current.getBounds(), {
         padding: [30, 30],
       });
@@ -331,10 +336,27 @@ export default function MapClient({
     shelters.forEach((shelter) => {
       const coords = shelter.geometry as { coordinates: [number, number] };
       if (coords?.coordinates) {
+        // Calculate availability percentage for color coding
+        const capacity = shelter.capacity || 0;
+        const occupied = shelter.currentOccupancy || 0;
+        const available = Math.max(0, capacity - occupied);
+        const occupancyPercentage =
+          capacity > 0 ? (occupied / capacity) * 100 : 0;
+
+        // Determine marker color based on availability
+        let markerColor = "#10b981"; // Green (> 50% available)
+        if (occupancyPercentage >= 90) {
+          markerColor = "#ef4444"; // Red (< 10% available)
+        } else if (occupancyPercentage >= 70) {
+          markerColor = "#f97316"; // Orange (10-30% available)
+        } else if (occupancyPercentage >= 50) {
+          markerColor = "#eab308"; // Yellow (30-50% available)
+        }
+
         const marker = L.marker(
           [coords.coordinates[1], coords.coordinates[0]],
           {
-            icon: createShelterIcon(shelter.condition),
+            icon: createShelterIcon(shelter.condition, markerColor),
           },
         ).addTo(shelterLayerGroupRef.current!);
 
@@ -346,10 +368,19 @@ export default function MapClient({
               ? { bg: "#854d0e", text: "#facc15", label: "Sedang" }
               : { bg: "#7f1d1d", text: "#f87171", label: "Buruk" };
 
-        const available = Math.max(
-          0,
-          shelter.capacity - (shelter.currentOccupancy ?? 0),
-        );
+        // Color coding for availability in popup (using variables from above)
+        let availColor = "#10b981"; // Green
+        let availBg = "rgba(16, 185, 129, 0.1)";
+        if (occupancyPercentage >= 90) {
+          availColor = "#ef4444"; // Red
+          availBg = "rgba(239, 68, 68, 0.1)";
+        } else if (occupancyPercentage >= 70) {
+          availColor = "#f97316"; // Orange
+          availBg = "rgba(249, 115, 22, 0.1)";
+        } else if (occupancyPercentage >= 50) {
+          availColor = "#eab308"; // Yellow
+          availBg = "rgba(234, 179, 8, 0.1)";
+        }
 
         const isDark = isDarkMode;
         const bgMain = isDark ? "#030712" : "#ffffff";
@@ -361,7 +392,7 @@ export default function MapClient({
         const border = isDark ? "rgba(255,255,255,0.07)" : "#e2e8f0";
 
         const popupContent = `
-          <div style="width:260px;background:${bgMain};color:${textMain};border-radius:12px;overflow:hidden;font-family:system-ui,sans-serif;border:1px solid ${border};">
+          <div style="width:260px;background:${bgMain};color:${textMain};border-radius:12px;overflow:hidden;font-family:var(--font-sans);border:1px solid ${border};">
             <!-- Badge -->
             <div style="padding:12px 14px 8px;">
               <span style="display:inline-block;background:${badgeColor.bg};color:${badgeColor.text};font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:0.03em;">${badgeColor.label}</span>
@@ -385,12 +416,13 @@ export default function MapClient({
                 </div>
                 <div style="font-size:22px;font-weight:800;">${shelter.capacity}</div>
               </div>
-              <div style="background:${bgCard};border-radius:8px;padding:10px;">
+              <div style="background:${availBg};border:1px solid ${availColor}33;border-radius:8px;padding:10px;">
                 <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${textLabel}" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                  <span style="font-size:9px;color:${textLabel};font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">TERSEDIA</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${availColor}" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                  <span style="font-size:9px;color:${availColor};font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">TERSEDIA</span>
                 </div>
-                <div style="font-size:22px;font-weight:800;">${available}</div>
+                <div style="font-size:22px;font-weight:800;color:${availColor};">${available}</div>
+                <div style="font-size:10px;color:${textMuted};margin-top:4px;">${occupied} / ${capacity} terisi</div>
               </div>
             </div>
 
@@ -419,29 +451,10 @@ export default function MapClient({
           </div>
         `;
 
-        const popup = marker.bindPopup(popupContent, {
-          maxWidth: 280,
-          minWidth: 260,
-          className: "custom-shelter-popup",
-          closeButton: true,
-          autoPan: false,
-          offset: [160, 100],
-        });
-
-        popup.on("popupopen", () => {
-          const routeBtn = document.getElementById(`route-btn-${shelter.id}`);
-          if (routeBtn) {
-            routeBtn.addEventListener("click", (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (onCalculateRouteRef.current) {
-                onCalculateRouteRef.current(
-                  coords.coordinates[1],
-                  coords.coordinates[0],
-                  shelter.name,
-                );
-              }
-            });
+        // Add click handler to show in sidebar instead (no popup)
+        marker.on("click", () => {
+          if (onShelterClickRef.current) {
+            onShelterClickRef.current(shelter);
           }
         });
       }
@@ -465,17 +478,22 @@ export default function MapClient({
       ) {
         const popupOptions = {
           autoPan: false,
-          offset: [160, 60] as L.PointTuple
+          offset: [160, 60] as L.PointTuple,
         };
         L.marker([coords.coordinates[1], coords.coordinates[0]], {
           icon: createFacilityIcon(facility.type),
-        }).addTo(facilityLayerGroupRef.current!).bindPopup(`
+        })
+          .addTo(facilityLayerGroupRef.current!)
+          .bindPopup(
+            `
             <div class="p-2">
               <h3 class="font-bold">${facility.name}</h3>
               <p class="text-sm">Jenis: ${facility.type}</p>
               ${facility.address ? `<p class="text-sm">Alamat: ${facility.address}</p>` : ""}
             </div>
-          `, popupOptions);
+          `,
+            popupOptions,
+          );
       }
     });
   }, [facilities, visibleLayers.facilities]);
@@ -489,9 +507,10 @@ export default function MapClient({
     if (!visibleLayers.earthquakes || earthquakes.length === 0) return;
 
     const activeEqId = selectedEarthquake?.id;
-    const earthquakesToRender = activeEqId != null
-      ? earthquakes.filter(eq => eq.id === activeEqId)
-      : earthquakes;
+    const earthquakesToRender =
+      activeEqId != null
+        ? earthquakes.filter((eq) => eq.id === activeEqId)
+        : earthquakes;
 
     earthquakesToRender
       .filter((eq) => eq.magnitude != null && eq.lat != null && eq.lon != null)
@@ -613,7 +632,9 @@ export default function MapClient({
           }
         });
       });
-      const earthquakeToShow = selectedEarthquake ? earthquakes.filter(eq => eq.id === selectedEarthquake.id) : earthquakes;
+    const earthquakeToShow = selectedEarthquake
+      ? earthquakes.filter((eq) => eq.id === selectedEarthquake.id)
+      : earthquakes;
     const hideRadiusHandler = () => {
       if (activeCircleRef.current) {
         activeCircleRef.current.eachLayer((layer) => {
@@ -1174,6 +1195,228 @@ export default function MapClient({
           margin: 0;
         }
       `}</style>
+
+      {/* Shelter Detail Sidebar */}
+      {selectedShelter && (
+        <div className="absolute top-4 right-4 z-[2100] w-[320px] bg-zinc-950/95 backdrop-blur-md rounded-xl shadow-2xl border border-zinc-800/60 overflow-hidden animate-in slide-in-from-right-5 fade-in duration-300">
+          {/* Header */}
+          <div className="p-4 border-b border-zinc-800/60">
+            <div className="flex items-start justify-between mb-2">
+              <span className="inline-block bg-green-500/20 text-green-400 text-xs font-bold px-3 py-1 rounded-full border border-green-500/30">
+                {selectedShelter.condition === "GOOD"
+                  ? "Baik"
+                  : selectedShelter.condition === "MODERATE"
+                    ? "Sedang"
+                    : "Buruk"}
+              </span>
+              <button
+                onClick={() => setSelectedShelter(null)}
+                className="text-zinc-400 hover:text-zinc-100 transition-colors p-1 hover:bg-zinc-800/50 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <h3 className="text-lg font-bold text-zinc-50 mb-1">
+              {selectedShelter.name}
+            </h3>
+            <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              {selectedShelter.address || "Jl. Parangtritis, Sewon, Bantul"}
+            </div>
+          </div>
+
+          {/* Capacity Grid */}
+          <div className="grid grid-cols-2 gap-3 p-4 border-b border-zinc-800/60">
+            {(() => {
+              const capacity = selectedShelter.capacity || 0;
+              const occupied = selectedShelter.currentOccupancy || 0;
+              const available = capacity - occupied;
+              const occupancyPercentage =
+                capacity > 0 ? (occupied / capacity) * 100 : 0;
+
+              // Color coding based on availability
+              let availabilityColor = "text-emerald-400"; // > 50% available
+              let availabilityBg = "bg-emerald-500/10";
+              let availabilityBorder = "border-emerald-500/20";
+
+              if (occupancyPercentage >= 90) {
+                // < 10% available - Critical (Red)
+                availabilityColor = "text-red-400";
+                availabilityBg = "bg-red-500/10";
+                availabilityBorder = "border-red-500/20";
+              } else if (occupancyPercentage >= 70) {
+                // 10-30% available - Warning (Orange)
+                availabilityColor = "text-orange-400";
+                availabilityBg = "bg-orange-500/10";
+                availabilityBorder = "border-orange-500/20";
+              } else if (occupancyPercentage >= 50) {
+                // 30-50% available - Caution (Yellow)
+                availabilityColor = "text-yellow-400";
+                availabilityBg = "bg-yellow-500/10";
+                availabilityBorder = "border-yellow-500/20";
+              }
+
+              return (
+                <>
+                  <div className="bg-zinc-900/80 rounded-lg p-3 border border-zinc-800/40">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#71717a"
+                        strokeWidth="2"
+                      >
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                      </svg>
+                      <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">
+                        KAPASITAS
+                      </span>
+                    </div>
+                    <div className="text-2xl font-extrabold text-zinc-50">
+                      {capacity.toLocaleString()}
+                    </div>
+                  </div>
+                  <div
+                    className={`${availabilityBg} rounded-lg p-3 border ${availabilityBorder}`}
+                  >
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className={availabilityColor}
+                      >
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                      </svg>
+                      <span
+                        className={`text-[9px] font-bold uppercase tracking-wider ${availabilityColor}`}
+                      >
+                        TERSEDIA
+                      </span>
+                    </div>
+                    <div
+                      className={`text-2xl font-extrabold ${availabilityColor}`}
+                    >
+                      {available.toLocaleString()}
+                    </div>
+                    <div className="text-[10px] text-zinc-500 mt-1 font-medium">
+                      {occupied.toLocaleString()} / {capacity.toLocaleString()}{" "}
+                      terisi
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Details */}
+          <div className="p-4 space-y-2 border-b border-zinc-800/60">
+            <div className="flex justify-between items-center py-2 px-3 bg-zinc-900/50 rounded-lg">
+              <span className="text-xs text-zinc-400">Jenis Fasilitas</span>
+              <span className="text-xs font-semibold text-zinc-100">
+                Ruang Publik
+              </span>
+            </div>
+            <div className="flex justify-between items-center py-2 px-3 bg-zinc-900/50 rounded-lg">
+              <span className="text-xs text-zinc-400">Jam Operasional</span>
+              <span className="text-xs font-semibold text-zinc-100">
+                24 Jam (Siaga)
+              </span>
+            </div>
+          </div>
+
+          {/* Button */}
+          <div className="p-4">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log("=== Button Rute Evakuasi Clicked ===");
+                console.log(
+                  "onCalculateRouteRef.current:",
+                  onCalculateRouteRef.current,
+                );
+                console.log("selectedShelter:", selectedShelter);
+
+                if (!onCalculateRouteRef.current) {
+                  console.error("onCalculateRouteRef.current is undefined!");
+                  return;
+                }
+
+                if (!selectedShelter) {
+                  console.error("selectedShelter is null!");
+                  return;
+                }
+
+                // Shelter uses 'geometry' not 'location'
+                const geom = selectedShelter.geometry as any;
+                if (!geom || !geom.coordinates) {
+                  console.error(
+                    "selectedShelter.geometry.coordinates is undefined!",
+                  );
+                  console.log(
+                    "Full shelter object:",
+                    JSON.stringify(selectedShelter, null, 2),
+                  );
+                  return;
+                }
+
+                const coords = geom.coordinates;
+                console.log("Coordinates:", coords);
+                console.log(
+                  "Calling with lat:",
+                  coords[1],
+                  "lng:",
+                  coords[0],
+                  "name:",
+                  selectedShelter.name,
+                );
+
+                onCalculateRouteRef.current(
+                  coords[1],
+                  coords[0],
+                  selectedShelter.name,
+                );
+                setSelectedShelter(null);
+              }}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-900/30 cursor-pointer"
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 11l19-9-9 19-2-8-8-2z" />
+              </svg>
+              Rute Evakuasi
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   X,
   Layers,
+  Info,
   Footprints,
   Bike,
   Car,
@@ -750,10 +751,10 @@ export default function Dashboard() {
             </div>
           )}
           <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
-            {/* Layer Sheet Toggle */}
+            {/* Info Panel Toggle */}
             <Sheet open={sheetOpen} onOpenChange={setSheetOpen} modal={false}>
               <SheetTrigger className="inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-800 shadow-lg bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors h-10 w-10">
-                <Layers className="h-5 w-5 text-slate-700 dark:text-zinc-300" />
+                <Info className="h-5 w-5 text-slate-700 dark:text-zinc-300" />
               </SheetTrigger>
               <SheetContent
                 side="right"
@@ -761,7 +762,7 @@ export default function Dashboard() {
               >
                 <div className="sticky top-0 z-10 bg-white dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 p-5 flex items-center justify-between">
                   <h1 className="text-lg font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
-                    <Layers className="h-5 w-5" /> Layer & Info
+                    <Info className="h-5 w-5" /> Info Lokasi
                   </h1>
                   <Button
                     variant="ghost"
@@ -1185,6 +1186,33 @@ export default function Dashboard() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Route Legend */}
+                      <div className="mt-3 pt-3 border-t border-slate-200 dark:border-zinc-800">
+                        <span className="font-bold text-[10px] uppercase text-slate-400 tracking-wider mb-2 block">
+                          Legenda Rute
+                        </span>
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2 text-xs">
+                            <div className="w-8 h-1 bg-blue-500 rounded-full"></div>
+                            <span className="text-slate-600 dark:text-zinc-400">
+                              Rute Evakuasi
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs">
+                            <div className="w-3 h-3 bg-yellow-400 rounded-full border-2 border-white dark:border-zinc-900 shadow-sm"></div>
+                            <span className="text-slate-600 dark:text-zinc-400">
+                              Lokasi Anda
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs">
+                            <div className="w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-zinc-900 shadow-sm"></div>
+                            <span className="text-slate-600 dark:text-zinc-400">
+                              Shelter Tujuan
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </>
                   );
                 })()}
@@ -1225,7 +1253,7 @@ export default function Dashboard() {
                       {nearestShelters.length} shelter terdekat
                     </span>{" "}
                     dari titik. <br />
-                    Buka profil Layer di kanan atas u/ info detail.
+                    Buka panel Info Lokasi di kanan atas untuk detail lengkap.
                   </div>
                 )}
               </CardContent>
@@ -1233,6 +1261,15 @@ export default function Dashboard() {
           )}
 
           <div className="relative h-full w-full dark-map-container flex-1">
+            {loading && (
+              <div className="absolute inset-0 z-[2000] bg-zinc-950/95 backdrop-blur-sm flex flex-col items-center justify-center">
+                <Loader2 className="h-12 w-12 animate-spin text-blue-500 mb-4" />
+                <p className="text-zinc-300 font-medium">Memuat data peta...</p>
+                <p className="text-zinc-500 text-sm mt-2">
+                  Mengambil data shelter, gempa, dan zona rawan
+                </p>
+              </div>
+            )}
             <MapClient
               earthquakes={earthquakes}
               shelters={shelters}

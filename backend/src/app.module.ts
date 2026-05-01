@@ -1,13 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { HttpModule } from '@nestjs/axios';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AppGateway } from './websocket/app.gateway';
+import { RequestTrackingInterceptor } from './common/interceptors/request-tracking.interceptor';
 
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
@@ -24,6 +25,7 @@ import { EarthquakeAnalysisModule } from './earthquake-analysis/earthquake-analy
 import { BpbdRiskModule } from './bpbd-risk/bpbd-risk.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OfficerModule } from './officer/officer.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
 
 @Module({
   imports: [
@@ -54,6 +56,7 @@ import { OfficerModule } from './officer/officer.module';
     BpbdRiskModule,
     NotificationsModule,
     OfficerModule,
+    MonitoringModule,
   ],
   controllers: [AppController],
   providers: [
@@ -62,6 +65,10 @@ import { OfficerModule } from './officer/officer.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RequestTrackingInterceptor,
     },
   ],
 })

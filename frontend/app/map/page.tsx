@@ -518,18 +518,29 @@ export default function MapPage() {
             </div>
           </div>
         )}
-        <MapClient
-          shelters={shelters}
-          hazardZones={hazardZones}
-          earthquakes={earthquakes}
-          facilities={facilities}
-          selectedLocation={selectedLocation}
-          onLocationSelect={handleMapClick}
-          onEarthquakeClick={handleEarthquakeClick}
-          onCalculateRoute={calculateRouteToShelter}
-          roadNetwork={roadNetwork}
-          calculatedRoute={calculatedRoute}
-        />
+        <div className="relative w-full h-full">
+          {loading && (
+            <div className="absolute inset-0 z-[2000] bg-zinc-950/95 backdrop-blur-sm flex flex-col items-center justify-center">
+              <Loader2 className="h-12 w-12 animate-spin text-blue-500 mb-4" />
+              <p className="text-zinc-300 font-medium">Memuat data peta...</p>
+              <p className="text-zinc-500 text-sm mt-2">
+                Mengambil data shelter, gempa, dan zona rawan
+              </p>
+            </div>
+          )}
+          <MapClient
+            shelters={shelters}
+            hazardZones={hazardZones}
+            earthquakes={earthquakes}
+            facilities={facilities}
+            selectedLocation={selectedLocation}
+            onLocationSelect={handleMapClick}
+            onEarthquakeClick={handleEarthquakeClick}
+            onCalculateRoute={calculateRouteToShelter}
+            roadNetwork={roadNetwork}
+            calculatedRoute={calculatedRoute}
+          />
+        </div>
 
         {/* Earthquake Detail Card - Top Right */}
         {selectedEarthquake && (

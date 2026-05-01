@@ -480,6 +480,17 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   )}
+                  {loading && (
+                    <div className="absolute inset-0 z-[2000] bg-zinc-950/95 backdrop-blur-sm flex flex-col items-center justify-center rounded-2xl">
+                      <Loader2 className="h-12 w-12 animate-spin text-blue-500 mb-4" />
+                      <p className="text-zinc-300 font-medium">
+                        Memuat data peta...
+                      </p>
+                      <p className="text-zinc-500 text-sm mt-2">
+                        Mengambil data shelter, gempa, dan zona rawan
+                      </p>
+                    </div>
+                  )}
                   <MapClient
                     shelters={shelters}
                     hazardZones={hazardZones}

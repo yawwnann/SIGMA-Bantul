@@ -17,10 +17,14 @@ import {
   ShieldAlert,
   UserCircle,
   Settings,
+  Activity,
+  Menu,
+  X,
 } from "lucide-react";
 
 const menuItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/monitoring", label: "Monitoring Sistem", icon: Activity },
   { href: "/admin/shelters", label: "Shelter Evakuasi", icon: Home },
   { href: "/admin/officers", label: "Petugas Shelter", icon: ShieldAlert },
   { href: "/admin/facilities", label: "Fasilitas Umum", icon: Building2 },
@@ -37,6 +41,7 @@ export default function AdminLayout({
   const [checked, setChecked] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [user, setUser] = useState<{ name: string } | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     // Login page needs no auth check
@@ -67,6 +72,11 @@ export default function AdminLayout({
     window.location.replace("/admin/login");
   };
 
+  // Close sidebar when route changes (mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
   // Always render login page as-is
   if (pathname === "/admin/login") {
     return <>{children}</>;
@@ -85,8 +95,30 @@ export default function AdminLayout({
 
   return (
     <div className="dark min-h-screen w-full flex bg-zinc-950 text-zinc-50">
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="hidden md:flex w-64 bg-zinc-950 border-r border-zinc-800 flex-col fixed inset-y-0 left-0 z-50 shadow-xl">
+      <aside
+        className={`
+          w-64 bg-zinc-950 border-r border-zinc-800 flex-col fixed inset-y-0 left-0 z-50 shadow-xl
+          transition-transform duration-300 ease-in-out
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          md:translate-x-0 md:flex
+        `}
+      >
+        {/* Mobile Close Button */}
+        <button
+          onClick={() => setSidebarOpen(false)}
+          className="absolute top-4 right-4 p-2 rounded-lg hover:bg-zinc-800 md:hidden"
+        >
+          <X className="w-5 h-5 text-zinc-400" />
+        </button>
         <div className="h-16 px-6 border-b border-zinc-800 flex items-center gap-3">
           <div className="p-1.5 bg-blue-500/10 rounded-lg border border-blue-500/20">
             <Image
@@ -160,14 +192,22 @@ export default function AdminLayout({
       </aside>
 
       {/* Main */}
-      <main className="flex-1 min-h-screen md:pl-64">
-        <header className="h-16 bg-zinc-900 border-b border-zinc-800 px-6 flex items-center sticky top-0 z-40">
-          <h2 className="text-base font-semibold text-zinc-100">
+      <main className="flex-1 min-h-screen w-full md:pl-64">
+        <header className="h-16 bg-zinc-900 border-b border-zinc-800 px-4 md:px-6 flex items-center sticky top-0 z-40">
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-lg hover:bg-zinc-800 mr-3 md:hidden"
+          >
+            <Menu className="w-5 h-5 text-zinc-400" />
+          </button>
+
+          <h2 className="text-sm md:text-base font-semibold text-zinc-100">
             {menuItems.find((item) => item.href === pathname)?.label ||
               "Admin Panel"}
           </h2>
         </header>
-        <div className="p-6">{children}</div>
+        <div className="p-4 md:p-6">{children}</div>
       </main>
     </div>
   );

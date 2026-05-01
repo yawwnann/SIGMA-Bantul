@@ -289,23 +289,36 @@ export default function EvacuationPage() {
                         </p>
                       </div>
                     ) : selectedRouteGeometry || latestEq ? (
-                      <MapClient
-                        shelters={nearbyShelters}
-                        earthquakes={latestEq ? [latestEq] : []}
-                        selectedEarthquake={latestEq}
-                        hazardZones={[]}
-                        facilities={[]}
-                        selectedLocation={
-                          startLat && startLon
-                            ? {
-                                lat: parseFloat(startLat),
-                                lng: parseFloat(startLon),
-                              }
-                            : null
-                        }
-                        onLocationSelect={() => {}}
-                        calculatedRoute={selectedRouteGeometry}
-                      />
+                      <>
+                        {calculating && (
+                          <div className="absolute inset-0 z-[2000] bg-zinc-950/95 backdrop-blur-sm flex flex-col items-center justify-center rounded-2xl">
+                            <Loader2 className="h-12 w-12 animate-spin text-blue-500 mb-4" />
+                            <p className="text-zinc-300 font-medium">
+                              Memuat data peta...
+                            </p>
+                            <p className="text-zinc-500 text-sm mt-2">
+                              Mengambil data shelter dan rute evakuasi
+                            </p>
+                          </div>
+                        )}
+                        <MapClient
+                          shelters={nearbyShelters}
+                          earthquakes={latestEq ? [latestEq] : []}
+                          selectedEarthquake={latestEq}
+                          hazardZones={[]}
+                          facilities={[]}
+                          selectedLocation={
+                            startLat && startLon
+                              ? {
+                                  lat: parseFloat(startLat),
+                                  lng: parseFloat(startLon),
+                                }
+                              : null
+                          }
+                          onLocationSelect={() => {}}
+                          calculatedRoute={selectedRouteGeometry}
+                        />
+                      </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <p className="text-slate-500 dark:text-zinc-400">

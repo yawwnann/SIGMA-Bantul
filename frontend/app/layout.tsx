@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
-import { Sidebar } from "@/components/layout/sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
-import { SidebarProvider } from "@/components/layout/sidebar-provider";
-import { AppLayout } from "@/components/layout/app-layout";
+import { ConditionalLayout } from "@/components/layout/conditional-layout";
 import { PushNotificationManager } from "@/components/PushNotificationManager";
 import "./globals.css";
 
@@ -52,15 +50,8 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SidebarProvider>
-            <div className="flex min-h-screen w-full">
-              <Sidebar />
-              <AppLayout>
-                <PushNotificationManager />
-                {children}
-              </AppLayout>
-            </div>
-          </SidebarProvider>
+          <PushNotificationManager />
+          <ConditionalLayout>{children}</ConditionalLayout>
           <Toaster />
         </ThemeProvider>
       </body>
