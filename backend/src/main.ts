@@ -13,7 +13,11 @@ async function bootstrap() {
 
   // CORS handled by NestJS
   app.enableCors({
-    origin: true, // Otomatis menyesuaikan dengan origin pemanggil
+    origin: [
+      'http://localhost:5173',
+      'https://sigma-bantul.duckdns.org',
+      'https://sigma-bantul.vercel.app',
+    ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
