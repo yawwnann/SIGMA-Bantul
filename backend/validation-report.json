@@ -1,7 +1,7 @@
 {
   "totalZones": 75,
-  "totalRoads": 12230,
-  "roadsWithBpbdRisk": 12230,
+  "totalRoads": 12227,
+  "roadsWithBpbdRisk": 12227,
   "roadsWithoutBpbdRisk": 0,
   "geometryValidation": {
     "validZones": 64,
@@ -14,7 +14,7 @@
       "HIGH": 10
     },
     "roads": {
-      "LOW": 11788,
+      "LOW": 11785,
       "MEDIUM": 417,
       "HIGH": 25
     }

@@ -3,8 +3,13 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/interceptors/global-exception.filter';
 
+const compression = require('compression');
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Enable gzip compression for all responses
+  app.use(compression());
 
   app.enableCors({
     origin: '*',

@@ -250,8 +250,7 @@ export class RoadService {
           "bpbdRiskScore",
           "combinedHazard",
           safe_cost,
-          geometry,
-          ST_AsGeoJSON(geom)::json as geojson
+          ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, 0.00005), 5)::json as geojson
         FROM "Road"
         WHERE ST_Intersects(
           geom,
@@ -271,8 +270,7 @@ export class RoadService {
           "bpbdRiskScore",
           "combinedHazard",
           safe_cost,
-          geometry,
-          ST_AsGeoJSON(geom)::json as geojson
+          ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, 0.00005), 5)::json as geojson
         FROM "Road"
         ORDER BY type, name
       `;
@@ -295,7 +293,7 @@ export class RoadService {
           combinedHazard: road.combinedHazard,
           safeCost: road.safe_cost,
         },
-        geometry: road.geojson || road.geometry,
+        geometry: road.geojson,
       })),
     };
 
