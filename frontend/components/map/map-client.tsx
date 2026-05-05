@@ -1015,7 +1015,7 @@ export default function MapClient({
       {isMapReady && mapInstance && (
         <BpbdRiskLayer map={mapInstance} visible={visibleLayers.bpbdRisk} />
       )}
-      <div className="absolute top-4 left-4 md:left-4 z-[1000] flex flex-col items-start gap-2">
+      <div className="absolute top-4 left-4 md:left-4 z-[500] flex flex-col items-start gap-2">
         <button
           onClick={(e) => {
             e.stopPropagation();

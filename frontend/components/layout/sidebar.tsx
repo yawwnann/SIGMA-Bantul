@@ -87,7 +87,7 @@ export function Sidebar() {
           collapsed ? "md:w-[80px]" : "md:w-64",
           "w-64",
           mobileOpen
-            ? "translate-x-0 z-[1000]"
+            ? "translate-x-0 z-[9999]"
             : "-translate-x-full md:translate-x-0 md:z-[9999]",
         )}
       >
