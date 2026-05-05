@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ConditionalLayout } from "@/components/layout/conditional-layout";
 import { PushNotificationManager } from "@/components/PushNotificationManager";
+import { PwaPermissionModal } from "@/components/pwa-permission-modal";
 import "./globals.css";
 
 const inter = Inter({
@@ -74,6 +75,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <PushNotificationManager />
+          <PwaPermissionModal />
           <ConditionalLayout>{children}</ConditionalLayout>
           <Toaster />
         </ThemeProvider>

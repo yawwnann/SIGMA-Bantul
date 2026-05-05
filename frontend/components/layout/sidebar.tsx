@@ -88,7 +88,7 @@ export function Sidebar() {
           "w-64",
           mobileOpen
             ? "translate-x-0 z-[1000]"
-            : "-translate-x-full md:translate-x-0 md:z-[100]",
+            : "-translate-x-full md:translate-x-0 md:z-[9999]",
         )}
       >
         <div
