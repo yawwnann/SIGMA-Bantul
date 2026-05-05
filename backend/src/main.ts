@@ -12,12 +12,7 @@ async function bootstrap() {
   app.use(compression());
 
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'https://sigma-bantul.duckdns.org',
-      'https://sigma-bantul.vercel.app',
-    ],
+    origin: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
