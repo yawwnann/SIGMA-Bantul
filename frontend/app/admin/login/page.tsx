@@ -84,7 +84,7 @@ export default function AdminLoginPage() {
               alt="SIGMA Bantul Logo"
               width={40}
               height={40}
-              style={{ objectFit: "contain" }}
+              style={{ width: "auto", height: "auto", objectFit: "contain" }}
             />
           </div>
           <h1

@@ -32,6 +32,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               width={24}
               height={24}
               className="h-6 w-6 object-contain"
+              style={{ width: "auto", height: "auto" }}
             />
             <span className="font-bold text-slate-900 dark:text-zinc-50">
               SIGMA Bantul

@@ -12,7 +12,11 @@ async function bootstrap() {
   app.use(compression());
 
   app.enableCors({
-    origin: '*',
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'https://sigma-bantul.duckdns.org',
+    ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
@@ -33,7 +37,8 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  // Bind to 0.0.0.0 to ensure it's accessible from Nginx proxy
+  await app.listen(port, '0.0.0.0');
 
   console.log(
     `🏠 GIS Bencana Backend running on: http://localhost:${port}/api`,

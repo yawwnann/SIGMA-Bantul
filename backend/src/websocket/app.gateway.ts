@@ -10,7 +10,12 @@ import { Logger } from '@nestjs/common';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'https://sigma-bantul.duckdns.org',
+    ],
+    credentials: true,
   },
   namespace: '/',
 })

@@ -88,7 +88,7 @@ export default function OfficerLayout({
                 alt="SIGMA Bantul Logo"
                 width={20}
                 height={20}
-                style={{ objectFit: "contain" }}
+                style={{ width: "auto", height: "auto", objectFit: "contain" }}
               />
             </div>
             <div className="hidden sm:block">

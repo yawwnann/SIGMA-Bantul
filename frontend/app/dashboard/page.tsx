@@ -495,7 +495,6 @@ export default function DashboardPage() {
                     shelters={shelters}
                     hazardZones={hazardZones}
                     earthquakes={earthquakes}
-                    routes={routes}
                     facilities={facilities}
                     selectedLocation={selectedLocation}
                     onLocationSelect={handleLocationSelect}

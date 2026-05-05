@@ -101,6 +101,7 @@ export function Sidebar() {
                 width={40}
                 height={40}
                 className="object-contain"
+                style={{ width: "auto", height: "auto" }}
                 onError={(e) => {
                   e.currentTarget.style.display = "none";
                 }}
