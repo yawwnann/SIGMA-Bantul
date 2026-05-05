@@ -44,6 +44,17 @@ export enum RouteType {
   ALTERNATIVE = "ALTERNATIVE",
 }
 
+export enum EvacueeStatus {
+  ACTIVE = "ACTIVE",
+  RELOCATED = "RELOCATED",
+  RETURNED_HOME = "RETURNED_HOME",
+}
+
+export enum EvacueeGender {
+  MALE = "MALE",
+  FEMALE = "FEMALE",
+}
+
 export interface User {
   id: number;
   email: string;
@@ -185,4 +196,50 @@ export interface OfficerDashboardResponse {
   };
   shelters: Shelter[];
   statistics: OfficerStats;
+}
+
+export interface Evacuee {
+  id: number;
+  shelterId: number;
+  shelter?: {
+    id: number;
+    name: string;
+    address?: string;
+  };
+  name: string;
+  nik?: string;
+  gender: EvacueeGender;
+  age: number;
+  address?: string;
+  phone?: string;
+  familySize: number;
+  specialNeeds?: string;
+  medicalCondition?: string;
+  status: EvacueeStatus;
+  checkInDate: string;
+  checkOutDate?: string;
+  notes?: string;
+  registeredBy?: number;
+  registeredByUser?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EvacueeStats {
+  total: number;
+  active: number;
+  relocated: number;
+  returnedHome: number;
+  byGender: Array<{
+    gender: EvacueeGender;
+    _count: number;
+  }>;
+  byAgeGroup: Array<{
+    age_group: string;
+    count: number;
+  }>;
 }

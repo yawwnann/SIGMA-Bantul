@@ -26,6 +26,7 @@ import { BpbdRiskModule } from './bpbd-risk/bpbd-risk.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OfficerModule } from './officer/officer.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
+import { EvacueeModule } from './evacuee/evacuee.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { MonitoringModule } from './monitoring/monitoring.module';
     NotificationsModule,
     OfficerModule,
     MonitoringModule,
+    EvacueeModule,
   ],
   controllers: [AppController],
   providers: [

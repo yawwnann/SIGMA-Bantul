@@ -22,7 +22,7 @@ const DynamicMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-[400px] bg-slate-100 dark:bg-zinc-900 rounded-lg animate-pulse" />
+      <div className="w-full h-100 bg-slate-100 dark:bg-zinc-900 rounded-lg animate-pulse" />
     ),
   },
 );
@@ -218,7 +218,7 @@ export default function SimulationPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[450px] w-full rounded-md border border-slate-200 dark:border-zinc-800 overflow-hidden">
+            <div className="h-112.5 w-full rounded-md border border-slate-200 dark:border-zinc-800 overflow-hidden">
               <DynamicMap
                 shelters={[]}
                 earthquakes={[]}

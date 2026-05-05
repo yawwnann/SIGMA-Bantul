@@ -29,4 +29,9 @@ export {
   type ImportResult,
   type AssignmentResult,
 } from "./bpbd-risk";
+export {
+  evacueeApi,
+  type CreateEvacueeDto,
+  type UpdateEvacueeDto,
+} from "./evacuee";
 export { default as apiClient } from "./client";

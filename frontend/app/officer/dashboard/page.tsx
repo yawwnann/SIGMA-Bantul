@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { officerApi, type DashboardResponse } from "@/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
   RefreshCw,
   Building2,
   Loader2,
+  UserPlus,
 } from "lucide-react";
 
 const conditionColors: Record<string, string> = {
@@ -47,6 +49,7 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function OfficerDashboardPage() {
+  const router = useRouter();
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<number | null>(null);
@@ -140,7 +143,7 @@ export default function OfficerDashboardPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Welcome Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-900/60 via-emerald-800/30 to-transparent border border-emerald-500/20 shadow-2xl shadow-emerald-900/20 rounded-2xl p-4 md:p-6 lg:p-8 backdrop-blur-xl">
+      <div className="relative overflow-hidden bg-linear-to-br from-emerald-900/60 via-emerald-800/30 to-transparent border border-emerald-500/20 shadow-2xl shadow-emerald-900/20 rounded-2xl p-4 md:p-6 lg:p-8 backdrop-blur-xl">
         <div className="absolute -top-20 -right-20 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl mix-blend-screen animate-pulse duration-10000" />
         <div className="absolute -bottom-10 left-10 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl opacity-50" />
         <div className="relative flex items-start md:items-center gap-3 md:gap-4 lg:gap-6">
@@ -162,8 +165,8 @@ export default function OfficerDashboardPage() {
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5">
         <Card className="relative overflow-hidden bg-zinc-900/40 backdrop-blur-xl border border-zinc-800 hover:border-emerald-500/30 group hover:-translate-y-1 transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/10 rounded-2xl">
-          <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute inset-x-0 -top-px h-px bg-linear-to-r from-transparent via-emerald-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute inset-0 bg-linear-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="pb-3 relative z-10">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-2.5">
               <div className="p-2 bg-emerald-500/10 rounded-xl flex-shrink-0 border border-emerald-500/10 group-hover:bg-emerald-500/20 transition-colors">
@@ -183,8 +186,8 @@ export default function OfficerDashboardPage() {
         </Card>
 
         <Card className="relative overflow-hidden bg-zinc-900/40 backdrop-blur-xl border border-zinc-800 hover:border-blue-500/30 group hover:-translate-y-1 transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/10 rounded-2xl">
-          <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute inset-x-0 -top-px h-px bg-linear-to-r from-transparent via-blue-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute inset-0 bg-linear-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="pb-3 relative z-10">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-2.5">
               <div className="p-2 bg-blue-500/10 rounded-xl flex-shrink-0 border border-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
@@ -204,8 +207,8 @@ export default function OfficerDashboardPage() {
         </Card>
 
         <Card className="relative overflow-hidden bg-zinc-900/40 backdrop-blur-xl border border-zinc-800 hover:border-amber-500/30 group hover:-translate-y-1 transition-all duration-500 hover:shadow-2xl hover:shadow-amber-500/10 rounded-2xl">
-          <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute inset-x-0 -top-px h-px bg-linear-to-r from-transparent via-amber-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute inset-0 bg-linear-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="pb-3 relative z-10">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-2.5">
               <div className="p-2 bg-amber-500/10 rounded-xl flex-shrink-0 border border-amber-500/10 group-hover:bg-amber-500/20 transition-colors">
@@ -245,7 +248,7 @@ export default function OfficerDashboardPage() {
       </div>
 
       {dashboard.shelters.length === 0 ? (
-        <Card className="bg-gradient-to-br from-zinc-900 to-zinc-900/50 border-zinc-800">
+        <Card className="bg-linear-to-br from-zinc-900 to-zinc-900/50 border-zinc-800">
           <CardContent className="py-16 text-center">
             <div className="p-4 bg-zinc-800/50 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
               <Home className="w-10 h-10 text-zinc-600" />
@@ -268,6 +271,9 @@ export default function OfficerDashboardPage() {
               onUpdateOccupancy={handleUpdateOccupancy}
               onUpdateCondition={handleUpdateCondition}
               onUpdateStatus={handleUpdateStatus}
+              onManageEvacuees={() =>
+                router.push(`/officer/shelters/${shelter.id}/evacuees`)
+              }
             />
           ))}
         </div>
@@ -282,6 +288,7 @@ interface ShelterCardProps {
   onUpdateOccupancy: (shelterId: number, occupancy: number) => void;
   onUpdateCondition: (shelterId: number, condition: string) => void;
   onUpdateStatus: (shelterId: number, status: string) => void;
+  onManageEvacuees: () => void;
 }
 
 function ShelterCard({
@@ -290,6 +297,7 @@ function ShelterCard({
   onUpdateOccupancy,
   onUpdateCondition,
   onUpdateStatus,
+  onManageEvacuees,
 }: ShelterCardProps) {
   const [occupancy, setOccupancy] = useState<number | "">(
     shelter.currentOccupancy,
@@ -318,7 +326,7 @@ function ShelterCard({
 
   return (
     <Card className="group relative bg-zinc-950/40 backdrop-blur-xl border border-zinc-800/80 hover:border-emerald-500/40 transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/5 overflow-hidden rounded-2xl">
-      <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/10 group-hover:via-emerald-500/30 to-transparent transition-all duration-500" />
+      <div className="absolute inset-x-0 -top-px h-px bg-linear-to-r from-transparent via-white/10 group-hover:via-emerald-500/30 to-transparent transition-all duration-500" />
       <CardHeader className="pb-5 relative z-10">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -363,10 +371,10 @@ function ShelterCard({
             <div
               className={`h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(255,255,255,0.2)] ${
                 occupancyPercentage > 90
-                  ? "bg-gradient-to-r from-red-600 to-red-400"
+                  ? "bg-linear-to-r from-red-600 to-red-400"
                   : occupancyPercentage > 70
-                    ? "bg-gradient-to-r from-amber-600 to-amber-400"
-                    : "bg-gradient-to-r from-emerald-600 to-emerald-400"
+                    ? "bg-linear-to-r from-amber-600 to-amber-400"
+                    : "bg-linear-to-r from-emerald-600 to-emerald-400"
               }`}
               style={{ width: `${Math.min(occupancyPercentage, 100)}%` }}
             />
@@ -472,7 +480,7 @@ function ShelterCard({
           <Button
             onClick={handleSave}
             disabled={updating}
-            className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-[0_0_20px_rgb(16,185,129,0.3)] hover:shadow-[0_0_25px_rgb(16,185,129,0.5)] border border-emerald-400/20 transition-all duration-300 h-11 font-bold rounded-xl mt-2 animate-in fade-in slide-in-from-bottom-2"
+            className="w-full bg-linear-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-[0_0_20px_rgb(16,185,129,0.3)] hover:shadow-[0_0_25px_rgb(16,185,129,0.5)] border border-emerald-400/20 transition-all duration-300 h-11 font-bold rounded-xl mt-2 animate-in fade-in slide-in-from-bottom-2"
           >
             {updating ? (
               <>
@@ -484,6 +492,16 @@ function ShelterCard({
             )}
           </Button>
         )}
+
+        {/* Manage Evacuees Button */}
+        <Button
+          onClick={onManageEvacuees}
+          variant="outline"
+          className="w-full bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 hover:border-blue-500/50 text-blue-400 hover:text-blue-300 transition-all duration-300 h-11 font-bold rounded-xl mt-2"
+        >
+          <UserPlus className="w-5 h-5 mr-2" />
+          Kelola Pengungsi
+        </Button>
       </CardContent>
     </Card>
   );

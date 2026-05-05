@@ -107,29 +107,6 @@ export default function AdminDashboardPage() {
           Pantau pusat kendali operasi dan analitik krisis gempa bumi wilayah
           Kabupaten Bantul.
         </p>
-
-        {/* Test Notification Button */}
-        <div className="mt-4 flex items-center gap-3">
-          <Button
-            variant="outline"
-            className="border-orange-800 text-orange-400 hover:bg-orange-900/20 hover:text-orange-300"
-            onClick={async () => {
-              try {
-                const response = await apiClient.get("/notifications/test");
-                const data = response.data;
-                toast.success(
-                  `Notifikasi test dikirim! Success: ${data.successCount || 0}, Error: ${data.errorCount || 0}`,
-                );
-              } catch (error) {
-                console.error("Test notification error:", error);
-                toast.error("Gagal mengirim notifikasi test");
-              }
-            }}
-          >
-            <Activity className="w-4 h-4 mr-2" />
-            Test Push Notifikasi
-          </Button>
-        </div>
       </div>
 
       {/* KPI Cards */}

@@ -48,25 +48,86 @@ async function main() {
     },
   });
 
-  const officer1 = await prisma.user.create({
-    data: {
-      email: 'petugas1@bantul.go.id',
-      password: hashedPassword,
-      name: 'Budi Santoso',
-      role: 'SHELTER_OFFICER',
+  // Create Shelter Officers with Indonesian names
+  const officers = [
+    {
+      email: 'ahmad.fauzi@bantul.go.id',
+      name: 'Ahmad Fauzi',
     },
-  });
-
-  const officer2 = await prisma.user.create({
-    data: {
-      email: 'petugas2@bantul.go.id',
-      password: hashedPassword,
+    {
+      email: 'siti.nurhaliza@bantul.go.id',
       name: 'Siti Nurhaliza',
-      role: 'SHELTER_OFFICER',
     },
-  });
+    {
+      email: 'budi.santoso@bantul.go.id',
+      name: 'Budi Santoso',
+    },
+    {
+      email: 'dewi.lestari@bantul.go.id',
+      name: 'Dewi Lestari',
+    },
+    {
+      email: 'eko.prasetyo@bantul.go.id',
+      name: 'Eko Prasetyo',
+    },
+    {
+      email: 'fitri.handayani@bantul.go.id',
+      name: 'Fitri Handayani',
+    },
+    {
+      email: 'gunawan.wijaya@bantul.go.id',
+      name: 'Gunawan Wijaya',
+    },
+    {
+      email: 'hesti.rahmawati@bantul.go.id',
+      name: 'Hesti Rahmawati',
+    },
+    {
+      email: 'indra.kusuma@bantul.go.id',
+      name: 'Indra Kusuma',
+    },
+    {
+      email: 'joko.widodo@bantul.go.id',
+      name: 'Joko Widodo',
+    },
+    {
+      email: 'kartika.sari@bantul.go.id',
+      name: 'Kartika Sari',
+    },
+    {
+      email: 'lukman.hakim@bantul.go.id',
+      name: 'Lukman Hakim',
+    },
+    {
+      email: 'maya.anggraini@bantul.go.id',
+      name: 'Maya Anggraini',
+    },
+    {
+      email: 'nugroho.susanto@bantul.go.id',
+      name: 'Nugroho Susanto',
+    },
+    {
+      email: 'putri.wulandari@bantul.go.id',
+      name: 'Putri Wulandari',
+    },
+  ];
 
-  console.log(`✅ Created ${4} users (1 admin, 1 user, 2 officers)`);
+  const createdOfficers = [];
+  for (const officer of officers) {
+    const created = await prisma.user.create({
+      data: {
+        email: officer.email,
+        password: hashedPassword,
+        name: officer.name,
+        role: 'SHELTER_OFFICER',
+      },
+    });
+    createdOfficers.push(created);
+  }
+
+  console.log(
+    `✅ Created ${4 + officers.length} users (1 admin, 1 user, ${officers.length} officers)`,
+  );
 
   // 2. Create Earthquakes (30 historical earthquakes in Bantul area)
   console.log('🌍 Creating earthquake records...');
@@ -662,8 +723,9 @@ async function main() {
     },
   ];
 
+  const createdShelters = [];
   for (const shelter of shelters) {
-    await prisma.$executeRaw`
+    const result = await prisma.$queryRaw<{ id: number }[]>`
       INSERT INTO "Shelter" (name, capacity, geometry, geom, address, condition, facilities, "createdAt", "updatedAt")
       VALUES (
         ${shelter.name},
@@ -676,10 +738,49 @@ async function main() {
         NOW(),
         NOW()
       )
+      RETURNING id
     `;
+    createdShelters.push(result[0]);
   }
 
   console.log(`✅ Created ${shelters.length} shelters`);
+
+  // 4.1. Assign Officers to Shelters
+  console.log('👥 Assigning officers to shelters...');
+
+  // Assign each officer to one or more shelters (some officers manage multiple shelters)
+  const assignments = [
+    { officerIndex: 0, shelterIndex: 0 }, // Ahmad Fauzi -> GOR Sewon
+    { officerIndex: 1, shelterIndex: 1 }, // Siti Nurhaliza -> Balai Desa Kasihan
+    { officerIndex: 2, shelterIndex: 2 }, // Budi Santoso -> Gedung Serbaguna Sedayu
+    { officerIndex: 3, shelterIndex: 3 }, // Dewi Lestari -> Stadion Srandakan
+    { officerIndex: 4, shelterIndex: 4 }, // Eko Prasetyo -> Shelter Pantai Sanden
+    { officerIndex: 5, shelterIndex: 5 }, // Fitri Handayani -> Pendopo Kecamatan Kretek
+    { officerIndex: 6, shelterIndex: 6 }, // Gunawan Wijaya -> Pusat Evakuasi Pundong
+    { officerIndex: 7, shelterIndex: 7 }, // Hesti Rahmawati -> Balai Rehabilitasi Bambanglipuro
+    { officerIndex: 8, shelterIndex: 8 }, // Indra Kusuma -> Gedung Dakwah Pandak
+    { officerIndex: 9, shelterIndex: 9 }, // Joko Widodo -> Shelter Utama Pajangan
+    { officerIndex: 10, shelterIndex: 10 }, // Kartika Sari -> Pendopo Kabupaten Bantul
+    { officerIndex: 11, shelterIndex: 11 }, // Lukman Hakim -> GOR Jetis
+    { officerIndex: 12, shelterIndex: 12 }, // Maya Anggraini -> Shelter Budaya Imogiri
+    { officerIndex: 13, shelterIndex: 13 }, // Nugroho Susanto -> Camp Pengungsian Dlingo
+    { officerIndex: 14, shelterIndex: 14 }, // Putri Wulandari -> Pusat Logistik Banguntapan
+    // Some officers manage multiple shelters
+    { officerIndex: 0, shelterIndex: 15 }, // Ahmad Fauzi -> Gedung Pertemuan Pleret
+    { officerIndex: 1, shelterIndex: 16 }, // Siti Nurhaliza -> Shelter Piyungan
+  ];
+
+  for (const assignment of assignments) {
+    await prisma.$executeRaw`
+      UPDATE "Shelter"
+      SET "officerId" = ${createdOfficers[assignment.officerIndex].id}
+      WHERE id = ${createdShelters[assignment.shelterIndex].id}
+    `;
+  }
+
+  console.log(
+    `✅ Assigned ${assignments.length} shelter-officer relationships`,
+  );
 
   // 5. Roads — managed separately
   // Road data is imported via: npm run db:import-roads
@@ -757,10 +858,13 @@ async function main() {
   const finalRoadCount = await prisma.road.count();
   console.log('✨ Seeding completed successfully!');
   console.log('\n📊 Summary:');
-  console.log(`   - Users: 4 (1 admin, 1 user, 2 officers)`);
+  console.log(
+    `   - Users: ${4 + officers.length} (1 admin, 1 user, ${officers.length} officers)`,
+  );
   console.log(`   - Earthquakes: ${earthquakes.length}`);
   console.log(`   - Hazard Zones: ${hazardZones.length}`);
   console.log(`   - Shelters: ${shelters.length}`);
+  console.log(`   - Shelter-Officer Assignments: ${assignments.length}`);
   console.log(
     `   - Roads: ${finalRoadCount} (not cleared — managed by import-roads script)`,
   );

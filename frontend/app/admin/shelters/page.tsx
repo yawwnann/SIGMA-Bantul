@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { shelterApi, officerApi, type Officer } from "@/api";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -30,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Home, Plus, MapPin, Users, UserCheck, UserX } from "lucide-react";
 import type { Shelter, ShelterCondition } from "@/types";
@@ -529,162 +528,272 @@ export default function AdminSheltersPage() {
       </Dialog>
 
       {/* Add/Edit Shelter Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg bg-zinc-900 text-zinc-100 border-zinc-800">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold">
-              {editingShelter ? "Perbarui Shelter" : "Tambah Shelter Baru"}
-            </DialogTitle>
-            <DialogDescription className="text-zinc-500">
-              {editingShelter
-                ? "Bila data tidak relevan, sesuaikan properti shelter di form ini."
-                : "Masukkan data logistik untuk penambahan situs bantuan/pengungsian."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-2">
-            <div className="grid gap-2">
-              <Label htmlFor="name" className="text-zinc-400">
-                Nama Shelter Utama
-              </Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                placeholder="Cth: Balai Desa Bantul"
-                className="bg-zinc-950 border-zinc-800 focus-visible:ring-blue-500"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="address" className="text-zinc-400">
-                Informasi Alamat
-              </Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) =>
-                  setFormData({ ...formData, address: e.target.value })
-                }
-                placeholder="Cth: Jl. Dr. Wahidin Sudiro Kusumo No.3"
-                className="bg-zinc-950 border-zinc-800 focus-visible:ring-blue-500"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="capacity" className="text-zinc-400">
-                  Estimasi Kapasitas
-                </Label>
-                <Input
-                  id="capacity"
-                  type="number"
-                  value={formData.capacity}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      capacity: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  className="bg-zinc-950 border-zinc-800 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="condition" className="text-zinc-400">
-                  Kelayakhunian
-                </Label>
-                <Select
-                  value={formData.condition}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      condition: value as ShelterCondition,
-                    })
-                  }
-                >
-                  <SelectTrigger className="bg-zinc-950 border-zinc-800">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
-                    <SelectItem value="GOOD">Sangat Baik</SelectItem>
-                    <SelectItem value="MODERATE">Layak Huni</SelectItem>
-                    <SelectItem value="NEEDS_REPAIR">Butuh Rehap</SelectItem>
-                    <SelectItem value="DAMAGED">Rusak Berat</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label className="text-zinc-400 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5" />
-                Tandai Lokasi di Peta
-              </Label>
-              <p className="text-xs text-zinc-600 -mt-1">
-                Klik pada peta atau seret penanda untuk memilih koordinat.
+      {isDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => {
+              setIsDialogOpen(false);
+              resetForm();
+            }}
+          />
+
+          {/* Dialog */}
+          <div className="relative bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl max-w-5xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="border-b border-zinc-800 p-6">
+              <h2 className="text-2xl font-bold flex items-center gap-2 text-white">
+                <Home className="w-6 h-6 text-blue-500" />
+                {editingShelter ? "Perbarui Shelter" : "Tambah Shelter Baru"}
+              </h2>
+              <p className="text-zinc-400 text-sm mt-2">
+                {editingShelter
+                  ? "Perbarui informasi shelter evakuasi yang sudah terdaftar"
+                  : "Masukkan data logistik untuk penambahan situs bantuan/pengungsian."}
               </p>
-              <LocationPickerMap
-                lat={formData.lat}
-                lon={formData.lon}
-                onChange={(lat, lon) =>
-                  setFormData((prev) => ({ ...prev, lat, lon }))
-                }
-              />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="lat" className="text-zinc-400 text-xs">
-                  Garis Lintang (Lat)
-                </Label>
-                <Input
-                  id="lat"
-                  type="number"
-                  step="any"
-                  value={formData.lat}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      lat: parseFloat(e.target.value),
-                    })
-                  }
-                  className="bg-zinc-950 border-zinc-800 font-mono text-xs h-8"
-                />
+
+            {/* Content - 2 Column Layout */}
+            <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column - Form Fields */}
+              <div className="space-y-5">
+                {/* Nama Shelter */}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="name"
+                    className="text-sm font-semibold text-zinc-300 flex items-center gap-1.5"
+                  >
+                    <Home className="w-4 h-4 text-blue-400" />
+                    Nama Shelter Utama
+                    <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    id="name"
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    placeholder="Contoh: Balai Desa Bantul"
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                  <p className="text-xs text-zinc-500">
+                    Nama resmi lokasi shelter yang mudah dikenali
+                  </p>
+                </div>
+
+                {/* Alamat */}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="address"
+                    className="text-sm font-semibold text-zinc-300 flex items-center gap-1.5"
+                  >
+                    <MapPin className="w-4 h-4 text-emerald-400" />
+                    Informasi Alamat
+                  </label>
+                  <input
+                    id="address"
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) =>
+                      setFormData({ ...formData, address: e.target.value })
+                    }
+                    placeholder="Contoh: Jl. Dr. Wahidin Sudiro Kusumo No.3"
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                  <p className="text-xs text-zinc-500">
+                    Alamat lengkap untuk memudahkan navigasi
+                  </p>
+                </div>
+
+                {/* Kapasitas */}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="capacity"
+                    className="text-sm font-semibold text-zinc-300 flex items-center gap-1.5"
+                  >
+                    <Users className="w-4 h-4 text-amber-400" />
+                    Estimasi Kapasitas
+                    <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    id="capacity"
+                    type="number"
+                    value={formData.capacity}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        capacity: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    placeholder="0"
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <p className="text-xs text-zinc-500">
+                    Jumlah maksimal pengungsi (orang)
+                  </p>
+                </div>
+
+                {/* Kondisi */}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="condition"
+                    className="text-sm font-semibold text-zinc-300 flex items-center gap-1.5"
+                  >
+                    <Home className="w-4 h-4 text-purple-400" />
+                    Kelayakhunian
+                  </label>
+                  <select
+                    id="condition"
+                    value={formData.condition}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        condition: e.target.value as ShelterCondition,
+                      })
+                    }
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  >
+                    <option value="GOOD">Sangat Baik</option>
+                    <option value="MODERATE">Layak Huni</option>
+                    <option value="NEEDS_REPAIR">Butuh Rehab</option>
+                    <option value="DAMAGED">Rusak Berat</option>
+                  </select>
+                  <p className="text-xs text-zinc-500">
+                    Status kondisi bangunan shelter
+                  </p>
+                </div>
+
+                {/* Coordinates */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="lat"
+                      className="text-xs font-medium text-zinc-400 uppercase tracking-wider"
+                    >
+                      Garis Lintang (Lat)
+                    </label>
+                    <input
+                      id="lat"
+                      type="number"
+                      step="any"
+                      value={formData.lat}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          lat: parseFloat(e.target.value),
+                        })
+                      }
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="lon"
+                      className="text-xs font-medium text-zinc-400 uppercase tracking-wider"
+                    >
+                      Garis Bujur (Lon)
+                    </label>
+                    <input
+                      id="lon"
+                      type="number"
+                      step="any"
+                      value={formData.lon}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          lon: parseFloat(e.target.value),
+                        })
+                      }
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Info Box */}
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <div className="p-1 bg-blue-500/20 rounded">
+                      <svg
+                        className="w-4 h-4 text-blue-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-blue-300 font-medium mb-1">
+                        Informasi Penting
+                      </p>
+                      <p className="text-xs text-blue-400/80">
+                        Pastikan lokasi yang dipilih akurat dan mudah diakses
+                        oleh pengungsi. Data ini akan ditampilkan di peta
+                        publik.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="lon" className="text-zinc-400 text-xs">
-                  Garis Bujur (Lon)
-                </Label>
-                <Input
-                  id="lon"
-                  type="number"
-                  step="any"
-                  value={formData.lon}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      lon: parseFloat(e.target.value),
-                    })
-                  }
-                  className="bg-zinc-950 border-zinc-800 font-mono text-xs h-8"
-                />
+
+              {/* Right Column - Map */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold text-zinc-300 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-red-400" />
+                    Tandai Lokasi di Peta
+                    <span className="text-red-400">*</span>
+                  </label>
+                  <span className="text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-1 rounded">
+                    Interaktif
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-500">
+                  Klik pada peta atau seret penanda untuk memilih koordinat
+                  shelter
+                </p>
+                <div className="rounded-lg overflow-hidden border border-zinc-800 h-auto">
+                  <LocationPickerMap
+                    lat={formData.lat}
+                    lon={formData.lon}
+                    onChange={(lat, lon) =>
+                      setFormData((prev) => ({ ...prev, lat, lon }))
+                    }
+                  />
+                </div>
               </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-zinc-800 p-6 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setIsDialogOpen(false);
+                  resetForm();
+                }}
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-lg transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={!formData.name || formData.capacity <= 0}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-lg shadow-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+              >
+                <Home className="w-4 h-4" />
+                {editingShelter ? "Simpan Perubahan" : "Simpan Shelter"}
+              </button>
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0 mt-2">
-            <Button
-              variant="ghost"
-              onClick={() => setIsDialogOpen(false)}
-              className="hover:bg-zinc-800 hover:text-zinc-100"
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/20"
-            >
-              {editingShelter ? "Simpan Perbaikan" : "Simpan Shelter"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   );
 }

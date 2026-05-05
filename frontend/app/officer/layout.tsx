@@ -1,35 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { authApi } from "@/api";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-
 import {
-  LayoutDashboard,
-  LogOut,
-  ShieldAlert,
-  UserCircle,
-  Map,
-  Menu,
-  X,
-} from "lucide-react";
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { LogOut, UserCircle } from "lucide-react";
 
-const menuItems = [
-  {
-    href: "/officer/dashboard",
-    label: "Dashboard Saya",
-    icon: LayoutDashboard,
-  },
-  {
-    href: "/officer/map",
-    label: "Monitoring Peta",
-    icon: Map,
-  },
-];
+type CurrentUser = {
+  name: string;
+  role: string;
+};
 
 export default function OfficerLayout({
   children,
@@ -37,10 +29,11 @@ export default function OfficerLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+
   const [checked, setChecked] = useState(false);
   const [authed, setAuthed] = useState(false);
-  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState<CurrentUser | null>(null);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -51,7 +44,6 @@ export default function OfficerLayout({
       return;
     }
 
-    // Check if user has SHELTER_OFFICER role
     if (currentUser.role !== "SHELTER_OFFICER") {
       toast.error("Akses ditolak. Anda bukan petugas shelter.");
       window.location.replace("/admin/login");
@@ -63,21 +55,22 @@ export default function OfficerLayout({
     setChecked(true);
   }, [pathname]);
 
+  const pageTitle = useMemo(() => {
+    if (pathname.startsWith("/officer/dashboard")) return "Dashboard";
+    if (pathname.includes("/evacuees")) return "Data Pengungsi";
+    return "Petugas Shelter";
+  }, [pathname]);
+
   const handleLogout = () => {
     authApi.logout();
     toast.info("Anda telah logout");
     window.location.replace("/admin/login");
   };
 
-  // Close sidebar when route changes (mobile)
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [pathname]);
-
   if (!checked) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -85,127 +78,88 @@ export default function OfficerLayout({
   if (!authed) return null;
 
   return (
-    <div className="dark min-h-screen w-full flex bg-zinc-950 text-zinc-50">
-      {/* Mobile Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+    <div className="dark min-h-screen w-full flex flex-col bg-zinc-950 text-zinc-50">
+      <header className="h-16 bg-zinc-900 border-b border-zinc-800 px-4 md:px-6 flex items-center justify-between sticky top-0 z-40">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link href="/officer/dashboard" className="flex items-center gap-3">
+            <div className="p-1.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+              <Image
+                src="/logo.png"
+                alt="SIGMA Bantul Logo"
+                width={20}
+                height={20}
+                style={{ objectFit: "contain" }}
+              />
+            </div>
+            <div className="hidden sm:block">
+              <div className="text-sm font-bold text-zinc-50 tracking-tight leading-none">
+                SIGMA Bantul
+              </div>
+              <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mt-1 leading-none">
+                Petugas Shelter
+              </div>
+            </div>
+          </Link>
 
-      {/* Sidebar */}
-      <aside
-        className={`
-          w-64 bg-zinc-950 border-r border-zinc-800 flex-col fixed inset-y-0 left-0 z-50 shadow-xl
-          transition-transform duration-300 ease-in-out
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-          md:translate-x-0 md:flex
-        `}
-      >
-        {/* Mobile Close Button */}
-        <button
-          onClick={() => setSidebarOpen(false)}
-          className="absolute top-4 right-4 p-2 rounded-lg hover:bg-zinc-800 md:hidden"
-        >
-          <X className="w-5 h-5 text-zinc-400" />
-        </button>
-        <div className="h-16 px-6 border-b border-zinc-800 flex items-center gap-3">
-          <div className="p-1.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-            <Image
-              src="/logo.png"
-              alt="SIGMA Bantul Logo"
-              width={20}
-              height={20}
-              style={{ objectFit: "contain" }}
-            />
-          </div>
-          <div>
-            <h1 className="text-base font-bold text-zinc-50 tracking-tight leading-none">
-              SIGMA Bantul
-            </h1>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mt-1 leading-none">
-              Petugas Shelter
-            </p>
-          </div>
+          <div className="hidden md:block h-8 w-px bg-zinc-800" />
+
+          <h2 className="text-sm md:text-base font-semibold text-zinc-100 truncate">
+            {pageTitle}
+          </h2>
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-          <div className="text-[11px] font-semibold text-zinc-500 uppercase tracking-widest mb-4 px-2">
-            Menu Petugas
+        <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2 text-xs text-zinc-400 max-w-[320px]">
+            <UserCircle className="w-4 h-4 text-zinc-500" />
+            <span className="truncate">{user?.name}</span>
           </div>
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  isActive
-                    ? "bg-emerald-600 font-semibold text-white shadow-md shadow-emerald-900/20"
-                    : "text-zinc-400 hover:bg-zinc-800/80 hover:text-zinc-100"
-                }`}
-              >
-                <Icon
-                  className={`w-5 h-5 ${isActive ? "text-white" : "text-zinc-500"}`}
-                />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
 
-        <div className="p-4 border-t border-zinc-800 bg-zinc-900/50">
-          <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700">
-              <UserCircle className="w-5 h-5 text-zinc-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-zinc-500 font-medium leading-tight">
-                Petugas Shelter
-              </p>
-              <p className="text-sm font-semibold text-zinc-200 truncate leading-tight">
-                {user?.name || "Officer"}
-              </p>
-            </div>
-          </div>
           <Button
             variant="outline"
             size="sm"
-            onClick={handleLogout}
-            className="w-full bg-zinc-900 border-zinc-700 text-zinc-400 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-colors justify-start px-3"
+            onClick={() => setLogoutDialogOpen(true)}
+            className="bg-zinc-900 border-zinc-700 text-zinc-400 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-colors"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Logout
           </Button>
         </div>
-      </aside>
+      </header>
 
-      {/* Main */}
-      <main className="flex-1 min-h-screen w-full md:pl-64 flex flex-col">
-        <header className="h-16 shrink-0 bg-zinc-900 border-b border-zinc-800 px-4 md:px-6 flex items-center sticky top-0 z-40">
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-lg hover:bg-zinc-800 mr-3 md:hidden"
-          >
-            <Menu className="w-5 h-5 text-zinc-400" />
-          </button>
+      <main className="flex-1 p-4 md:p-6">{children}</main>
 
-          <h2 className="text-sm md:text-base font-semibold text-zinc-100">
-            {menuItems.find((item) => item.href === pathname)?.label ||
-              "Dashboard Petugas"}
-          </h2>
-        </header>
-        <div
-          className={
-            pathname === "/officer/map" ? "flex-1" : "p-4 md:p-6 flex-1"
-          }
-        >
-          {children}
-        </div>
-      </main>
+      <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+        <DialogContent className="bg-zinc-900 border border-zinc-800 text-zinc-50">
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Logout</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              Kamu yakin ingin keluar dari akun petugas shelter?
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="border-zinc-800 bg-zinc-900/50">
+            <DialogClose
+              render={
+                <Button
+                  variant="outline"
+                  className="border-zinc-700 bg-zinc-950 text-zinc-200 hover:bg-zinc-800"
+                />
+              }
+            >
+              Batal
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setLogoutDialogOpen(false);
+                handleLogout();
+              }}
+            >
+              Logout
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

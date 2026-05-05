@@ -67,6 +67,17 @@ enum BpbdRiskLevel {
   HIGH
 }
 
+enum EvacueeStatus {
+  ACTIVE
+  RELOCATED
+  RETURNED_HOME
+}
+
+enum EvacueeGender {
+  MALE
+  FEMALE
+}
+
 model User {
   id                 Int                @id @default(autoincrement())
   email              String             @unique
@@ -75,6 +86,7 @@ model User {
   role               UserRole           @default(USER)
   pushSubscriptions  PushSubscription[]
   managedShelters    Shelter[]
+  registeredEvacuees Evacuee[]
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 }
@@ -122,6 +134,7 @@ model Shelter {
   facilities       String?
   officerId        Int?
   officer          User?            @relation(fields: [officerId], references: [id], onDelete: SetNull)
+  evacuees         Evacuee[]
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 }
@@ -217,4 +230,31 @@ model ShelterLog {
   action      String
   changes     Json
   createdAt   DateTime @default(now())
+}
+
+model Evacuee {
+  id               Int            @id @default(autoincrement())
+  shelterId        Int
+  shelter          Shelter        @relation(fields: [shelterId], references: [id], onDelete: Cascade)
+  name             String
+  nik              String?
+  gender           EvacueeGender
+  age              Int
+  address          String?
+  phone            String?
+  familySize       Int            @default(1)
+  specialNeeds     String?
+  medicalCondition String?
+  status           EvacueeStatus  @default(ACTIVE)
+  checkInDate      DateTime       @default(now())
+  checkOutDate     DateTime?
+  notes            String?
+  registeredBy     Int?
+  registeredByUser User?          @relation(fields: [registeredBy], references: [id], onDelete: SetNull)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([shelterId])
+  @@index([status])
+  @@index([nik])
 }

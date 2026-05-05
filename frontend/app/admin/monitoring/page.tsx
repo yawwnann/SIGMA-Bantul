@@ -570,7 +570,7 @@ export default function MonitoringPage() {
               </div>
 
               {/* Request Rate Indicator */}
-              <div className="mt-4 md:mt-6 p-3 md:p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
+              <div className="mt-4 md:mt-6 p-3 md:p-4 bg-linear-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs md:text-sm text-zinc-300 font-medium">
                     Request Rate

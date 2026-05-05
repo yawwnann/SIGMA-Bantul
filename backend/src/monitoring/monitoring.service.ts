@@ -23,7 +23,7 @@ export interface UserAccessMetrics {
 
 export interface RequestHistoryPoint {
   timestamp: Date;
-  count: number;
+  count: number; // Requests in this specific time window
 }
 
 @Injectable()
@@ -31,6 +31,7 @@ export class MonitoringService {
   private metricsHistory: PerformanceMetrics[] = [];
   private userAccessHistory: UserAccessMetrics[] = [];
   private requestHistory: RequestHistoryPoint[] = [];
+  private lastRequestCount = 0; // Track previous count to calculate delta
   private readonly MAX_HISTORY = 50; // Reduced from 100 to save memory
   private readonly MAX_REQUEST_HISTORY = 60; // Keep 60 data points (5 minutes at 5s interval)
 
@@ -53,15 +54,23 @@ export class MonitoringService {
           this.metricsHistory.shift();
         }
 
-        // Track request count for history
+        // Track request count for history (calculate delta, not cumulative)
         const requestStats = (await this.redis.getJson<{
           total: number;
           lastMinute: number;
         }>('system:requests:stats')) || { total: 0, lastMinute: 0 };
 
+        // Calculate requests in this 5-second interval
+        const currentTotal = requestStats.total;
+        const requestsInInterval = currentTotal - this.lastRequestCount;
+        this.lastRequestCount = currentTotal;
+
+        // Convert to requests per minute (multiply by 12 since we collect every 5 seconds)
+        const requestsPerMinute = requestsInInterval * 12;
+
         this.requestHistory.push({
           timestamp: new Date(),
-          count: requestStats.lastMinute,
+          count: requestsPerMinute, // Store as requests/minute
         });
 
         // Keep only last MAX_REQUEST_HISTORY items

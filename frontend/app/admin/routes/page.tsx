@@ -498,7 +498,7 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-stretch justify-center"
+      className="fixed inset-0 z-9999 flex items-stretch justify-center"
       style={{ fontFamily: "inherit" }}
     >
       {/* Backdrop */}
@@ -609,16 +609,28 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-700 text-zinc-100">
                     <SelectItem value="NATIONAL">
-                      <div className="flex items-center gap-2"><MapIcon className="w-4 h-4 text-red-500"/> Tingkat Nasional</div>
+                      <div className="flex items-center gap-2">
+                        <MapIcon className="w-4 h-4 text-red-500" /> Tingkat
+                        Nasional
+                      </div>
                     </SelectItem>
                     <SelectItem value="PROVINCIAL">
-                      <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-orange-500"/> Tingkat Provinsi</div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-orange-500" /> Tingkat
+                        Provinsi
+                      </div>
                     </SelectItem>
                     <SelectItem value="REGIONAL">
-                      <div className="flex items-center gap-2"><Map className="w-4 h-4 text-yellow-500"/> Tingkat Wilayah</div>
+                      <div className="flex items-center gap-2">
+                        <Map className="w-4 h-4 text-yellow-500" /> Tingkat
+                        Wilayah
+                      </div>
                     </SelectItem>
                     <SelectItem value="LOCAL">
-                      <div className="flex items-center gap-2"><Route className="w-4 h-4 text-slate-400"/> Jalan Lokal / Gang</div>
+                      <div className="flex items-center gap-2">
+                        <Route className="w-4 h-4 text-slate-400" /> Jalan Lokal
+                        / Gang
+                      </div>
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -640,16 +652,27 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-700 text-zinc-100">
                     <SelectItem value="GOOD">
-                      <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500"/> Sangat Baik</div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />{" "}
+                        Sangat Baik
+                      </div>
                     </SelectItem>
                     <SelectItem value="MODERATE">
-                      <div className="flex items-center gap-2"><AlertCircle className="w-4 h-4 text-yellow-500"/> Sedang</div>
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-yellow-500" />{" "}
+                        Sedang
+                      </div>
                     </SelectItem>
                     <SelectItem value="POOR">
-                      <div className="flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-orange-500"/> Kondisi Buruk</div>
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-orange-500" />{" "}
+                        Kondisi Buruk
+                      </div>
                     </SelectItem>
                     <SelectItem value="DAMAGED">
-                      <div className="flex items-center gap-2"><XCircle className="w-4 h-4 text-red-500"/> Rusak Berat</div>
+                      <div className="flex items-center gap-2">
+                        <XCircle className="w-4 h-4 text-red-500" /> Rusak Berat
+                      </div>
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -671,7 +694,8 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
                   </Badge>
                 </div>
                 <p className="text-[11px] text-amber-500 flex items-center gap-1.5 mt-2">
-                  <AlertTriangle className="w-3.5 h-3.5" /> Kerentanan dihitung otomatis berdasarkan zona rawan gempa BPBD
+                  <AlertTriangle className="w-3.5 h-3.5" /> Kerentanan dihitung
+                  otomatis berdasarkan zona rawan gempa BPBD
                 </p>
               </div>
 
@@ -710,9 +734,13 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
                     Menyimpan...
                   </>
                 ) : editingRoute ? (
-                  <div className="flex items-center"><Save className="w-4 h-4 mr-2" /> Simpan Perubahan</div>
+                  <div className="flex items-center">
+                    <Save className="w-4 h-4 mr-2" /> Simpan Perubahan
+                  </div>
                 ) : (
-                  <div className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-2" /> Simpan Jalur</div>
+                  <div className="flex items-center">
+                    <CheckCircle2 className="w-4 h-4 mr-2" /> Simpan Jalur
+                  </div>
                 )}
               </Button>
               <Button
@@ -724,7 +752,8 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
               </Button>
               {drawCoords.length < 2 && (
                 <p className="text-center text-[11px] text-zinc-600 flex items-center justify-center gap-1.5 mt-2">
-                  <AlertTriangle className="w-3.5 h-3.5" /> Minimal 2 titik pada peta diperlukan
+                  <AlertTriangle className="w-3.5 h-3.5" /> Minimal 2 titik pada
+                  peta diperlukan
                 </p>
               )}
             </div>
@@ -834,7 +863,7 @@ export default function AdminRoutesPage() {
             value={filterType}
             onValueChange={(v) => setFilterType(v || "all")}
           >
-            <SelectTrigger className="w-full sm:w-[200px] h-10 bg-zinc-950 border-zinc-800 text-zinc-200">
+            <SelectTrigger className="w-full sm:w-50 h-10 bg-zinc-950 border-zinc-800 text-zinc-200">
               <SelectValue placeholder="Semua Jenis Jalan" />
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
@@ -1018,7 +1047,7 @@ export default function AdminRoutesPage() {
           if (!open) setMapRoad(null);
         }}
       >
-        <DialogContent className="!max-w-3xl w-full bg-zinc-900 text-zinc-100 border-zinc-800 p-0 overflow-hidden gap-0">
+        <DialogContent className="max-w-3xl! w-full bg-zinc-900 text-zinc-100 border-zinc-800 p-0 overflow-hidden gap-0">
           <DialogHeader className="px-6 pt-5 pb-3 border-b border-zinc-800">
             <div className="flex items-start gap-4">
               <div className="flex-1 min-w-0">
@@ -1055,7 +1084,7 @@ export default function AdminRoutesPage() {
               )}
             </div>
           </DialogHeader>
-          <div className="w-full h-[440px] relative bg-zinc-950">
+          <div className="w-full h-110 relative bg-zinc-950">
             {isMapOpen && mapRoad?.geometry ? (
               <RoadMapViewer road={mapRoad} />
             ) : (
