@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import { ThemedLogo } from "@/components/ui/themed-logo";
 import { authApi } from "@/api";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -121,12 +121,9 @@ export default function AdminLayout({
         </button>
         <div className="h-16 px-6 border-b border-zinc-800 flex items-center gap-3">
           <div className="p-1.5 bg-blue-500/10 rounded-lg border border-blue-500/20">
-            <Image
-              src="/logo.png"
-              alt="SIGMA Bantul Logo"
+            <ThemedLogo
               width={20}
               height={20}
-              style={{ width: "auto", height: "auto", objectFit: "contain" }}
             />
           </div>
           <div>

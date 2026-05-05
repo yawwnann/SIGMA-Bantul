@@ -25,6 +25,29 @@ export const metadata: Metadata = {
     "BPBD",
   ],
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      {
+        url: "/logo-black/favicon-32x32.png",
+        sizes: "32x32",
+        type: "image/png",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        url: "/logo-white/favicon-32x32.png",
+        sizes: "32x32",
+        type: "image/png",
+        media: "(prefers-color-scheme: dark)",
+      },
+    ],
+    apple: [
+      {
+        url: "/logo-black/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
+  },
 };
 
 export const viewport = {

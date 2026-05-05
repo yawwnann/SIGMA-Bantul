@@ -20,6 +20,7 @@ import {
 import Image from "next/image";
 import { useTheme } from "next-themes";
 import { useSidebar } from "./sidebar-provider";
+import { ThemedLogo } from "@/components/ui/themed-logo";
 import { EnableNotificationsButton } from "@/components/EnableNotificationsButton";
 
 const navItems = [
@@ -95,16 +96,10 @@ export function Sidebar() {
         >
           <div className="flex items-center gap-3">
             <div className="relative h-10 w-10 flex items-center justify-center shrink-0">
-              <Image
-                src="/logo.png"
-                alt="SIG Bantul"
+              <ThemedLogo
                 width={40}
                 height={40}
                 className="object-contain"
-                style={{ width: "auto", height: "auto" }}
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
               />
             </div>
 

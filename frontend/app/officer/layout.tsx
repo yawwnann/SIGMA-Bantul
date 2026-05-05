@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import { ThemedLogo } from "@/components/ui/themed-logo";
 import { authApi } from "@/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -83,12 +83,9 @@ export default function OfficerLayout({
         <div className="flex items-center gap-3 min-w-0">
           <Link href="/officer/dashboard" className="flex items-center gap-3">
             <div className="p-1.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-              <Image
-                src="/logo.png"
-                alt="SIGMA Bantul Logo"
+              <ThemedLogo
                 width={20}
                 height={20}
-                style={{ width: "auto", height: "auto", objectFit: "contain" }}
               />
             </div>
             <div className="hidden sm:block">

@@ -4,7 +4,7 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "./sidebar-provider";
 import { Menu } from "lucide-react";
-import Image from "next/image";
+import { ThemedLogo } from "@/components/ui/themed-logo";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { collapsed, toggleMobile } = useSidebar();
@@ -26,13 +26,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <Menu className="h-6 w-6 text-slate-700 dark:text-zinc-300" />
           </button>
           <div className="flex items-center gap-2">
-            <Image
-              src="/logo.png"
-              alt="Logo"
+            <ThemedLogo
               width={24}
               height={24}
               className="h-6 w-6 object-contain"
-              style={{ width: "auto", height: "auto" }}
             />
             <span className="font-bold text-slate-900 dark:text-zinc-50">
               SIGMA Bantul

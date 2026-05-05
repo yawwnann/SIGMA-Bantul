@@ -15,6 +15,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
@@ -31,6 +39,7 @@ import {
   Bike,
   Car,
   Clock,
+  MapPinOff,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
@@ -189,6 +198,7 @@ export default function Dashboard() {
     lon: number;
     zoom?: number;
   } | null>(null);
+  const [isOutsideBantulModalOpen, setIsOutsideBantulModalOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -366,9 +376,7 @@ export default function Dashboard() {
             const userLng = position.coords.longitude;
 
             if (!isWithinBantul(userLat, userLng)) {
-              toast.error(
-                "Maaf, lokasi Anda di luar wilayah Kabupaten Bantul.",
-              );
+              setIsOutsideBantulModalOpen(true);
               setGettingLocation(false);
               return;
             }
@@ -460,9 +468,7 @@ export default function Dashboard() {
       (position) => {
         const { latitude, longitude } = position.coords;
         if (!isWithinBantul(latitude, longitude)) {
-          toast.error(
-            "Maaf, lokasi GPS Anda di luar batas wilayah Kabupaten Bantul.",
-          );
+          setIsOutsideBantulModalOpen(true);
           setGettingLocation(false);
           return;
         }
@@ -616,9 +622,7 @@ export default function Dashboard() {
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
         if (!isWithinBantul(userLat, userLng)) {
-          toast.error(
-            "Maaf, lokasi GPS Anda di luar batas wilayah Kabupaten Bantul.",
-          );
+          setIsOutsideBantulModalOpen(true);
           setCalculatingRoute(false);
           return;
         }
@@ -681,6 +685,44 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      {/* Outside Boundary Modal */}
+      <Dialog
+        open={isOutsideBantulModalOpen}
+        onOpenChange={setIsOutsideBantulModalOpen}
+      >
+        <DialogContent className="sm:max-w-[425px] bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800 shadow-2xl">
+          <DialogHeader className="flex flex-col items-center justify-center text-center pt-4">
+            <div className="w-16 h-16 bg-amber-50 dark:bg-amber-950/30 rounded-full flex items-center justify-center mb-4 border border-amber-200 dark:border-amber-900/50">
+              <MapPinOff className="w-8 h-8 text-amber-600 dark:text-amber-500" />
+            </div>
+            <DialogTitle className="text-xl font-bold text-slate-900 dark:text-zinc-50">
+              Lokasi Di Luar Jangkauan
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 dark:text-zinc-400 mt-2">
+              Maaf, sistem saat ini hanya mendukung pencarian rute evakuasi di
+              dalam wilayah administrasi <span className="font-semibold text-slate-900 dark:text-zinc-200">Kabupaten Bantul</span>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-slate-50 dark:bg-zinc-900/50 p-4 rounded-xl border border-slate-100 dark:border-zinc-800/50 mt-4">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+              Saran Keamanan
+            </h4>
+            <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
+              Jika terjadi gempa, harap segera mencari tanah lapang atau shelter
+              terdekat di lokasi Anda saat ini. Selalu ikuti instruksi dari petugas keamanan setempat.
+            </p>
+          </div>
+          <DialogFooter className="mt-6">
+            <Button
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-11"
+              onClick={() => setIsOutsideBantulModalOpen(false)}
+            >
+              Saya Mengerti
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="p-4 md:p-6 lg:p-8 min-h-screen space-y-6 max-w-[1600px] mx-auto">
         {/* Top Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

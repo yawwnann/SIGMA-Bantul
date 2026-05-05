@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { ThemedLogo } from "@/components/ui/themed-logo";
 import { authApi } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,12 +79,9 @@ export default function AdminLoginPage() {
               marginBottom: "1rem",
             }}
           >
-            <Image
-              src="/logo.png"
-              alt="SIGMA Bantul Logo"
+            <ThemedLogo
               width={40}
               height={40}
-              style={{ width: "auto", height: "auto", objectFit: "contain" }}
             />
           </div>
           <h1
