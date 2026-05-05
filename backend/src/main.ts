@@ -16,6 +16,7 @@ async function bootstrap() {
       'http://localhost:3000',
       'http://localhost:5173',
       'https://sigma-bantul.duckdns.org',
+      'https://sigma-bantul.vercel.app',
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,

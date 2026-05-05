@@ -14,6 +14,7 @@ import { Logger } from '@nestjs/common';
       'http://localhost:3000',
       'http://localhost:5173',
       'https://sigma-bantul.duckdns.org',
+      'https://sigma-bantul.vercel.app',
     ],
     credentials: true,
   },
