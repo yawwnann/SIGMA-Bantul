@@ -221,8 +221,8 @@ export default function MapClient({
     // Default to light mode tile if resolvedTheme isn't ready
     const tileName =
       resolvedTheme === "dark"
-        ? "Stadia.AlidadeSmoothDark"
-        : "Stadia.AlidadeSmooth";
+        ? "CartoDB.DarkMatter"
+        : "CartoDB.Positron";
 
     if (tileLayerRef.current) {
       mapRef.current.removeLayer(tileLayerRef.current);
