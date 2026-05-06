@@ -371,11 +371,7 @@ export default function Dashboard() {
       console.log("[Emergency] Emergency mode activated from URL parameter");
 
       // Remove param from URL to prevent re-triggering on refresh
-      window.history.replaceState(
-        {},
-        document.title,
-        window.location.pathname,
-      );
+      window.history.replaceState({}, document.title, window.location.pathname);
 
       toast.info("Mencari rute evakuasi darurat...", {
         description:
@@ -474,14 +470,10 @@ export default function Dashboard() {
               "[Emergency] Error calculating emergency route:",
               error,
             );
-            toast.error(
-              "Gagal menghitung rute darurat dari lokasi saat ini.",
-              {
-                description:
-                  "Silakan coba lagi atau pilih shelter secara manual",
-                duration: 5000,
-              },
-            );
+            toast.error("Gagal menghitung rute darurat dari lokasi saat ini.", {
+              description: "Silakan coba lagi atau pilih shelter secara manual",
+              duration: 5000,
+            });
           } finally {
             setGettingLocation(false);
           }
@@ -1089,43 +1081,60 @@ export default function Dashboard() {
             <MapPin className="h-5 w-5 text-white" />
           </Button>
 
-          {/* Selected Earthquake Floating Detail */}
+          {/* Selected Earthquake Floating Detail - Compact Bottom */}
           {selectedEarthquake && (
             <div
-              className="absolute top-40 right-4 z-[1000] w-[300px] md:w-[340px] shadow-2xl rounded-xl overflow-hidden"
+              className="absolute bottom-6 left-4 right-4 md:left-auto md:right-4 md:bottom-8 z-[80] md:z-[500] md:w-[280px] shadow-2xl rounded-xl overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-300"
               style={{
-                background: isDark ? "#030712" : "#ffffff",
+                background: isDark
+                  ? "rgba(3, 7, 18, 0.95)"
+                  : "rgba(255, 255, 255, 0.95)",
+                backdropFilter: "blur(12px)",
                 color: isDark ? "#f1f5f9" : "#0f172a",
                 fontFamily: "system-ui,sans-serif",
                 border: isDark
-                  ? "1px solid rgba(255,255,255,0.07)"
-                  : "1px solid #e2e8f0",
+                  ? "1px solid rgba(255,255,255,0.1)"
+                  : "1px solid rgba(226, 232, 240, 0.8)",
               }}
             >
-              {/* Header */}
+              {/* Compact Header */}
               <div
                 style={{
-                  padding: "12px 14px 10px",
+                  padding: "8px 10px",
                   borderBottom: isDark
-                    ? "1px solid #111827"
-                    : "1px solid #e2e8f0",
+                    ? "1px solid rgba(255,255,255,0.05)"
+                    : "1px solid rgba(226, 232, 240, 0.5)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
                 }}
               >
-                <span
-                  style={{
-                    background: isDark ? "#7f1d1d" : "#fef2f2",
-                    color: isDark ? "#f87171" : "#dc2626",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    padding: "3px 10px",
-                    borderRadius: "999px",
-                  }}
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
                 >
-                  Pusat Gempa Terpilih
-                </span>
+                  <span
+                    style={{
+                      background: isDark ? "#7f1d1d" : "#fef2f2",
+                      color: isDark ? "#f87171" : "#dc2626",
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    GEMPA
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      color: isDark ? "#f1f5f9" : "#0f172a",
+                    }}
+                  >
+                    {selectedEarthquake.location}
+                  </span>
+                </div>
                 <button
                   onClick={handleCloseEarthquakeDetail}
                   style={{
@@ -1135,101 +1144,166 @@ export default function Dashboard() {
                     cursor: "pointer",
                     padding: "2px",
                     lineHeight: 1,
+                    borderRadius: "4px",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = isDark
+                      ? "#1f2937"
+                      : "#f1f5f9";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
                   }}
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
               </div>
-              {/* Body */}
-              <div style={{ padding: "12px 14px 14px" }}>
-                <h3
-                  style={{
-                    fontSize: "17px",
-                    fontWeight: 700,
-                    marginBottom: "12px",
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {selectedEarthquake.location}
-                </h3>
+              {/* Compact Body */}
+              <div
+                style={{
+                  padding: "8px 10px",
+                  display: "flex",
+                  gap: "8px",
+                  alignItems: "center",
+                }}
+              >
+                {/* Magnitude - Compact */}
                 <div
                   style={{
                     display: "flex",
-                    justifyContent: "space-between",
+                    flexDirection: "column",
                     alignItems: "center",
-                    padding: "7px 8px",
-                    background: isDark ? "#111827" : "#f8fafc",
-                    borderRadius: "6px",
-                    marginBottom: "6px",
+                    justifyContent: "center",
+                    padding: "8px 12px",
+                    background: isDark
+                      ? "rgba(239, 68, 68, 0.15)"
+                      : "rgba(239, 68, 68, 0.08)",
+                    borderRadius: "8px",
+                    border: isDark
+                      ? "1px solid rgba(239, 68, 68, 0.3)"
+                      : "1px solid rgba(239, 68, 68, 0.15)",
+                    minWidth: "70px",
                   }}
                 >
-                  <span
+                  <div
                     style={{
-                      fontSize: "13px",
+                      fontSize: "8px",
                       color: isDark ? "#9ca3af" : "#64748b",
-                      fontWeight: 500,
+                      fontWeight: 600,
+                      marginBottom: "2px",
+                      letterSpacing: "0.05em",
                     }}
                   >
-                    Magnitudo
-                  </span>
-                  <span
+                    MAG
+                  </div>
+                  <div
                     style={{
-                      fontSize: "13px",
-                      fontWeight: 700,
+                      fontSize: "22px",
+                      fontWeight: 800,
                       color: isDark ? "#f87171" : "#dc2626",
+                      lineHeight: 1,
                     }}
                   >
-                    M {selectedEarthquake.magnitude}
-                  </span>
+                    {selectedEarthquake.magnitude}
+                  </div>
                 </div>
+
+                {/* Details - Compact Grid */}
                 <div
                   style={{
+                    flex: 1,
                     display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "7px 8px",
-                    background: isDark ? "#111827" : "#f8fafc",
-                    borderRadius: "6px",
-                    marginBottom: "10px",
+                    flexDirection: "column",
+                    gap: "4px",
                   }}
                 >
-                  <span
+                  <div
                     style={{
-                      fontSize: "13px",
-                      color: isDark ? "#9ca3af" : "#64748b",
-                      fontWeight: 500,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      fontSize: "11px",
                     }}
                   >
-                    Kedalaman
-                  </span>
-                  <span
+                    <span
+                      style={{
+                        color: isDark ? "#9ca3af" : "#64748b",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Kedalaman
+                    </span>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        color: isDark ? "#f1f5f9" : "#0f172a",
+                      }}
+                    >
+                      {selectedEarthquake.depth} Km
+                    </span>
+                  </div>
+
+                  <div
                     style={{
-                      fontSize: "13px",
-                      fontWeight: 700,
-                      color: isDark ? "#f1f5f9" : "#0f172a",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      fontSize: "10px",
                     }}
                   >
-                    {selectedEarthquake.depth} Km
-                  </span>
+                    <span
+                      style={{
+                        color: isDark ? "#9ca3af" : "#64748b",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Koordinat
+                    </span>
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        color: isDark ? "#d1d5db" : "#475569",
+                        fontFamily: "monospace",
+                      }}
+                    >
+                      {selectedEarthquake.lat.toFixed(2)},{" "}
+                      {selectedEarthquake.lon.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: "9px",
+                      color: isDark ? "#6b7280" : "#94a3b8",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "3px",
+                      marginTop: "2px",
+                    }}
+                  >
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    {new Date(selectedEarthquake.time).toLocaleDateString(
+                      "id-ID",
+                      {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      },
+                    )}
+                  </div>
                 </div>
-                <p
-                  style={{
-                    fontSize: "11px",
-                    color: isDark ? "#6b7280" : "#94a3b8",
-                  }}
-                >
-                  {new Date(selectedEarthquake.time).toLocaleDateString(
-                    "id-ID",
-                    {
-                      day: "2-digit",
-                      month: "long",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    },
-                  )}{" "}
-                  WIB
-                </p>
               </div>
             </div>
           )}
