@@ -149,7 +149,7 @@
 .leaflet-container {
   width: 100%;
   height: 100%;
-  z-index: 0;
+  z-index: 1;
 }
 
 @keyframes dash-animation {
@@ -241,23 +241,27 @@
 }
 
 [data-sonner-toast][data-type="success"] {
-  background: hsl(142 76% 36% / 0.1) !important;
-  border-color: hsl(142 76% 36% / 0.3) !important;
+  background: hsl(142 76% 96%) !important;
+  border-color: hsl(142 76% 80%) !important;
+  border-left: 4px solid hsl(142 76% 36%) !important;
 }
 
 [data-sonner-toast][data-type="error"] {
-  background: hsl(0 84% 60% / 0.1) !important;
-  border-color: hsl(0 84% 60% / 0.3) !important;
+  background: hsl(0 84% 96%) !important;
+  border-color: hsl(0 84% 85%) !important;
+  border-left: 4px solid hsl(0 84% 60%) !important;
 }
 
 [data-sonner-toast][data-type="warning"] {
-  background: hsl(38 92% 50% / 0.1) !important;
-  border-color: hsl(38 92% 50% / 0.3) !important;
+  background: hsl(38 92% 95%) !important;
+  border-color: hsl(38 92% 85%) !important;
+  border-left: 4px solid hsl(38 92% 50%) !important;
 }
 
 [data-sonner-toast][data-type="info"] {
-  background: hsl(217 91% 60% / 0.1) !important;
-  border-color: hsl(217 91% 60% / 0.3) !important;
+  background: hsl(217 91% 95%) !important;
+  border-color: hsl(217 91% 85%) !important;
+  border-left: 4px solid hsl(217 91% 60%) !important;
 }
 
 [data-sonner-toast] [data-icon] {
@@ -328,23 +332,27 @@
 }
 
 .dark [data-sonner-toast][data-type="success"] {
-  background: hsl(142 76% 36% / 0.15) !important;
-  border-color: hsl(142 76% 36% / 0.4) !important;
+  background: hsl(142 76% 15%) !important;
+  border-color: hsl(142 76% 25%) !important;
+  border-left: 4px solid hsl(142 76% 50%) !important;
 }
 
 .dark [data-sonner-toast][data-type="error"] {
-  background: hsl(0 84% 60% / 0.15) !important;
-  border-color: hsl(0 84% 60% / 0.4) !important;
+  background: hsl(0 84% 15%) !important;
+  border-color: hsl(0 84% 25%) !important;
+  border-left: 4px solid hsl(0 84% 60%) !important;
 }
 
 .dark [data-sonner-toast][data-type="warning"] {
-  background: hsl(38 92% 50% / 0.15) !important;
-  border-color: hsl(38 92% 50% / 0.4) !important;
+  background: hsl(38 92% 15%) !important;
+  border-color: hsl(38 92% 25%) !important;
+  border-left: 4px solid hsl(38 92% 55%) !important;
 }
 
 .dark [data-sonner-toast][data-type="info"] {
-  background: hsl(217 91% 60% / 0.15) !important;
-  border-color: hsl(217 91% 60% / 0.4) !important;
+  background: hsl(217 91% 15%) !important;
+  border-color: hsl(217 91% 25%) !important;
+  border-left: 4px solid hsl(217 91% 65%) !important;
 }
 
 /* Toast animation */

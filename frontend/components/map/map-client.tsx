@@ -1107,7 +1107,7 @@ export default function MapClient({
       {isMapReady && mapInstance && (
         <BpbdRiskLayer map={mapInstance} visible={visibleLayers.bpbdRisk} />
       )}
-      <div className="absolute top-4 left-4 md:left-4 z-[500] flex flex-col items-start gap-2">
+      <div className="absolute top-4 left-4 md:left-4 z-[60] md:z-[500] flex flex-col items-start gap-2">
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -1290,7 +1290,7 @@ export default function MapClient({
 
       {/* Shelter Detail Sidebar */}
       {selectedShelter && (
-        <div className="absolute bottom-4 left-4 right-4 sm:bottom-auto sm:top-4 sm:left-auto sm:right-4 z-[2100] sm:w-[320px] bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md rounded-xl shadow-2xl border border-slate-200/80 dark:border-zinc-800/60 overflow-y-auto overflow-x-hidden animate-in slide-in-from-bottom-5 sm:slide-in-from-right-5 fade-in duration-300 max-h-[50%] sm:max-h-none">
+        <div className="absolute bottom-4 left-4 right-4 sm:bottom-auto sm:top-4 sm:left-auto sm:right-4 z-[70] md:z-[600] sm:w-[320px] bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md rounded-xl shadow-2xl border border-slate-200/80 dark:border-zinc-800/60 overflow-y-auto overflow-x-hidden animate-in slide-in-from-bottom-5 sm:slide-in-from-right-5 fade-in duration-300 max-h-[50%] sm:max-h-none">
           {/* Header */}
           <div className="p-3 sm:p-4 border-b border-slate-200/80 dark:border-zinc-800/60">
             <div className="flex items-start justify-between mb-1 sm:mb-2">

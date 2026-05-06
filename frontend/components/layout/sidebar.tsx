@@ -78,6 +78,7 @@ export function Sidebar() {
         <div
           className="fixed inset-0 bg-black/50 z-[999] md:hidden"
           onClick={toggleMobile}
+          aria-label="Close sidebar overlay"
         />
       )}
 
@@ -87,8 +88,8 @@ export function Sidebar() {
           collapsed ? "md:w-[80px]" : "md:w-64",
           "w-64",
           mobileOpen
-            ? "translate-x-0 z-[9999]"
-            : "-translate-x-full md:translate-x-0 md:z-[9999]",
+            ? "translate-x-0 z-[1000]"
+            : "-translate-x-full md:translate-x-0 md:z-50",
         )}
       >
         <div
@@ -96,11 +97,7 @@ export function Sidebar() {
         >
           <div className="flex items-center gap-3">
             <div className="relative h-10 w-10 flex items-center justify-center shrink-0">
-              <ThemedLogo
-                width={40}
-                height={40}
-                className="object-contain"
-              />
+              <ThemedLogo width={40} height={40} className="object-contain" />
             </div>
 
             {!collapsed && (
@@ -167,35 +164,6 @@ export function Sidebar() {
             );
           })}
         </nav>
-
-        <div
-          className={`border-t border-slate-200 dark:border-zinc-800 py-4 transition-all ${collapsed ? "px-2" : "px-3"}`}
-        >
-          {collapsed ? (
-            <div
-              className="flex justify-center"
-              title="Status Darurat: Saat gempa terjadi, segera menuju shelter terdekat."
-            >
-              <div className="relative p-2 rounded-full bg-red-50 dark:bg-red-950/30 text-red-600">
-                <Activity className="h-5 w-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-600 animate-pulse" />
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Activity className="h-4 w-4 text-red-600" />
-                <span className="text-xs font-semibold text-red-700">
-                  Status Darurat
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 dark:text-red-200/70 mt-1">
-                Saat gempa terjadi, segera menuju shelter terdekat dan hindari
-                zona rawan.
-              </p>
-            </div>
-          )}
-        </div>
 
         <div className="border-t border-slate-200 dark:border-zinc-800 px-3 py-4 flex flex-col gap-4">
           {/* Notification Toggle */}
