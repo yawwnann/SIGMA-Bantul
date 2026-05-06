@@ -132,7 +132,7 @@ export default function MapClient({
     boundary: true,
     shelters: true,
     hazardZones: false,
-    earthquakes: true,
+    earthquakes: false, // Default: tidak tampil
     facilities: true,
     roads: false,
     bpbdRisk: false,
@@ -224,9 +224,7 @@ export default function MapClient({
 
     // Default to light mode tile if resolvedTheme isn't ready
     const tileName =
-      resolvedTheme === "dark"
-        ? "CartoDB.DarkMatter"
-        : "CartoDB.Positron";
+      resolvedTheme === "dark" ? "CartoDB.DarkMatter" : "CartoDB.Positron";
 
     if (tileLayerRef.current) {
       mapRef.current.removeLayer(tileLayerRef.current);
@@ -509,7 +507,19 @@ export default function MapClient({
     earthquakeLayerGroupRef.current.clearLayers();
     earthquakeCirclesRef.current.clear();
 
-    if (!visibleLayers.earthquakes || earthquakes.length === 0) return;
+    console.log("[Map] Earthquake rendering:", {
+      visible: visibleLayers.earthquakes,
+      count: earthquakes.length,
+      earthquakes: earthquakes.slice(0, 3), // Log first 3 for debugging
+    });
+
+    if (!visibleLayers.earthquakes || earthquakes.length === 0) {
+      console.log("[Map] Earthquakes not rendered:", {
+        visible: visibleLayers.earthquakes,
+        hasData: earthquakes.length > 0,
+      });
+      return;
+    }
 
     const activeEqId = selectedEarthquake?.id;
     const earthquakesToRender =
@@ -517,55 +527,68 @@ export default function MapClient({
         ? earthquakes.filter((eq) => eq.id === activeEqId)
         : earthquakes;
 
-    earthquakesToRender
-      .filter((eq) => eq.magnitude != null && eq.lat != null && eq.lon != null)
-      .forEach((eq) => {
-        // Konsep Radius: Red (Dampak Keras), Yellow (Menengah), Green (Terasa ringan)
-        // Perhitungan radius berdasar perpangkatan magnitudo agar lebih logis
-        const baseRadius = Math.pow(eq.magnitude, 2.5) * 50;
+    console.log("[Map] Rendering earthquakes:", earthquakesToRender.length);
 
-        const redZone = L.circle([eq.lat, eq.lon], {
-          radius: baseRadius,
-          color: "#dc2626",
-          fillColor: "#dc2626",
-          fillOpacity: 0,
-          weight: 0,
-          opacity: 0,
-          interactive: false,
-        });
+    const validEarthquakes = earthquakesToRender.filter(
+      (eq) => eq.magnitude != null && eq.lat != null && eq.lon != null,
+    );
 
-        const yellowZone = L.circle([eq.lat, eq.lon], {
-          radius: baseRadius * 3,
-          color: "#eab308",
-          fillColor: "#eab308",
-          fillOpacity: 0,
-          weight: 0,
-          opacity: 0,
-          interactive: false,
-        });
+    console.log("[Map] Valid earthquakes after filter:", {
+      total: earthquakesToRender.length,
+      valid: validEarthquakes.length,
+      sample: validEarthquakes.slice(0, 2).map((eq) => ({
+        id: eq.id,
+        mag: eq.magnitude,
+        lat: eq.lat,
+        lon: eq.lon,
+      })),
+    });
 
-        const greenZone = L.circle([eq.lat, eq.lon], {
-          radius: baseRadius * 6,
-          color: "#22c55e",
-          fillColor: "#22c55e",
-          fillOpacity: 0,
-          weight: 0,
-          opacity: 0,
-          interactive: false,
-        });
+    validEarthquakes.forEach((eq) => {
+      // Konsep Radius: Red (Dampak Keras), Yellow (Menengah), Green (Terasa ringan)
+      // Perhitungan radius berdasar perpangkatan magnitudo agar lebih logis
+      const baseRadius = Math.pow(eq.magnitude, 2.5) * 50;
 
-        const radiusGroup = L.layerGroup([
-          greenZone,
-          yellowZone,
-          redZone,
-        ]).addTo(earthquakeLayerGroupRef.current!);
+      const redZone = L.circle([eq.lat, eq.lon], {
+        radius: baseRadius,
+        color: "#dc2626",
+        fillColor: "#dc2626",
+        fillOpacity: 0,
+        weight: 0,
+        opacity: 0,
+        interactive: false,
+      });
 
-        // Store circle reference
-        earthquakeCirclesRef.current.set(eq.id, radiusGroup);
+      const yellowZone = L.circle([eq.lat, eq.lon], {
+        radius: baseRadius * 3,
+        color: "#eab308",
+        fillColor: "#eab308",
+        fillOpacity: 0,
+        weight: 0,
+        opacity: 0,
+        interactive: false,
+      });
 
-        const markerIcon = L.divIcon({
-          className: "earthquake-marker",
-          html: `
+      const greenZone = L.circle([eq.lat, eq.lon], {
+        radius: baseRadius * 6,
+        color: "#22c55e",
+        fillColor: "#22c55e",
+        fillOpacity: 0,
+        weight: 0,
+        opacity: 0,
+        interactive: false,
+      });
+
+      const radiusGroup = L.layerGroup([greenZone, yellowZone, redZone]).addTo(
+        earthquakeLayerGroupRef.current!,
+      );
+
+      // Store circle reference
+      earthquakeCirclesRef.current.set(eq.id, radiusGroup);
+
+      const markerIcon = L.divIcon({
+        className: "earthquake-marker",
+        html: `
             <div style="position: relative; width: auto; display: flex; flex-direction: column; align-items: center;">
               <div style="
                 width: 20px;
@@ -601,42 +624,46 @@ export default function MapClient({
               </div>
             </div>
           `,
-          iconSize: [60, 60],
-          iconAnchor: [30, 10],
-        });
+        iconSize: [60, 60],
+        iconAnchor: [30, 10],
+      });
 
-        const marker = L.marker([eq.lat, eq.lon], {
-          icon: markerIcon,
-        }).addTo(earthquakeLayerGroupRef.current!);
+      const marker = L.marker([eq.lat, eq.lon], {
+        icon: markerIcon,
+      }).addTo(earthquakeLayerGroupRef.current!);
 
-        marker.on("click", (e) => {
-          L.DomEvent.stopPropagation(e);
+      console.log(
+        `[Map] Added earthquake marker #${eq.id} at [${eq.lat}, ${eq.lon}], M${eq.magnitude}`,
+      );
 
-          // Hide all circles first
-          earthquakeCirclesRef.current.forEach((group) => {
-            group.eachLayer((layer) => {
-              const pathLayer = layer as L.Path;
-              pathLayer.setStyle({
-                fillOpacity: 0,
-                weight: 0,
-                opacity: 0,
-              });
+      marker.on("click", (e) => {
+        L.DomEvent.stopPropagation(e);
+
+        // Hide all circles first
+        earthquakeCirclesRef.current.forEach((group) => {
+          group.eachLayer((layer) => {
+            const pathLayer = layer as L.Path;
+            pathLayer.setStyle({
+              fillOpacity: 0,
+              weight: 0,
+              opacity: 0,
             });
           });
-
-          // Show current circles immediately
-          redZone.setStyle({ fillOpacity: 0.25, weight: 2, opacity: 0.8 });
-          yellowZone.setStyle({ fillOpacity: 0.15, weight: 2, opacity: 0.6 });
-          greenZone.setStyle({ fillOpacity: 0.1, weight: 1.5, opacity: 0.4 });
-
-          activeCircleRef.current = radiusGroup;
-
-          // Call earthquake click handler
-          if (onEarthquakeClickRef.current) {
-            onEarthquakeClickRef.current(eq);
-          }
         });
+
+        // Show current circles immediately
+        redZone.setStyle({ fillOpacity: 0.25, weight: 2, opacity: 0.8 });
+        yellowZone.setStyle({ fillOpacity: 0.15, weight: 2, opacity: 0.6 });
+        greenZone.setStyle({ fillOpacity: 0.1, weight: 1.5, opacity: 0.4 });
+
+        activeCircleRef.current = radiusGroup;
+
+        // Call earthquake click handler
+        if (onEarthquakeClickRef.current) {
+          onEarthquakeClickRef.current(eq);
+        }
       });
+    });
     const earthquakeToShow = selectedEarthquake
       ? earthquakes.filter((eq) => eq.id === selectedEarthquake.id)
       : earthquakes;
@@ -1006,21 +1033,23 @@ export default function MapClient({
       if (geoData.features && geoData.features.length > 0) {
         let firstCoord: [number, number] | null = null;
         let lastCoord: [number, number] | null = null;
-        
+
         // Find first coordinate of the primary route
-        const primaryFeatures = geoData.features.filter((f: any) => f.properties?.routeId !== "ALTERNATIVE");
-        
+        const primaryFeatures = geoData.features.filter(
+          (f: any) => f.properties?.routeId !== "ALTERNATIVE",
+        );
+
         if (primaryFeatures.length > 0) {
           const firstFeature = primaryFeatures[0];
           const lastFeature = primaryFeatures[primaryFeatures.length - 1];
-          
+
           if (firstFeature.geometry.type === "LineString") {
             const coords = firstFeature.geometry.coordinates;
             if (coords.length > 0) {
               firstCoord = [coords[0][1], coords[0][0]]; // [lat, lng]
             }
           }
-          
+
           if (lastFeature.geometry.type === "LineString") {
             const coords = lastFeature.geometry.coordinates;
             if (coords.length > 0) {
@@ -1037,7 +1066,7 @@ export default function MapClient({
             weight: 3,
             dashArray: "4, 6",
             opacity: 0.8,
-            interactive: false
+            interactive: false,
           }).addTo(routeGroup);
         }
 
@@ -1048,7 +1077,7 @@ export default function MapClient({
             weight: 3,
             dashArray: "4, 6",
             opacity: 0.8,
-            interactive: false
+            interactive: false,
           }).addTo(routeGroup);
         }
       }
@@ -1294,7 +1323,9 @@ export default function MapClient({
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                 <circle cx="12" cy="10" r="3" />
               </svg>
-              <span className="truncate">{selectedShelter.address || "Jl. Parangtritis, Sewon, Bantul"}</span>
+              <span className="truncate">
+                {selectedShelter.address || "Jl. Parangtritis, Sewon, Bantul"}
+              </span>
             </div>
           </div>
 
@@ -1395,13 +1426,17 @@ export default function MapClient({
           {/* Details */}
           <div className="p-4 space-y-2 border-b border-slate-200/80 dark:border-zinc-800/60">
             <div className="flex justify-between items-center py-2 px-3 bg-slate-50 dark:bg-zinc-900/50 rounded-lg">
-              <span className="text-xs text-slate-500 dark:text-zinc-400">Jenis Fasilitas</span>
+              <span className="text-xs text-slate-500 dark:text-zinc-400">
+                Jenis Fasilitas
+              </span>
               <span className="text-xs font-semibold text-slate-900 dark:text-zinc-100">
                 Ruang Publik
               </span>
             </div>
             <div className="flex justify-between items-center py-2 px-3 bg-slate-50 dark:bg-zinc-900/50 rounded-lg">
-              <span className="text-xs text-slate-500 dark:text-zinc-400">Jam Operasional</span>
+              <span className="text-xs text-slate-500 dark:text-zinc-400">
+                Jam Operasional
+              </span>
               <span className="text-xs font-semibold text-slate-900 dark:text-zinc-100">
                 24 Jam (Siaga)
               </span>

@@ -2,8 +2,7 @@
 
 import { useEffect } from "react";
 import apiClient from "@/api/client";
-import { toast } from "sonner";
-import { Bell, AlertTriangle } from "lucide-react";
+import toast from "@/lib/toast-utils";
 
 // Use the public key from backend .env - MUST match exactly!
 const publicVapidKey =
@@ -58,9 +57,7 @@ export function PushNotificationManager() {
             existingSub,
           );
           if (response) {
-            toast.success("Notifikasi darurat telah aktif.", {
-              icon: <Bell className="w-4 h-4" />,
-            });
+            toast.notification.enabled();
           }
           return;
         }
@@ -70,13 +67,7 @@ export function PushNotificationManager() {
         console.log("Notification permission:", permission);
 
         if (permission === "denied") {
-          toast.error(
-            "Izin notifikasi ditolak. Silakan aktifkan di pengaturan browser.",
-            {
-              icon: <AlertTriangle className="w-4 h-4 text-amber-500" />,
-              duration: 5000,
-            },
-          );
+          toast.notification.denied();
           return;
         }
 
@@ -102,9 +93,7 @@ export function PushNotificationManager() {
         console.log("Subscription saved to backend:", response);
 
         if (response) {
-          toast.success("Notifikasi darurat telah aktif!", {
-            icon: <Bell className="w-4 h-4" />,
-          });
+          toast.notification.enabled();
         }
       } catch (err) {
         console.error("Error setting up push notifications:", err);
@@ -117,9 +106,7 @@ export function PushNotificationManager() {
         // Check for specific error types
         if (err instanceof Error) {
           if (err.message.includes("Permission denied")) {
-            toast.error("Izin notifikasi ditolak.", {
-              icon: <AlertTriangle className="w-4 h-4 text-red-500" />,
-            });
+            toast.notification.denied();
           } else if (
             err.name === "NetworkError" ||
             err.message.includes("Network Error")
@@ -128,10 +115,11 @@ export function PushNotificationManager() {
               "Network error - push notifications unavailable while offline or backend not running",
             );
           } else {
-            console.warn(`Push setup error: ${err.message}`);
+            toast.notification.error();
           }
         } else {
           console.warn("Unknown error setting up push:", err);
+          toast.notification.error();
         }
       }
     }
@@ -141,15 +129,9 @@ export function PushNotificationManager() {
     // Dengarkan pesan "PUSH_RECEIVED" langsung dari ServiceWorker jika web sedang aktif/terbuka
     const handleSWMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === "PUSH_RECEIVED") {
-        toast.error(event.data.title, {
-          description: event.data.body,
-          action: {
-            label: "Lihat Cepat",
-            onClick: () => window.open(event.data.url, "_blank"),
-          },
-          duration: 10000,
-          icon: <AlertTriangle className="w-5 h-5 text-red-500" />,
-        });
+        toast.emergency.alert(event.data.title, event.data.body, () =>
+          window.open(event.data.url, "_blank"),
+        );
       }
 
       // Handle navigation request from service worker (when notification is clicked)
