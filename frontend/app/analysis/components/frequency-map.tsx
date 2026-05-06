@@ -16,7 +16,10 @@ interface FrequencyMapProps {
   showBpbdLayer?: boolean;
 }
 
-export default function FrequencyMap({ grids, showBpbdLayer = false }: FrequencyMapProps) {
+export default function FrequencyMap({
+  grids,
+  showBpbdLayer = false,
+}: FrequencyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const layersRef = useRef<L.Layer[]>([]);
@@ -67,13 +70,26 @@ export default function FrequencyMap({ grids, showBpbdLayer = false }: Frequency
         preferCanvas: true,
       });
 
-      L.control.zoom({
-        position: "bottomleft",
-      }).addTo(mapRef.current);
+      L.control
+        .zoom({
+          position: "bottomleft",
+        })
+        .addTo(mapRef.current);
 
-      // Set initial tile based on current theme
-      const initialTile = resolvedTheme === "dark" ? "Stadia.AlidadeSmoothDark" : "Stadia.AlidadeSmooth";
-      tileLayerRef.current = (L.tileLayer as any).provider(initialTile, { maxZoom: 19 }).addTo(mapRef.current);
+      // Set initial tile based on current theme - using free tile providers
+      // Default to light mode tile if resolvedTheme isn't ready
+      const initialTile =
+        resolvedTheme === "dark" ? "CartoDB.DarkMatter" : "CartoDB.Positron";
+      tileLayerRef.current = (
+        L.tileLayer as unknown as {
+          provider: (
+            name: string,
+            options?: Record<string, unknown>,
+          ) => L.TileLayer;
+        }
+      )
+        .provider(initialTile, { maxZoom: 19 })
+        .addTo(mapRef.current);
 
       // Extract boundary coordinates from GeoJSON
       const feature = bantulBoundary.features[0];
@@ -157,18 +173,21 @@ export default function FrequencyMap({ grids, showBpbdLayer = false }: Frequency
       if (!mapRef.current) return;
 
       // Only include grids with actual earthquakes (count > 0)
-      const activeGrids = grids.filter(grid => grid.count > 0);
+      const activeGrids = grids.filter((grid) => grid.count > 0);
 
       if (activeGrids.length === 0) return;
 
       // Extract points for heat map: [lat, lon, intensity]
-      const heatPoints: [number, number, number][] = activeGrids.map(grid => [
-        grid.center.lat, 
-        grid.center.lon, 
-        grid.count * 10
+      const heatPoints: [number, number, number][] = activeGrids.map((grid) => [
+        grid.center.lat,
+        grid.center.lon,
+        grid.count * 10,
       ]);
 
-      const maxIntensity = Math.max(...activeGrids.map(g => g.count * 10), 10);
+      const maxIntensity = Math.max(
+        ...activeGrids.map((g) => g.count * 10),
+        10,
+      );
 
       // Cast L to any because leaflet.heat adds heatLayer to L namespace
       const heatLayer = (L as any).heatLayer(heatPoints, {
@@ -177,12 +196,12 @@ export default function FrequencyMap({ grids, showBpbdLayer = false }: Frequency
         maxZoom: 14,
         max: maxIntensity,
         gradient: {
-          0.0: 'rgba(255,255,0,0)',   // transparent
-          0.3: '#fef08a',              // yellow-200
-          0.6: '#f97316',              // orange-500
-          0.85: '#ef4444',             // red-500
-          1.0: '#991b1b'               // red-800
-        }
+          0.0: "rgba(255,255,0,0)", // transparent
+          0.3: "#fef08a", // yellow-200
+          0.6: "#f97316", // orange-500
+          0.85: "#ef4444", // red-500
+          1.0: "#991b1b", // red-800
+        },
       });
 
       heatLayer.addTo(mapRef.current);
@@ -221,11 +240,14 @@ export default function FrequencyMap({ grids, showBpbdLayer = false }: Frequency
           },
           onEachFeature: (feature, layer) => {
             const riskLevel = feature.properties?.bahaya || "Tidak diketahui";
-            const desa = feature.properties?.desa || feature.properties?.desa_2 || "Tidak diketahui";
-            
+            const desa =
+              feature.properties?.desa ||
+              feature.properties?.desa_2 ||
+              "Tidak diketahui";
+
             layer.bindTooltip(`Risiko: ${riskLevel}`, {
-              className: 'custom-tooltip text-sm font-medium p-2',
-              direction: 'auto'
+              className: "custom-tooltip text-sm font-medium p-2",
+              direction: "auto",
             });
 
             layer.bindPopup(
@@ -234,44 +256,60 @@ export default function FrequencyMap({ grids, showBpbdLayer = false }: Frequency
                 <p class="font-bold text-slate-800 mb-1">${desa}</p>
                 <div class="flex items-center gap-1.5 mt-2">
                   <div class="w-2.5 h-2.5 rounded-full" style="background-color: ${
-                    riskLevel.toLowerCase() === 'rendah' ? '#22c55e' : 
-                    riskLevel.toLowerCase() === 'sedang' ? '#f59e0b' : '#ef4444'
+                    riskLevel.toLowerCase() === "rendah"
+                      ? "#22c55e"
+                      : riskLevel.toLowerCase() === "sedang"
+                        ? "#f59e0b"
+                        : "#ef4444"
                   }"></div>
                   <p class="text-sm font-medium">Tingkat Risiko: ${riskLevel}</p>
                 </div>
-              </div>`
+              </div>`,
             );
           },
         });
       }
-      
+
       // Ensure layer is added
       if (!mapRef.current.hasLayer(bpbdLayerRef.current)) {
         bpbdLayerRef.current.addTo(mapRef.current);
       }
     } else {
       // Remove layer if it exists
-      if (bpbdLayerRef.current && mapRef.current.hasLayer(bpbdLayerRef.current)) {
+      if (
+        bpbdLayerRef.current &&
+        mapRef.current.hasLayer(bpbdLayerRef.current)
+      ) {
         mapRef.current.removeLayer(bpbdLayerRef.current);
       }
     }
-
   }, [showBpbdLayer, bpbdData]);
 
   // Handle Theme Changes for Tiles
   useEffect(() => {
     if (!mapRef.current) return;
-    
-    const tileName = resolvedTheme === "dark" ? "Stadia.AlidadeSmoothDark" : "Stadia.AlidadeSmooth";
+
+    // Use free tile providers that don't require API keys
+    // Default to light mode tile if resolvedTheme isn't ready
+    const tileName =
+      resolvedTheme === "dark" ? "CartoDB.DarkMatter" : "CartoDB.Positron";
 
     if (tileLayerRef.current) {
       mapRef.current.removeLayer(tileLayerRef.current);
     }
-    
-    tileLayerRef.current = (L.tileLayer as any).provider(tileName, {
-      maxZoom: 19,
-    }).addTo(mapRef.current);
 
+    tileLayerRef.current = (
+      L.tileLayer as unknown as {
+        provider: (
+          name: string,
+          options?: Record<string, unknown>,
+        ) => L.TileLayer;
+      }
+    )
+      .provider(tileName, {
+        maxZoom: 19,
+      })
+      .addTo(mapRef.current);
   }, [resolvedTheme]);
 
   // Cleanup on unmount
