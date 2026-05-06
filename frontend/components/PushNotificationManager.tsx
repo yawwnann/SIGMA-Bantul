@@ -58,7 +58,9 @@ export function PushNotificationManager() {
             existingSub,
           );
           if (response) {
-            toast.success("Notifikasi darurat telah aktif.", { icon: <Bell className="w-4 h-4" /> });
+            toast.success("Notifikasi darurat telah aktif.", {
+              icon: <Bell className="w-4 h-4" />,
+            });
           }
           return;
         }
@@ -100,7 +102,9 @@ export function PushNotificationManager() {
         console.log("Subscription saved to backend:", response);
 
         if (response) {
-          toast.success("Notifikasi darurat telah aktif!", { icon: <Bell className="w-4 h-4" /> });
+          toast.success("Notifikasi darurat telah aktif!", {
+            icon: <Bell className="w-4 h-4" />,
+          });
         }
       } catch (err) {
         console.error("Error setting up push notifications:", err);
@@ -113,7 +117,9 @@ export function PushNotificationManager() {
         // Check for specific error types
         if (err instanceof Error) {
           if (err.message.includes("Permission denied")) {
-            toast.error("Izin notifikasi ditolak.", { icon: <AlertTriangle className="w-4 h-4 text-red-500" /> });
+            toast.error("Izin notifikasi ditolak.", {
+              icon: <AlertTriangle className="w-4 h-4 text-red-500" />,
+            });
           } else if (
             err.name === "NetworkError" ||
             err.message.includes("Network Error")
@@ -144,6 +150,12 @@ export function PushNotificationManager() {
           duration: 10000,
           icon: <AlertTriangle className="w-5 h-5 text-red-500" />,
         });
+      }
+
+      // Handle navigation request from service worker (when notification is clicked)
+      if (event.data && event.data.type === "NAVIGATE_TO") {
+        console.log("[App] Received NAVIGATE_TO message:", event.data.url);
+        window.location.href = event.data.url;
       }
     };
     navigator.serviceWorker?.addEventListener("message", handleSWMessage);

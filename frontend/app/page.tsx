@@ -193,14 +193,17 @@ export default function Dashboard() {
     null,
   );
   const [destinationName, setDestinationName] = useState<string>("Tujuan");
-  const [activeRouteMode, setActiveRouteMode] = useState<"walk" | "bike" | "car">("car");
+  const [activeRouteMode, setActiveRouteMode] = useState<
+    "walk" | "bike" | "car"
+  >("car");
   const [calculatingRoute, setCalculatingRoute] = useState(false);
   const [flyToLocation, setFlyToLocation] = useState<{
     lat: number;
     lon: number;
     zoom?: number;
   } | null>(null);
-  const [isOutsideBantulModalOpen, setIsOutsideBantulModalOpen] = useState(false);
+  const [isOutsideBantulModalOpen, setIsOutsideBantulModalOpen] =
+    useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -357,6 +360,8 @@ export default function Dashboard() {
     if (shelters.length > 0) {
       const searchParams = new URLSearchParams(window.location.search);
       if (searchParams.get("emergency") === "true") {
+        console.log("[Emergency] Emergency mode activated from URL parameter");
+
         // Remove param from URL to prevent re-triggering on refresh
         window.history.replaceState(
           {},
@@ -364,20 +369,29 @@ export default function Dashboard() {
           window.location.pathname,
         );
 
-        toast.info("Mencari rute evakuasi darurat...");
+        toast.info("Mencari rute evakuasi darurat...", {
+          description:
+            "Mohon izinkan akses lokasi untuk menghitung rute terdekat",
+          duration: 5000,
+        });
 
         if (!navigator.geolocation) {
+          console.error("[Emergency] Geolocation not supported");
           toast.error("Geolocation tidak didukung oleh browser ini.");
           return;
         }
 
         setGettingLocation(true);
+
+        console.log("[Emergency] Requesting geolocation...");
         navigator.geolocation.getCurrentPosition(
           async (position) => {
+            console.log("[Emergency] Geolocation obtained:", position.coords);
             const userLat = position.coords.latitude;
             const userLng = position.coords.longitude;
 
             if (!isWithinBantul(userLat, userLng)) {
+              console.warn("[Emergency] User location outside Bantul");
               setIsOutsideBantulModalOpen(true);
               setGettingLocation(false);
               return;
@@ -387,6 +401,11 @@ export default function Dashboard() {
             let availableShelters = shelters.filter(
               (s) => s.capacity - (s.currentOccupancy ?? 0) > 0,
             );
+            console.log(
+              "[Emergency] Available shelters:",
+              availableShelters.length,
+            );
+
             if (availableShelters.length === 0) {
               toast.error(
                 "Peringatan: Tidak ada shelter dengan kapasitas tersedia. Mencari shelter terdekat...",
@@ -443,20 +462,58 @@ export default function Dashboard() {
                 `Rute darurat ke ${nearestShelter.name} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
               );
             } catch (error) {
-              console.error("Error calculating emergency route:", error);
+              console.error(
+                "[Emergency] Error calculating emergency route:",
+                error,
+              );
               toast.error(
                 "Gagal menghitung rute darurat dari lokasi saat ini.",
+                {
+                  description:
+                    "Silakan coba lagi atau pilih shelter secara manual",
+                  duration: 5000,
+                },
               );
             } finally {
               setGettingLocation(false);
             }
           },
           (error) => {
-            console.error(error);
-            toast.error("Gagal mendapatkan lokasi GPS Anda untuk evakuasi.");
+            console.error("[Emergency] Geolocation error:", error);
+
+            let errorMessage =
+              "Gagal mendapatkan lokasi GPS Anda untuk evakuasi.";
+            let errorDescription = "";
+
+            switch (error.code) {
+              case error.PERMISSION_DENIED:
+                errorMessage = "Izin lokasi ditolak";
+                errorDescription =
+                  "Silakan aktifkan izin lokasi di pengaturan browser untuk menggunakan fitur rute darurat";
+                break;
+              case error.POSITION_UNAVAILABLE:
+                errorMessage = "Lokasi tidak tersedia";
+                errorDescription =
+                  "GPS tidak dapat menentukan lokasi Anda saat ini";
+                break;
+              case error.TIMEOUT:
+                errorMessage = "Waktu habis";
+                errorDescription =
+                  "Permintaan lokasi memakan waktu terlalu lama. Silakan coba lagi";
+                break;
+            }
+
+            toast.error(errorMessage, {
+              description: errorDescription,
+              duration: 7000,
+            });
             setGettingLocation(false);
           },
-          { enableHighAccuracy: true, timeout: 10000 },
+          {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0,
+          },
         );
       }
     }
@@ -559,7 +616,9 @@ export default function Dashboard() {
             routeEnd.lng,
           );
           setCalculatedRoute(route);
-          setDestinationName(`Titik (${routeEnd.lat.toFixed(4)}, ${routeEnd.lng.toFixed(4)})`);
+          setDestinationName(
+            `Titik (${routeEnd.lat.toFixed(4)}, ${routeEnd.lng.toFixed(4)})`,
+          );
           setIsMapExpanded(true);
           toast.success(
             `Rute ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
@@ -712,7 +771,11 @@ export default function Dashboard() {
             </DialogTitle>
             <DialogDescription className="text-slate-500 dark:text-zinc-400 mt-2">
               Maaf, sistem saat ini hanya mendukung pencarian rute evakuasi di
-              dalam wilayah administrasi <span className="font-semibold text-slate-900 dark:text-zinc-200">Kabupaten Bantul</span>.
+              dalam wilayah administrasi{" "}
+              <span className="font-semibold text-slate-900 dark:text-zinc-200">
+                Kabupaten Bantul
+              </span>
+              .
             </DialogDescription>
           </DialogHeader>
           <div className="bg-slate-50 dark:bg-zinc-900/50 p-4 rounded-xl border border-slate-100 dark:border-zinc-800/50 mt-4">
@@ -721,7 +784,8 @@ export default function Dashboard() {
             </h4>
             <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
               Jika terjadi gempa, harap segera mencari tanah lapang atau shelter
-              terdekat di lokasi Anda saat ini. Selalu ikuti instruksi dari petugas keamanan setempat.
+              terdekat di lokasi Anda saat ini. Selalu ikuti instruksi dari
+              petugas keamanan setempat.
             </p>
           </div>
           <DialogFooter className="mt-6">
@@ -1195,37 +1259,44 @@ export default function Dashboard() {
                     </button>
                   </div>
                 </div>
-                
+
                 {/* Mode Selectors */}
                 <div className="flex justify-around items-center p-1.5 bg-slate-50/50 dark:bg-zinc-900/20">
                   {(() => {
-                    const distKm = calculatedRoute.properties.totalDistance / 1000;
+                    const distKm =
+                      calculatedRoute.properties.totalDistance / 1000;
                     const walkTime = Math.ceil((distKm / 5) * 60);
                     const bikeTime = Math.ceil((distKm / 40) * 60);
                     const carTime = Math.ceil((distKm / 30) * 60);
-                    
+
                     return (
                       <>
-                        <button 
+                        <button
                           onClick={() => setActiveRouteMode("car")}
                           className={`flex flex-col items-center p-2 rounded-xl min-w-[70px] transition-colors ${activeRouteMode === "car" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" : "text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800"}`}
                         >
                           <Car className="w-4 h-4 mb-1" />
-                          <span className="text-[10px] font-bold">{carTime} mnt</span>
+                          <span className="text-[10px] font-bold">
+                            {carTime} mnt
+                          </span>
                         </button>
-                        <button 
+                        <button
                           onClick={() => setActiveRouteMode("bike")}
                           className={`flex flex-col items-center p-2 rounded-xl min-w-[70px] transition-colors ${activeRouteMode === "bike" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400" : "text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800"}`}
                         >
                           <Bike className="w-4 h-4 mb-1" />
-                          <span className="text-[10px] font-bold">{bikeTime} mnt</span>
+                          <span className="text-[10px] font-bold">
+                            {bikeTime} mnt
+                          </span>
                         </button>
-                        <button 
+                        <button
                           onClick={() => setActiveRouteMode("walk")}
                           className={`flex flex-col items-center p-2 rounded-xl min-w-[70px] transition-colors ${activeRouteMode === "walk" ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" : "text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800"}`}
                         >
                           <Footprints className="w-4 h-4 mb-1" />
-                          <span className="text-[10px] font-bold">{walkTime} mnt</span>
+                          <span className="text-[10px] font-bold">
+                            {walkTime} mnt
+                          </span>
                         </button>
                       </>
                     );
@@ -1236,11 +1307,12 @@ export default function Dashboard() {
               {/* Mobile Bottom Bar */}
               <div className="absolute bottom-4 left-4 right-4 z-[1000] md:hidden bg-white dark:bg-zinc-950 rounded-2xl shadow-xl border border-slate-200 dark:border-zinc-800 p-4 animate-in slide-in-from-bottom-5 duration-300">
                 {(() => {
-                  const distKm = calculatedRoute.properties.totalDistance / 1000;
+                  const distKm =
+                    calculatedRoute.properties.totalDistance / 1000;
                   const walkTime = Math.ceil((distKm / 5) * 60);
                   const bikeTime = Math.ceil((distKm / 40) * 60);
                   const carTime = Math.ceil((distKm / 30) * 60);
-                  
+
                   let activeTime = carTime;
                   let activeColor = "text-blue-600 dark:text-blue-400";
                   if (activeRouteMode === "walk") {
@@ -1250,26 +1322,37 @@ export default function Dashboard() {
                     activeTime = bikeTime;
                     activeColor = "text-orange-600 dark:text-orange-400";
                   }
-                  
+
                   return (
                     <div className="flex items-center justify-between">
                       <div className="flex flex-col">
                         <div className="flex items-baseline gap-1">
-                          <span className={`text-2xl font-black ${activeColor}`}>{activeTime}</span>
-                          <span className="text-[13px] font-bold text-slate-700 dark:text-zinc-300">mnt</span>
+                          <span
+                            className={`text-2xl font-black ${activeColor}`}
+                          >
+                            {activeTime}
+                          </span>
+                          <span className="text-[13px] font-bold text-slate-700 dark:text-zinc-300">
+                            mnt
+                          </span>
                         </div>
                         <span className="text-[11px] font-medium text-slate-500">
                           {distKm.toFixed(2)} km via rute darurat
                         </span>
                       </div>
-                      <Button 
+                      <Button
                         size="lg"
                         className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6 font-bold shadow-lg shadow-blue-500/20"
                         onClick={() => {
-                          toast.info("Navigasi evakuasi disimulasikan. Tetap waspada.");
+                          toast.info(
+                            "Navigasi evakuasi disimulasikan. Tetap waspada.",
+                          );
                         }}
                       >
-                        <Navigation className="w-4 h-4 mr-2" fill="currentColor" />
+                        <Navigation
+                          className="w-4 h-4 mr-2"
+                          fill="currentColor"
+                        />
                         Mulai
                       </Button>
                     </div>
@@ -1398,7 +1481,9 @@ export default function Dashboard() {
                   <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center border border-blue-100 dark:border-blue-900/30">
                     <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-500" />
                   </div>
-                  <span className="text-sm font-bold text-slate-800 dark:text-zinc-100">Lokasi Titik</span>
+                  <span className="text-sm font-bold text-slate-800 dark:text-zinc-100">
+                    Lokasi Titik
+                  </span>
                 </div>
                 <button
                   className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 p-0.5"
@@ -1412,11 +1497,19 @@ export default function Dashboard() {
               </div>
               <div className="p-2.5 md:p-3 space-y-1.5 bg-slate-50 dark:bg-zinc-900/30">
                 <div className="font-mono text-[10px] md:text-xs font-semibold bg-white dark:bg-zinc-900 p-1.5 md:p-2 rounded border border-slate-100 dark:border-zinc-800 text-slate-700 dark:text-zinc-300">
-                  {selectedLocation.lat.toFixed(5)}, {selectedLocation.lng.toFixed(5)}
+                  {selectedLocation.lat.toFixed(5)},{" "}
+                  {selectedLocation.lng.toFixed(5)}
                 </div>
                 {nearestShelters.length > 0 && (
                   <div className="text-[10px] md:text-xs text-slate-600 dark:text-zinc-400 leading-tight">
-                    Ada <span className="font-bold text-slate-800 dark:text-zinc-200">{nearestShelters.length} shelter</span> terdekat. <span className="hidden md:inline">Buka panel Info Lokasi (kanan atas) untuk detail.</span>
+                    Ada{" "}
+                    <span className="font-bold text-slate-800 dark:text-zinc-200">
+                      {nearestShelters.length} shelter
+                    </span>{" "}
+                    terdekat.{" "}
+                    <span className="hidden md:inline">
+                      Buka panel Info Lokasi (kanan atas) untuk detail.
+                    </span>
                   </div>
                 )}
               </div>

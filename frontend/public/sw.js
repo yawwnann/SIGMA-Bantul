@@ -84,42 +84,83 @@ self.addEventListener("notificationclick", function (event) {
 
   // Handle different actions
   if (event.action === "dismiss") {
+    console.log("[SW] Notification dismissed by user");
     return;
   }
 
+  // Get the URL to open from notification data
   const urlToOpen = new URL(
     event.notification.data?.url || "/?emergency=true",
     self.location.origin,
   ).href;
 
+  console.log("[SW] URL to open:", urlToOpen);
+
   event.waitUntil(
     clients
-      .matchAll({ type: "window", includeUncontrolled: true })
+      .matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      })
       .then((windowClients) => {
-        let matchingClient = null;
+        console.log("[SW] Found", windowClients.length, "open window(s)");
 
-        // Try to find existing window with matching URL
+        // Strategy 1: Try to find and focus existing app window
         for (let i = 0; i < windowClients.length; i++) {
-          const windowClient = windowClients[i];
-          if (
-            windowClient.url.includes(urlToOpen) ||
-            urlToOpen.includes(windowClient.url)
-          ) {
-            matchingClient = windowClient;
-            break;
+          const client = windowClients[i];
+          const clientUrl = new URL(client.url);
+          const targetUrl = new URL(urlToOpen);
+
+          // Check if it's our app (same origin)
+          if (clientUrl.origin === targetUrl.origin) {
+            console.log(
+              "[SW] Found existing app window, attempting to navigate",
+            );
+
+            // Try to navigate if supported
+            if (client.navigate) {
+              return client
+                .navigate(urlToOpen)
+                .then((navigatedClient) => {
+                  console.log("[SW] Navigation successful, focusing window");
+                  return navigatedClient
+                    ? navigatedClient.focus()
+                    : client.focus();
+                })
+                .catch((navError) => {
+                  console.warn(
+                    "[SW] Navigate failed, trying postMessage:",
+                    navError,
+                  );
+                  // Fallback: send message to client to navigate itself
+                  client.postMessage({
+                    type: "NAVIGATE_TO",
+                    url: urlToOpen,
+                  });
+                  return client.focus();
+                });
+            } else {
+              // Navigate not supported, use postMessage
+              console.log("[SW] Navigate not supported, using postMessage");
+              client.postMessage({
+                type: "NAVIGATE_TO",
+                url: urlToOpen,
+              });
+              return client.focus();
+            }
           }
         }
 
-        if (matchingClient) {
-          console.log("[SW] Focusing existing window");
-          return matchingClient.focus();
-        } else {
-          console.log("[SW] Opening new window:", urlToOpen);
-          return clients.openWindow(urlToOpen);
-        }
+        // Strategy 2: No existing window found, open new one
+        console.log("[SW] No existing app window found, opening new window");
+        return clients.openWindow(urlToOpen);
       })
       .catch((err) => {
         console.error("[SW] Error handling notification click:", err);
+        // Final fallback: try to open window anyway
+        return clients.openWindow(urlToOpen).catch((openErr) => {
+          console.error("[SW] Failed to open window:", openErr);
+        });
       }),
   );
 });
@@ -129,7 +170,5 @@ self.addEventListener("notificationclose", function (event) {
   console.log("[SW] Notification closed");
 });
 
-
 // Satisfy PWA requirement for installability
-self.addEventListener('fetch', (event) => {});
-
+self.addEventListener("fetch", (event) => {});
