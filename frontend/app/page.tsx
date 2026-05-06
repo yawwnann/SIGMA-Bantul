@@ -127,7 +127,13 @@ function getStatusWilayah(earthquakes: Earthquake[]): {
 }
 
 function isWithinBantul(lat: number, lng: number): boolean {
-  return lat >= -8.05 && lat <= -7.75 && lng >= 110.15 && lng <= 110.55;
+  // Bounding box yang lebih akurat untuk Kabupaten Bantul
+  // Berdasarkan batas administratif resmi Bantul
+  // Utara: berbatasan dengan Kota Yogyakarta (sekitar -7.88)
+  // Selatan: Samudra Hindia (sekitar -8.15)
+  // Barat: Kulon Progo
+  // Timur: Gunung Kidul
+  return lat >= -8.15 && lat <= -7.88 && lng >= 110.2 && lng <= 110.5;
 }
 
 // Calculate impact radius based on magnitude

@@ -76,15 +76,19 @@ export class NotificationsService {
   ) {
     this.logger.log(`Broadcasting earthquake alert: ${eqTitle}`);
 
+    // Get frontend URL from environment or use default
+    const frontendUrl =
+      process.env.FRONTEND_URL || 'https://sigma-bantul.vercel.app';
+
     // Create proper payload - web-push will handle the encoding
     const notificationPayload = {
       title: eqTitle,
       body: eqBody,
       data: {
-        url: `/?emergency=${emergencyParam}`,
+        url: `${frontendUrl}/?emergency=${emergencyParam}`,
       },
-      icon: '/logo.png',
-      badge: '/logo.png',
+      icon: `${frontendUrl}/logo.png`,
+      badge: `${frontendUrl}/logo.png`,
       tag: 'earthquake-alert',
       requireInteraction: true,
     };
@@ -124,7 +128,9 @@ export class NotificationsService {
           err.statusCode === 404 ||
           err.statusCode === 401
         ) {
-          this.logger.log(`Marking invalid subscription for deletion: ${sub.id}`);
+          this.logger.log(
+            `Marking invalid subscription for deletion: ${sub.id}`,
+          );
           invalidIds.push(sub.id);
         }
       }
@@ -134,7 +140,9 @@ export class NotificationsService {
       await this.prisma.pushSubscription.deleteMany({
         where: { id: { in: invalidIds } },
       });
-      this.logger.log(`Bulk deleted ${invalidIds.length} invalid subscriptions.`);
+      this.logger.log(
+        `Bulk deleted ${invalidIds.length} invalid subscriptions.`,
+      );
     }
 
     this.logger.log(
