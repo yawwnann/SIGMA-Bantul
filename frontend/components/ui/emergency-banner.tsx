@@ -35,7 +35,11 @@ function calculateImpactRadius(magnitude: number): number {
 // Check if location is within Bantul administrative boundary
 function isWithinBantul(lat: number, lng: number): boolean {
   // Bounding box yang lebih akurat untuk Kabupaten Bantul
-  return lat >= -8.15 && lat <= -7.88 && lng >= 110.2 && lng <= 110.5;
+  // Utara: berbatasan dengan Kota Yogyakarta (sekitar -7.80)
+  // Selatan: Samudra Hindia (sekitar -8.15)
+  // Barat: Kulon Progo (sekitar 110.15)
+  // Timur: Gunung Kidul (sekitar 110.50)
+  return lat >= -8.15 && lat <= -7.8 && lng >= 110.15 && lng <= 110.5;
 }
 
 function EmergencyBannerInner({

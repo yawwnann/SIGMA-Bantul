@@ -129,11 +129,11 @@ function getStatusWilayah(earthquakes: Earthquake[]): {
 function isWithinBantul(lat: number, lng: number): boolean {
   // Bounding box yang lebih akurat untuk Kabupaten Bantul
   // Berdasarkan batas administratif resmi Bantul
-  // Utara: berbatasan dengan Kota Yogyakarta (sekitar -7.88)
+  // Utara: berbatasan dengan Kota Yogyakarta (sekitar -7.80)
   // Selatan: Samudra Hindia (sekitar -8.15)
-  // Barat: Kulon Progo
-  // Timur: Gunung Kidul
-  return lat >= -8.15 && lat <= -7.88 && lng >= 110.2 && lng <= 110.5;
+  // Barat: Kulon Progo (sekitar 110.15)
+  // Timur: Gunung Kidul (sekitar 110.50)
+  return lat >= -8.15 && lat <= -7.8 && lng >= 110.15 && lng <= 110.5;
 }
 
 // Calculate impact radius based on magnitude
@@ -211,6 +211,7 @@ export default function Dashboard() {
   const [isOutsideBantulModalOpen, setIsOutsideBantulModalOpen] =
     useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  const [isShelterDetailOpen, setIsShelterDetailOpen] = useState(false);
 
   useEffect(() => {
     setCurrentTime(new Date());
@@ -363,167 +364,167 @@ export default function Dashboard() {
 
   // Handle emergency routing from push notification click or toast
   useEffect(() => {
-    if (shelters.length > 0) {
-      const searchParams = new URLSearchParams(window.location.search);
-      if (searchParams.get("emergency") === "true") {
-        console.log("[Emergency] Emergency mode activated from URL parameter");
+    if (shelters.length === 0) return;
 
-        // Remove param from URL to prevent re-triggering on refresh
-        window.history.replaceState(
-          {},
-          document.title,
-          window.location.pathname,
-        );
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get("emergency") === "true") {
+      console.log("[Emergency] Emergency mode activated from URL parameter");
 
-        toast.info("Mencari rute evakuasi darurat...", {
-          description:
-            "Mohon izinkan akses lokasi untuk menghitung rute terdekat",
-          duration: 5000,
-        });
+      // Remove param from URL to prevent re-triggering on refresh
+      window.history.replaceState(
+        {},
+        document.title,
+        window.location.pathname,
+      );
 
-        if (!navigator.geolocation) {
-          console.error("[Emergency] Geolocation not supported");
-          toast.error("Geolocation tidak didukung oleh browser ini.");
-          return;
-        }
+      toast.info("Mencari rute evakuasi darurat...", {
+        description:
+          "Mohon izinkan akses lokasi untuk menghitung rute terdekat",
+        duration: 5000,
+      });
 
-        setGettingLocation(true);
-
-        console.log("[Emergency] Requesting geolocation...");
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            console.log("[Emergency] Geolocation obtained:", position.coords);
-            const userLat = position.coords.latitude;
-            const userLng = position.coords.longitude;
-
-            if (!isWithinBantul(userLat, userLng)) {
-              console.warn("[Emergency] User location outside Bantul");
-              setIsOutsideBantulModalOpen(true);
-              setGettingLocation(false);
-              return;
-            }
-
-            // 1. Find shelters with available capacity
-            let availableShelters = shelters.filter(
-              (s) => s.capacity - (s.currentOccupancy ?? 0) > 0,
-            );
-            console.log(
-              "[Emergency] Available shelters:",
-              availableShelters.length,
-            );
-
-            if (availableShelters.length === 0) {
-              toast.error(
-                "Peringatan: Tidak ada shelter dengan kapasitas tersedia. Mencari shelter terdekat...",
-              );
-              // Fallback to all shelters if none available
-              availableShelters = [...shelters];
-            }
-
-            // 2. Locate nearest available shelter
-            let nearestShelter = availableShelters[0];
-            let minDistance = Infinity;
-
-            availableShelters.forEach((s) => {
-              const coords = s.geometry as { coordinates: [number, number] };
-              const dist = calculateDistance(
-                userLat,
-                userLng,
-                coords.coordinates[1],
-                coords.coordinates[0],
-              );
-              if (dist < minDistance) {
-                minDistance = dist;
-                nearestShelter = s;
-              }
-            });
-
-            const targetCoords = nearestShelter.geometry as {
-              coordinates: [number, number];
-            };
-
-            // Set state for location select first
-            handleLocationSelect(userLat, userLng);
-            setRoutingMode(true);
-
-            // 3. Immediately calculate map route
-            try {
-              toast.info(`Menghitung rute ke ${nearestShelter.name}...`);
-              const route = await roadApi.calculateRoute(
-                userLat,
-                userLng,
-                targetCoords.coordinates[1],
-                targetCoords.coordinates[0],
-              );
-
-              setCalculatedRoute(route);
-              setRouteStart({ lat: userLat, lng: userLng });
-              setRouteEnd({
-                lat: targetCoords.coordinates[1],
-                lng: targetCoords.coordinates[0],
-              });
-              setDestinationName(nearestShelter.name);
-              setIsMapExpanded(true);
-              toast.success(
-                `Rute darurat ke ${nearestShelter.name} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
-              );
-            } catch (error) {
-              console.error(
-                "[Emergency] Error calculating emergency route:",
-                error,
-              );
-              toast.error(
-                "Gagal menghitung rute darurat dari lokasi saat ini.",
-                {
-                  description:
-                    "Silakan coba lagi atau pilih shelter secara manual",
-                  duration: 5000,
-                },
-              );
-            } finally {
-              setGettingLocation(false);
-            }
-          },
-          (error) => {
-            console.error("[Emergency] Geolocation error:", error);
-
-            let errorMessage =
-              "Gagal mendapatkan lokasi GPS Anda untuk evakuasi.";
-            let errorDescription = "";
-
-            switch (error.code) {
-              case error.PERMISSION_DENIED:
-                errorMessage = "Izin lokasi ditolak";
-                errorDescription =
-                  "Silakan aktifkan izin lokasi di pengaturan browser untuk menggunakan fitur rute darurat";
-                break;
-              case error.POSITION_UNAVAILABLE:
-                errorMessage = "Lokasi tidak tersedia";
-                errorDescription =
-                  "GPS tidak dapat menentukan lokasi Anda saat ini";
-                break;
-              case error.TIMEOUT:
-                errorMessage = "Waktu habis";
-                errorDescription =
-                  "Permintaan lokasi memakan waktu terlalu lama. Silakan coba lagi";
-                break;
-            }
-
-            toast.error(errorMessage, {
-              description: errorDescription,
-              duration: 7000,
-            });
-            setGettingLocation(false);
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 0,
-          },
-        );
+      if (!navigator.geolocation) {
+        console.error("[Emergency] Geolocation not supported");
+        toast.error("Geolocation tidak didukung oleh browser ini.");
+        return;
       }
+
+      setGettingLocation(true);
+
+      console.log("[Emergency] Requesting geolocation...");
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          console.log("[Emergency] Geolocation obtained:", position.coords);
+          const userLat = position.coords.latitude;
+          const userLng = position.coords.longitude;
+
+          if (!isWithinBantul(userLat, userLng)) {
+            console.warn("[Emergency] User location outside Bantul");
+            setIsOutsideBantulModalOpen(true);
+            setGettingLocation(false);
+            return;
+          }
+
+          // 1. Find shelters with available capacity
+          let availableShelters = shelters.filter(
+            (s) => s.capacity - (s.currentOccupancy ?? 0) > 0,
+          );
+          console.log(
+            "[Emergency] Available shelters:",
+            availableShelters.length,
+          );
+
+          if (availableShelters.length === 0) {
+            toast.error(
+              "Peringatan: Tidak ada shelter dengan kapasitas tersedia. Mencari shelter terdekat...",
+            );
+            // Fallback to all shelters if none available
+            availableShelters = [...shelters];
+          }
+
+          // 2. Locate nearest available shelter
+          let nearestShelter = availableShelters[0];
+          let minDistance = Infinity;
+
+          availableShelters.forEach((s) => {
+            const coords = s.geometry as { coordinates: [number, number] };
+            const dist = calculateDistance(
+              userLat,
+              userLng,
+              coords.coordinates[1],
+              coords.coordinates[0],
+            );
+            if (dist < minDistance) {
+              minDistance = dist;
+              nearestShelter = s;
+            }
+          });
+
+          const targetCoords = nearestShelter.geometry as {
+            coordinates: [number, number];
+          };
+
+          // Set state for location select first
+          setSelectedLocation({ lat: userLat, lng: userLng });
+          setRoutingMode(true);
+
+          // 3. Immediately calculate map route
+          try {
+            toast.info(`Menghitung rute ke ${nearestShelter.name}...`);
+            const route = await roadApi.calculateRoute(
+              userLat,
+              userLng,
+              targetCoords.coordinates[1],
+              targetCoords.coordinates[0],
+            );
+
+            setCalculatedRoute(route);
+            setRouteStart({ lat: userLat, lng: userLng });
+            setRouteEnd({
+              lat: targetCoords.coordinates[1],
+              lng: targetCoords.coordinates[0],
+            });
+            setDestinationName(nearestShelter.name);
+            setIsMapExpanded(true);
+            toast.success(
+              `Rute darurat ke ${nearestShelter.name} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
+            );
+          } catch (error) {
+            console.error(
+              "[Emergency] Error calculating emergency route:",
+              error,
+            );
+            toast.error(
+              "Gagal menghitung rute darurat dari lokasi saat ini.",
+              {
+                description:
+                  "Silakan coba lagi atau pilih shelter secara manual",
+                duration: 5000,
+              },
+            );
+          } finally {
+            setGettingLocation(false);
+          }
+        },
+        (error) => {
+          console.error("[Emergency] Geolocation error:", error);
+
+          let errorMessage =
+            "Gagal mendapatkan lokasi GPS Anda untuk evakuasi.";
+          let errorDescription = "";
+
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = "Izin lokasi ditolak";
+              errorDescription =
+                "Silakan aktifkan izin lokasi di pengaturan browser untuk menggunakan fitur rute darurat";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = "Lokasi tidak tersedia";
+              errorDescription =
+                "GPS tidak dapat menentukan lokasi Anda saat ini";
+              break;
+            case error.TIMEOUT:
+              errorMessage = "Waktu habis";
+              errorDescription =
+                "Permintaan lokasi memakan waktu terlalu lama. Silakan coba lagi";
+              break;
+          }
+
+          toast.error(errorMessage, {
+            description: errorDescription,
+            duration: 7000,
+          });
+          setGettingLocation(false);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        },
+      );
     }
-  }, [shelters, handleLocationSelect]);
+  }, [shelters.length]);
 
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -1064,7 +1065,7 @@ export default function Dashboard() {
           <Button
             onClick={handleGetCurrentLocation}
             disabled={gettingLocation}
-            className="absolute bottom-24 right-4 z-[1000] h-12 w-12 shadow-lg bg-blue-600 hover:bg-blue-700 border-0 rounded-full transition-colors flex items-center justify-center"
+            className="absolute bottom-24 right-4 z-[80] md:z-[500] h-12 w-12 shadow-lg bg-blue-600 hover:bg-blue-700 border-0 rounded-full transition-colors flex items-center justify-center"
             size="icon"
           >
             {gettingLocation ? (
@@ -1077,7 +1078,7 @@ export default function Dashboard() {
           {/* Routing Mode Toggle Button */}
           <Button
             onClick={handleToggleRoutingMode}
-            className={`absolute bottom-8 right-4 z-[1000] h-12 w-12 shadow-lg border-0 rounded-full transition-colors flex items-center justify-center ${
+            className={`absolute bottom-8 right-4 z-[80] md:z-[500] h-12 w-12 shadow-lg border-0 rounded-full transition-colors flex items-center justify-center ${
               routingMode
                 ? "bg-green-600 hover:bg-green-700"
                 : "bg-slate-800 dark:bg-zinc-800 hover:bg-slate-900"
@@ -1309,62 +1310,6 @@ export default function Dashboard() {
                   })()}
                 </div>
               </div>
-
-              {/* Mobile Bottom Bar */}
-              <div className="absolute bottom-4 left-4 right-4 z-[1000] md:hidden bg-white dark:bg-zinc-950 rounded-2xl shadow-xl border border-slate-200 dark:border-zinc-800 p-4 animate-in slide-in-from-bottom-5 duration-300">
-                {(() => {
-                  const distKm =
-                    calculatedRoute.properties.totalDistance / 1000;
-                  const walkTime = Math.ceil((distKm / 5) * 60);
-                  const bikeTime = Math.ceil((distKm / 40) * 60);
-                  const carTime = Math.ceil((distKm / 30) * 60);
-
-                  let activeTime = carTime;
-                  let activeColor = "text-blue-600 dark:text-blue-400";
-                  if (activeRouteMode === "walk") {
-                    activeTime = walkTime;
-                    activeColor = "text-green-600 dark:text-green-400";
-                  } else if (activeRouteMode === "bike") {
-                    activeTime = bikeTime;
-                    activeColor = "text-orange-600 dark:text-orange-400";
-                  }
-
-                  return (
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <div className="flex items-baseline gap-1">
-                          <span
-                            className={`text-2xl font-black ${activeColor}`}
-                          >
-                            {activeTime}
-                          </span>
-                          <span className="text-[13px] font-bold text-slate-700 dark:text-zinc-300">
-                            mnt
-                          </span>
-                        </div>
-                        <span className="text-[11px] font-medium text-slate-500">
-                          {distKm.toFixed(2)} km via rute darurat
-                        </span>
-                      </div>
-                      <Button
-                        size="lg"
-                        className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6 font-bold shadow-lg shadow-blue-500/20"
-                        onClick={() => {
-                          toast.info(
-                            "Navigasi evakuasi disimulasikan. Tetap waspada.",
-                          );
-                        }}
-                      >
-                        <Navigation
-                          className="w-4 h-4 mr-2"
-                          fill="currentColor"
-                        />
-                        Mulai
-                      </Button>
-                    </div>
-                  );
-                })()}
-              </div>
             </>
           )}
 
@@ -1480,47 +1425,50 @@ export default function Dashboard() {
           )}
 
           {/* Selected Location Floating Detail */}
-          {selectedLocation && !routingMode && !calculatedRoute && (
-            <div className="absolute bottom-6 left-1/2 md:bottom-8 md:left-8 transform -translate-x-1/2 md:translate-x-0 z-[1000] w-[calc(100%-2rem)] sm:w-[340px] shadow-2xl bg-white dark:bg-zinc-950/95 backdrop-blur-md border border-slate-200/80 dark:border-zinc-800/60 rounded-xl overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-300">
-              <div className="flex items-center justify-between p-3 border-b border-slate-100 dark:border-zinc-800/60">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center border border-blue-100 dark:border-blue-900/30">
-                    <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-500" />
-                  </div>
-                  <span className="text-sm font-bold text-slate-800 dark:text-zinc-100">
-                    Lokasi Titik
-                  </span>
-                </div>
-                <button
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 p-0.5"
-                  onClick={() => {
-                    setSelectedLocation(null);
-                    setNearestShelters([]);
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="p-2.5 md:p-3 space-y-1.5 bg-slate-50 dark:bg-zinc-900/30">
-                <div className="font-mono text-[10px] md:text-xs font-semibold bg-white dark:bg-zinc-900 p-1.5 md:p-2 rounded border border-slate-100 dark:border-zinc-800 text-slate-700 dark:text-zinc-300">
-                  {selectedLocation.lat.toFixed(5)},{" "}
-                  {selectedLocation.lng.toFixed(5)}
-                </div>
-                {nearestShelters.length > 0 && (
-                  <div className="text-[10px] md:text-xs text-slate-600 dark:text-zinc-400 leading-tight">
-                    Ada{" "}
-                    <span className="font-bold text-slate-800 dark:text-zinc-200">
-                      {nearestShelters.length} shelter
-                    </span>{" "}
-                    terdekat.{" "}
-                    <span className="hidden md:inline">
-                      Buka panel Info Lokasi (kanan atas) untuk detail.
+          {selectedLocation &&
+            !routingMode &&
+            !calculatedRoute &&
+            !isShelterDetailOpen && (
+              <div className="absolute bottom-6 left-1/2 md:bottom-8 md:left-8 transform -translate-x-1/2 md:translate-x-0 z-[90] md:z-[1000] w-[calc(100%-2rem)] sm:w-[340px] shadow-2xl bg-white dark:bg-zinc-950/95 backdrop-blur-md border border-slate-200/80 dark:border-zinc-800/60 rounded-xl overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-300">
+                <div className="flex items-center justify-between p-3 border-b border-slate-100 dark:border-zinc-800/60">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center border border-blue-100 dark:border-blue-900/30">
+                      <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-500" />
+                    </div>
+                    <span className="text-sm font-bold text-slate-800 dark:text-zinc-100">
+                      Lokasi Titik
                     </span>
                   </div>
-                )}
+                  <button
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 p-0.5"
+                    onClick={() => {
+                      setSelectedLocation(null);
+                      setNearestShelters([]);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="p-2.5 md:p-3 space-y-1.5 bg-slate-50 dark:bg-zinc-900/30">
+                  <div className="font-mono text-[10px] md:text-xs font-semibold bg-white dark:bg-zinc-900 p-1.5 md:p-2 rounded border border-slate-100 dark:border-zinc-800 text-slate-700 dark:text-zinc-300">
+                    {selectedLocation.lat.toFixed(5)},{" "}
+                    {selectedLocation.lng.toFixed(5)}
+                  </div>
+                  {nearestShelters.length > 0 && (
+                    <div className="text-[10px] md:text-xs text-slate-600 dark:text-zinc-400 leading-tight">
+                      Ada{" "}
+                      <span className="font-bold text-slate-800 dark:text-zinc-200">
+                        {nearestShelters.length} shelter
+                      </span>{" "}
+                      terdekat.{" "}
+                      <span className="hidden md:inline">
+                        Buka panel Info Lokasi (kanan atas) untuk detail.
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           <div className="relative h-full w-full dark-map-container flex-1">
             {loading && (
@@ -1547,6 +1495,7 @@ export default function Dashboard() {
               routeEnd={routeEnd}
               selectedEarthquake={selectedEarthquake}
               flyToLocation={flyToLocation}
+              onShelterDetailOpen={setIsShelterDetailOpen}
             />
           </div>
         </div>

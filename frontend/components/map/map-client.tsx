@@ -30,6 +30,7 @@ interface MapClientProps {
   routeEnd?: { lat: number; lng: number } | null;
   selectedEarthquake?: Earthquake | null;
   flyToLocation?: { lat: number; lon: number; zoom?: number } | null;
+  onShelterDetailOpen?: (isOpen: boolean) => void;
 }
 
 const BANTUL_CENTER: [number, number] = [-7.888, 110.33];
@@ -110,6 +111,7 @@ export default function MapClient({
   routeEnd,
   selectedEarthquake,
   flyToLocation,
+  onShelterDetailOpen,
 }: MapClientProps) {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -145,6 +147,26 @@ export default function MapClient({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const [selectedShelter, setSelectedShelter] = useState<Shelter | null>(null);
   const onShelterClickRef = useRef<((shelter: Shelter) => void) | null>(null);
+  const onShelterDetailOpenRef = useRef(onShelterDetailOpen);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    onShelterDetailOpenRef.current = onShelterDetailOpen;
+  }, [onShelterDetailOpen]);
+
+  // Notify parent when shelter detail opens/closes
+  useEffect(() => {
+    if (onShelterDetailOpenRef.current) {
+      onShelterDetailOpenRef.current(selectedShelter !== null);
+    }
+  }, [selectedShelter]);
 
   useEffect(() => {
     setIsDarkMode(resolvedTheme === "dark");
@@ -211,7 +233,35 @@ export default function MapClient({
 
     return () => {
       if (mapRef.current) {
-        mapRef.current.remove();
+        try {
+          // Clear all layer groups first
+          if (earthquakeLayerGroupRef.current) {
+            earthquakeLayerGroupRef.current.clearLayers();
+          }
+          if (shelterLayerGroupRef.current) {
+            shelterLayerGroupRef.current.clearLayers();
+          }
+          if (facilityLayerGroupRef.current) {
+            facilityLayerGroupRef.current.clearLayers();
+          }
+          if (hazardLayerGroupRef.current) {
+            hazardLayerGroupRef.current.clearLayers();
+          }
+
+          // Remove all layers
+          mapRef.current.eachLayer((layer) => {
+            try {
+              mapRef.current?.removeLayer(layer);
+            } catch (e) {
+              // Ignore errors during cleanup
+            }
+          });
+
+          // Finally remove the map
+          mapRef.current.remove();
+        } catch (error) {
+          console.warn("Map cleanup error:", error);
+        }
         mapRef.current = null;
       }
       setIsMapReady(false);
@@ -220,14 +270,18 @@ export default function MapClient({
   }, []);
 
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !isMountedRef.current) return;
 
     // Default to light mode tile if resolvedTheme isn't ready
     const tileName =
       resolvedTheme === "dark" ? "CartoDB.DarkMatter" : "CartoDB.Positron";
 
-    if (tileLayerRef.current) {
-      mapRef.current.removeLayer(tileLayerRef.current);
+    if (tileLayerRef.current && mapRef.current.hasLayer(tileLayerRef.current)) {
+      try {
+        mapRef.current.removeLayer(tileLayerRef.current);
+      } catch (e) {
+        // Ignore cleanup errors
+      }
     }
 
     tileLayerRef.current = (
@@ -247,10 +301,13 @@ export default function MapClient({
   useEffect(() => {
     if (!mapRef.current || !bantulBoundary) return;
 
-    if (boundaryLayerRef.current) {
+    if (
+      boundaryLayerRef.current &&
+      mapRef.current.hasLayer(boundaryLayerRef.current)
+    ) {
       mapRef.current.removeLayer(boundaryLayerRef.current);
     }
-    if (maskLayerRef.current) {
+    if (maskLayerRef.current && mapRef.current.hasLayer(maskLayerRef.current)) {
       mapRef.current.removeLayer(maskLayerRef.current);
     }
 
@@ -805,7 +862,10 @@ export default function MapClient({
   useEffect(() => {
     if (!mapRef.current) return;
 
-    if (locationMarkerRef.current) {
+    if (
+      locationMarkerRef.current &&
+      mapRef.current.hasLayer(locationMarkerRef.current)
+    ) {
       mapRef.current.removeLayer(locationMarkerRef.current);
       locationMarkerRef.current = null;
     }
@@ -843,7 +903,7 @@ export default function MapClient({
   useEffect(() => {
     if (!mapRef.current || !roadNetwork) return;
 
-    if (roadLayerRef.current) {
+    if (roadLayerRef.current && mapRef.current.hasLayer(roadLayerRef.current)) {
       mapRef.current.removeLayer(roadLayerRef.current);
       roadLayerRef.current = null;
     }
@@ -911,7 +971,10 @@ export default function MapClient({
   useEffect(() => {
     if (!mapRef.current) return;
 
-    if (calculatedRouteLayerRef.current) {
+    if (
+      calculatedRouteLayerRef.current &&
+      mapRef.current.hasLayer(calculatedRouteLayerRef.current)
+    ) {
       mapRef.current.removeLayer(calculatedRouteLayerRef.current);
       calculatedRouteLayerRef.current = null;
     }
@@ -1102,8 +1165,12 @@ export default function MapClient({
   };
 
   return (
-    <div className="relative w-full h-full text-left">
-      <div ref={mapContainerRef} className="w-full h-full" />
+    <div className="relative w-full h-full text-left" suppressHydrationWarning>
+      <div
+        ref={mapContainerRef}
+        className="w-full h-full"
+        suppressHydrationWarning
+      />
       {isMapReady && mapInstance && (
         <BpbdRiskLayer map={mapInstance} visible={visibleLayers.bpbdRisk} />
       )}
