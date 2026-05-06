@@ -26,6 +26,8 @@ interface MapClientProps {
   ) => void;
   roadNetwork?: Record<string, unknown>;
   calculatedRoute?: Record<string, unknown>;
+  routeStart?: { lat: number; lng: number } | null;
+  routeEnd?: { lat: number; lng: number } | null;
   selectedEarthquake?: Earthquake | null;
   flyToLocation?: { lat: number; lon: number; zoom?: number } | null;
 }
@@ -104,6 +106,8 @@ export default function MapClient({
   onCalculateRoute,
   roadNetwork,
   calculatedRoute,
+  routeStart,
+  routeEnd,
   selectedEarthquake,
   flyToLocation,
 }: MapClientProps) {
@@ -278,13 +282,14 @@ export default function MapClient({
       });
     }
 
-    const padding = 0.3;
+    // Use valid [lat, lng] for the outer boundary of the mask.
+    // Making it very large to cover the entire map when zoomed out.
     const worldBounds: [number, number][] = [
-      [minLon - padding, minLat - padding],
-      [maxLon + padding, minLat - padding],
-      [maxLon + padding, maxLat + padding],
-      [minLon - padding, maxLat + padding],
-      [minLon - padding, minLat - padding],
+      [-90, -360],
+      [90, -360],
+      [90, 360],
+      [-90, 360],
+      [-90, -360],
     ];
 
     const holes: [number, number][][] = [];
@@ -993,6 +998,64 @@ export default function MapClient({
       `;
     });
 
+    // Draw snapping lines to connect exact user start/end points with the road network graph
+    // Extract first and last coordinates of the calculated route
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const geoData = calculatedRoute as any;
+      if (geoData.features && geoData.features.length > 0) {
+        let firstCoord: [number, number] | null = null;
+        let lastCoord: [number, number] | null = null;
+        
+        // Find first coordinate of the primary route
+        const primaryFeatures = geoData.features.filter((f: any) => f.properties?.routeId !== "ALTERNATIVE");
+        
+        if (primaryFeatures.length > 0) {
+          const firstFeature = primaryFeatures[0];
+          const lastFeature = primaryFeatures[primaryFeatures.length - 1];
+          
+          if (firstFeature.geometry.type === "LineString") {
+            const coords = firstFeature.geometry.coordinates;
+            if (coords.length > 0) {
+              firstCoord = [coords[0][1], coords[0][0]]; // [lat, lng]
+            }
+          }
+          
+          if (lastFeature.geometry.type === "LineString") {
+            const coords = lastFeature.geometry.coordinates;
+            if (coords.length > 0) {
+              const lastPoint = coords[coords.length - 1];
+              lastCoord = [lastPoint[1], lastPoint[0]]; // [lat, lng]
+            }
+          }
+        }
+
+        // Draw dashed snapping line from origin marker to route start
+        if (firstCoord && routeStart) {
+          L.polyline([[routeStart.lat, routeStart.lng], firstCoord], {
+            color: "#94a3b8",
+            weight: 3,
+            dashArray: "4, 6",
+            opacity: 0.8,
+            interactive: false
+          }).addTo(routeGroup);
+        }
+
+        // Draw dashed snapping line from route end to destination marker
+        if (lastCoord && routeEnd) {
+          L.polyline([lastCoord, [routeEnd.lat, routeEnd.lng]], {
+            color: "#94a3b8",
+            weight: 3,
+            dashArray: "4, 6",
+            opacity: 0.8,
+            interactive: false
+          }).addTo(routeGroup);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to draw route snapping lines:", err);
+    }
+
     routeGroup.addTo(mapRef.current);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     calculatedRouteLayerRef.current = routeGroup as any;
@@ -1198,11 +1261,11 @@ export default function MapClient({
 
       {/* Shelter Detail Sidebar */}
       {selectedShelter && (
-        <div className="absolute top-4 right-4 z-[2100] w-[320px] bg-zinc-950/95 backdrop-blur-md rounded-xl shadow-2xl border border-zinc-800/60 overflow-hidden animate-in slide-in-from-right-5 fade-in duration-300">
+        <div className="absolute bottom-4 left-4 right-4 sm:bottom-auto sm:top-4 sm:left-auto sm:right-4 z-[2100] sm:w-[320px] bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md rounded-xl shadow-2xl border border-slate-200/80 dark:border-zinc-800/60 overflow-y-auto overflow-x-hidden animate-in slide-in-from-bottom-5 sm:slide-in-from-right-5 fade-in duration-300 max-h-[50%] sm:max-h-none">
           {/* Header */}
-          <div className="p-4 border-b border-zinc-800/60">
-            <div className="flex items-start justify-between mb-2">
-              <span className="inline-block bg-green-500/20 text-green-400 text-xs font-bold px-3 py-1 rounded-full border border-green-500/30">
+          <div className="p-3 sm:p-4 border-b border-slate-200/80 dark:border-zinc-800/60">
+            <div className="flex items-start justify-between mb-1 sm:mb-2">
+              <span className="inline-block bg-green-500/20 text-green-400 text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-green-500/30">
                 {selectedShelter.condition === "GOOD"
                   ? "Baik"
                   : selectedShelter.condition === "MODERATE"
@@ -1211,15 +1274,15 @@ export default function MapClient({
               </span>
               <button
                 onClick={() => setSelectedShelter(null)}
-                className="text-zinc-400 hover:text-zinc-100 transition-colors p-1 hover:bg-zinc-800/50 rounded-lg"
+                className="text-slate-400 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 transition-colors p-1 hover:bg-slate-100 dark:hover:bg-zinc-800/50 rounded-lg"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
-            <h3 className="text-lg font-bold text-zinc-50 mb-1">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-50 mb-0.5 sm:mb-1 leading-tight">
               {selectedShelter.name}
             </h3>
-            <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+            <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-slate-500 dark:text-zinc-400">
               <svg
                 width="11"
                 height="11"
@@ -1231,12 +1294,12 @@ export default function MapClient({
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                 <circle cx="12" cy="10" r="3" />
               </svg>
-              {selectedShelter.address || "Jl. Parangtritis, Sewon, Bantul"}
+              <span className="truncate">{selectedShelter.address || "Jl. Parangtritis, Sewon, Bantul"}</span>
             </div>
           </div>
 
           {/* Capacity Grid */}
-          <div className="grid grid-cols-2 gap-3 p-4 border-b border-zinc-800/60">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 p-3 sm:p-4 border-b border-slate-200/80 dark:border-zinc-800/60">
             {(() => {
               const capacity = selectedShelter.capacity || 0;
               const occupied = selectedShelter.currentOccupancy || 0;
@@ -1268,26 +1331,27 @@ export default function MapClient({
 
               return (
                 <>
-                  <div className="bg-zinc-900/80 rounded-lg p-3 border border-zinc-800/40">
+                  <div className="bg-slate-50 dark:bg-zinc-900/80 rounded-lg p-3 border border-slate-200/80 dark:border-zinc-800/40">
                     <div className="flex items-center gap-1.5 mb-2">
                       <svg
                         width="12"
                         height="12"
                         viewBox="0 0 24 24"
                         fill="none"
-                        stroke="#71717a"
+                        stroke="currentColor"
                         strokeWidth="2"
+                        className="text-slate-400 dark:text-zinc-500"
                       >
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                       </svg>
-                      <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">
+                      <span className="text-[9px] text-slate-500 dark:text-zinc-500 font-bold uppercase tracking-wider">
                         KAPASITAS
                       </span>
                     </div>
-                    <div className="text-2xl font-extrabold text-zinc-50">
+                    <div className="text-2xl font-extrabold text-slate-900 dark:text-zinc-50">
                       {capacity.toLocaleString()}
                     </div>
                   </div>
@@ -1318,7 +1382,7 @@ export default function MapClient({
                     >
                       {available.toLocaleString()}
                     </div>
-                    <div className="text-[10px] text-zinc-500 mt-1 font-medium">
+                    <div className="text-[10px] text-slate-500 dark:text-zinc-500 mt-1 font-medium">
                       {occupied.toLocaleString()} / {capacity.toLocaleString()}{" "}
                       terisi
                     </div>
@@ -1329,16 +1393,16 @@ export default function MapClient({
           </div>
 
           {/* Details */}
-          <div className="p-4 space-y-2 border-b border-zinc-800/60">
-            <div className="flex justify-between items-center py-2 px-3 bg-zinc-900/50 rounded-lg">
-              <span className="text-xs text-zinc-400">Jenis Fasilitas</span>
-              <span className="text-xs font-semibold text-zinc-100">
+          <div className="p-4 space-y-2 border-b border-slate-200/80 dark:border-zinc-800/60">
+            <div className="flex justify-between items-center py-2 px-3 bg-slate-50 dark:bg-zinc-900/50 rounded-lg">
+              <span className="text-xs text-slate-500 dark:text-zinc-400">Jenis Fasilitas</span>
+              <span className="text-xs font-semibold text-slate-900 dark:text-zinc-100">
                 Ruang Publik
               </span>
             </div>
-            <div className="flex justify-between items-center py-2 px-3 bg-zinc-900/50 rounded-lg">
-              <span className="text-xs text-zinc-400">Jam Operasional</span>
-              <span className="text-xs font-semibold text-zinc-100">
+            <div className="flex justify-between items-center py-2 px-3 bg-slate-50 dark:bg-zinc-900/50 rounded-lg">
+              <span className="text-xs text-slate-500 dark:text-zinc-400">Jam Operasional</span>
+              <span className="text-xs font-semibold text-slate-900 dark:text-zinc-100">
                 24 Jam (Siaga)
               </span>
             </div>

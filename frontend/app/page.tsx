@@ -192,6 +192,8 @@ export default function Dashboard() {
   const [routeEnd, setRouteEnd] = useState<{ lat: number; lng: number } | null>(
     null,
   );
+  const [destinationName, setDestinationName] = useState<string>("Tujuan");
+  const [activeRouteMode, setActiveRouteMode] = useState<"walk" | "bike" | "car">("car");
   const [calculatingRoute, setCalculatingRoute] = useState(false);
   const [flyToLocation, setFlyToLocation] = useState<{
     lat: number;
@@ -435,6 +437,8 @@ export default function Dashboard() {
                 lat: targetCoords.coordinates[1],
                 lng: targetCoords.coordinates[0],
               });
+              setDestinationName(nearestShelter.name);
+              setIsMapExpanded(true);
               toast.success(
                 `Rute darurat ke ${nearestShelter.name} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
               );
@@ -527,6 +531,8 @@ export default function Dashboard() {
             lng,
           );
           setCalculatedRoute(route);
+          setDestinationName(`Titik (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+          setIsMapExpanded(true);
           toast.success(
             `Rute ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
           );
@@ -553,6 +559,8 @@ export default function Dashboard() {
             routeEnd.lng,
           );
           setCalculatedRoute(route);
+          setDestinationName(`Titik (${routeEnd.lat.toFixed(4)}, ${routeEnd.lng.toFixed(4)})`);
+          setIsMapExpanded(true);
           toast.success(
             `Rute ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
           );
@@ -591,6 +599,8 @@ export default function Dashboard() {
           );
           setCalculatedRoute(route);
           setRouteEnd({ lat: shelterLat, lng: shelterLng });
+          setDestinationName(shelterName);
+          setIsMapExpanded(true);
           toast.success(
             `Rute ke ${shelterName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
           );
@@ -637,6 +647,8 @@ export default function Dashboard() {
           setCalculatedRoute(route);
           setRouteStart({ lat: userLat, lng: userLng });
           setRouteEnd({ lat: shelterLat, lng: shelterLng });
+          setDestinationName(shelterName);
+          setIsMapExpanded(true);
           toast.success(
             `Rute ke ${shelterName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
           );
@@ -1151,9 +1163,125 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Routing Info Form/Floating Detail */}
+          {/* Routing Info Form/Floating Detail - Mobile View */}
           {calculatedRoute && (
-            <Card className="absolute top-20 md:top-20 left-1/2 md:left-4 transform -translate-x-1/2 md:translate-x-0 z-[1000] w-[300px] shadow-xl bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800">
+            <>
+              {/* Mobile Top Bar */}
+              <div className="absolute top-4 left-4 right-4 z-[1000] md:hidden bg-white dark:bg-zinc-950 rounded-2xl shadow-xl border border-slate-200 dark:border-zinc-800 overflow-hidden animate-in slide-in-from-top-5 duration-300">
+                <div className="p-3 border-b border-slate-100 dark:border-zinc-800 flex flex-col gap-2">
+                  <div className="flex items-start gap-3">
+                    <div className="flex flex-col items-center gap-1 mt-2">
+                      <div className="w-2.5 h-2.5 rounded-full border-2 border-blue-500 bg-white dark:bg-zinc-950 z-10" />
+                      <div className="w-0.5 h-3 bg-slate-300 dark:bg-zinc-700" />
+                      <MapPin className="w-3.5 h-3.5 text-red-500" />
+                    </div>
+                    <div className="flex-1 flex flex-col gap-2">
+                      <div className="h-8 bg-slate-50 dark:bg-zinc-900 rounded-lg px-3 flex items-center text-[13px] text-slate-600 dark:text-zinc-400 border border-slate-100 dark:border-zinc-800 truncate">
+                        Lokasi Anda
+                      </div>
+                      <div className="h-8 bg-slate-50 dark:bg-zinc-900 rounded-lg px-3 flex items-center text-[13px] font-semibold text-slate-900 dark:text-zinc-100 border border-slate-100 dark:border-zinc-800 truncate">
+                        {destinationName}
+                      </div>
+                    </div>
+                    <button
+                      className="p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-900 rounded-full mt-1"
+                      onClick={() => {
+                        setCalculatedRoute(null);
+                        setRouteStart(null);
+                        setRouteEnd(null);
+                      }}
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Mode Selectors */}
+                <div className="flex justify-around items-center p-1.5 bg-slate-50/50 dark:bg-zinc-900/20">
+                  {(() => {
+                    const distKm = calculatedRoute.properties.totalDistance / 1000;
+                    const walkTime = Math.ceil((distKm / 5) * 60);
+                    const bikeTime = Math.ceil((distKm / 40) * 60);
+                    const carTime = Math.ceil((distKm / 30) * 60);
+                    
+                    return (
+                      <>
+                        <button 
+                          onClick={() => setActiveRouteMode("car")}
+                          className={`flex flex-col items-center p-2 rounded-xl min-w-[70px] transition-colors ${activeRouteMode === "car" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" : "text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800"}`}
+                        >
+                          <Car className="w-4 h-4 mb-1" />
+                          <span className="text-[10px] font-bold">{carTime} mnt</span>
+                        </button>
+                        <button 
+                          onClick={() => setActiveRouteMode("bike")}
+                          className={`flex flex-col items-center p-2 rounded-xl min-w-[70px] transition-colors ${activeRouteMode === "bike" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400" : "text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800"}`}
+                        >
+                          <Bike className="w-4 h-4 mb-1" />
+                          <span className="text-[10px] font-bold">{bikeTime} mnt</span>
+                        </button>
+                        <button 
+                          onClick={() => setActiveRouteMode("walk")}
+                          className={`flex flex-col items-center p-2 rounded-xl min-w-[70px] transition-colors ${activeRouteMode === "walk" ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" : "text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800"}`}
+                        >
+                          <Footprints className="w-4 h-4 mb-1" />
+                          <span className="text-[10px] font-bold">{walkTime} mnt</span>
+                        </button>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Mobile Bottom Bar */}
+              <div className="absolute bottom-4 left-4 right-4 z-[1000] md:hidden bg-white dark:bg-zinc-950 rounded-2xl shadow-xl border border-slate-200 dark:border-zinc-800 p-4 animate-in slide-in-from-bottom-5 duration-300">
+                {(() => {
+                  const distKm = calculatedRoute.properties.totalDistance / 1000;
+                  const walkTime = Math.ceil((distKm / 5) * 60);
+                  const bikeTime = Math.ceil((distKm / 40) * 60);
+                  const carTime = Math.ceil((distKm / 30) * 60);
+                  
+                  let activeTime = carTime;
+                  let activeColor = "text-blue-600 dark:text-blue-400";
+                  if (activeRouteMode === "walk") {
+                    activeTime = walkTime;
+                    activeColor = "text-green-600 dark:text-green-400";
+                  } else if (activeRouteMode === "bike") {
+                    activeTime = bikeTime;
+                    activeColor = "text-orange-600 dark:text-orange-400";
+                  }
+                  
+                  return (
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <div className="flex items-baseline gap-1">
+                          <span className={`text-2xl font-black ${activeColor}`}>{activeTime}</span>
+                          <span className="text-[13px] font-bold text-slate-700 dark:text-zinc-300">mnt</span>
+                        </div>
+                        <span className="text-[11px] font-medium text-slate-500">
+                          {distKm.toFixed(2)} km via rute darurat
+                        </span>
+                      </div>
+                      <Button 
+                        size="lg"
+                        className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6 font-bold shadow-lg shadow-blue-500/20"
+                        onClick={() => {
+                          toast.info("Navigasi evakuasi disimulasikan. Tetap waspada.");
+                        }}
+                      >
+                        <Navigation className="w-4 h-4 mr-2" fill="currentColor" />
+                        Mulai
+                      </Button>
+                    </div>
+                  );
+                })()}
+              </div>
+            </>
+          )}
+
+          {/* Desktop/Tablet Routing Info Card (Original Layout) */}
+          {calculatedRoute && (
+            <Card className="hidden md:block absolute top-20 md:left-4 z-[1000] w-[300px] shadow-xl bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800 max-h-[50vh] overflow-y-auto">
               <CardHeader className="pb-3 border-b border-slate-100 dark:border-zinc-800">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm text-slate-800 dark:text-zinc-200">
@@ -1234,21 +1362,21 @@ export default function Dashboard() {
                         <span className="font-bold text-[10px] uppercase text-slate-400 tracking-wider mb-2 block">
                           Legenda Rute
                         </span>
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-2 text-xs">
-                            <div className="w-8 h-1 bg-blue-500 rounded-full"></div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-2">
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <div className="w-6 h-1 bg-blue-500 rounded-full"></div>
                             <span className="text-slate-600 dark:text-zinc-400">
                               Rute Evakuasi
                             </span>
                           </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            <div className="w-3 h-3 bg-yellow-400 rounded-full border-2 border-white dark:border-zinc-900 shadow-sm"></div>
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <div className="w-2.5 h-2.5 bg-yellow-400 rounded-full border-2 border-white dark:border-zinc-900 shadow-sm"></div>
                             <span className="text-slate-600 dark:text-zinc-400">
                               Lokasi Anda
                             </span>
                           </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            <div className="w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-zinc-900 shadow-sm"></div>
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <div className="w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-zinc-900 shadow-sm"></div>
                             <span className="text-slate-600 dark:text-zinc-400">
                               Shelter Tujuan
                             </span>
@@ -1264,42 +1392,35 @@ export default function Dashboard() {
 
           {/* Selected Location Floating Detail */}
           {selectedLocation && !routingMode && !calculatedRoute && (
-            <Card className="absolute top-20 md:top-20 left-1/2 md:left-4 transform -translate-x-1/2 md:translate-x-0 z-[1000] w-[300px] shadow-xl bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800">
-              <CardHeader className="pb-3 border-b border-slate-100 dark:border-zinc-800">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-bold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-blue-500" /> Lokasi Titik
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => {
-                      setSelectedLocation(null);
-                      setNearestShelters([]);
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+            <div className="absolute bottom-6 left-1/2 md:bottom-8 md:left-8 transform -translate-x-1/2 md:translate-x-0 z-[1000] w-[calc(100%-2rem)] sm:w-[340px] shadow-2xl bg-white dark:bg-zinc-950/95 backdrop-blur-md border border-slate-200/80 dark:border-zinc-800/60 rounded-xl overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-300">
+              <div className="flex items-center justify-between p-3 border-b border-slate-100 dark:border-zinc-800/60">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center border border-blue-100 dark:border-blue-900/30">
+                    <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-500" />
+                  </div>
+                  <span className="text-sm font-bold text-slate-800 dark:text-zinc-100">Lokasi Titik</span>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-4 space-y-2">
-                <div className="font-mono text-xs font-semibold bg-slate-50 dark:bg-zinc-900 p-2 rounded text-slate-700 dark:text-zinc-300">
-                  {selectedLocation.lat.toFixed(6)},{" "}
-                  {selectedLocation.lng.toFixed(6)}
+                <button
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 p-0.5"
+                  onClick={() => {
+                    setSelectedLocation(null);
+                    setNearestShelters([]);
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="p-2.5 md:p-3 space-y-1.5 bg-slate-50 dark:bg-zinc-900/30">
+                <div className="font-mono text-[10px] md:text-xs font-semibold bg-white dark:bg-zinc-900 p-1.5 md:p-2 rounded border border-slate-100 dark:border-zinc-800 text-slate-700 dark:text-zinc-300">
+                  {selectedLocation.lat.toFixed(5)}, {selectedLocation.lng.toFixed(5)}
                 </div>
                 {nearestShelters.length > 0 && (
-                  <div className="text-xs text-slate-600 dark:text-zinc-400">
-                    Ada{" "}
-                    <span className="font-medium text-slate-800 dark:text-zinc-200">
-                      {nearestShelters.length} shelter terdekat
-                    </span>{" "}
-                    dari titik. <br />
-                    Buka panel Info Lokasi di kanan atas untuk detail lengkap.
+                  <div className="text-[10px] md:text-xs text-slate-600 dark:text-zinc-400 leading-tight">
+                    Ada <span className="font-bold text-slate-800 dark:text-zinc-200">{nearestShelters.length} shelter</span> terdekat. <span className="hidden md:inline">Buka panel Info Lokasi (kanan atas) untuk detail.</span>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
 
           <div className="relative h-full w-full dark-map-container flex-1">
@@ -1323,6 +1444,8 @@ export default function Dashboard() {
               onCalculateRoute={calculateRouteToShelter}
               roadNetwork={roadNetwork}
               calculatedRoute={calculatedRoute}
+              routeStart={routeStart}
+              routeEnd={routeEnd}
               selectedEarthquake={selectedEarthquake}
               flyToLocation={flyToLocation}
             />
