@@ -100,7 +100,7 @@ export class ShelterService {
   async getNearby(
     lat: number,
     lon: number,
-    radiusKm: number = 3,
+    radiusKm: number = 5,
     limit: number = 10,
   ) {
     // Use PostGIS spatial query for optimal performance

@@ -264,6 +264,11 @@ export default function MapPage() {
       return;
     }
 
+    if (!isWithinBantul(origin.lat, origin.lng)) {
+      toast.error("Maaf, pencarian rute evakuasi hanya tersedia di wilayah Kabupaten Bantul.");
+      return;
+    }
+
     try {
       setCalculatingRoute(true);
       toast.info("Menghitung rute terpendek...");
@@ -325,7 +330,7 @@ export default function MapPage() {
         const response = await evacuationService.getNearbyShelters({
           lat,
           lng,
-          radius: 23,
+          radius: 5,
           limit: 10,
         });
 

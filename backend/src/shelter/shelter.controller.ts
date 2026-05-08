@@ -37,7 +37,7 @@ export class ShelterController {
     return this.shelterService.getNearby(
       parseFloat(lat),
       parseFloat(lon),
-      radius ? parseFloat(radius) : 3,
+      radius ? parseFloat(radius) : 5,
       limit ? parseInt(limit) : 10,
     );
   }
