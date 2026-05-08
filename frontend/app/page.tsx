@@ -294,7 +294,7 @@ export default function Dashboard() {
         const nearbyShelters = await evacuationService.getNearbyShelters({
           lat: userLocation.lat,
           lng: userLocation.lng,
-          radius: 5, // 5 km radius
+          radius: 3, // 3 km radius
           limit: 10, // max 10 shelters
         });
 

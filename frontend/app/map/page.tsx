@@ -330,7 +330,7 @@ export default function MapPage() {
         const response = await evacuationService.getNearbyShelters({
           lat,
           lng,
-          radius: 5,
+          radius: 3,
           limit: 10,
         });
 
