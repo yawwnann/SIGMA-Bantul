@@ -1,7 +1,6 @@
 import L from "leaflet";
 import type { Shelter } from "@/types";
 import { createEvacuationIcon } from "./marker-icons";
-import { createEvacuationPopupHtml } from "./evacuation-popup";
 
 export type EvacuationMarkerData = {
   shelter: Shelter;
@@ -47,13 +46,6 @@ export function createEvacuationMarker(
     icon: createEvacuationIcon(item.shelter.category),
     keyboard: false,
     riseOnHover: true,
-  });
-
-  marker.bindPopup(createEvacuationPopupHtml(item.shelter), {
-    className: "custom-shelter-popup",
-    maxWidth: 280,
-    minWidth: 240,
-    autoPan: false,
   });
 
   marker.on("click", () => onClick(item.shelter));

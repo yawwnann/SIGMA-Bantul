@@ -27,6 +27,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { OfficerModule } from './officer/officer.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { EvacueeModule } from './evacuee/evacuee.module';
+import { EvacuationLocationModule } from './evacuation-location/evacuation-location.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { EvacueeModule } from './evacuee/evacuee.module';
     OfficerModule,
     MonitoringModule,
     EvacueeModule,
+    EvacuationLocationModule,
   ],
   controllers: [AppController],
   providers: [

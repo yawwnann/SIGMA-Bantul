@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -10,19 +10,17 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   earthquakeApi,
-  shelterApi,
   hazardZoneApi,
-  evacuationApi,
-  publicFacilityApi,
   roadApi,
 } from "@/api";
+import { useUserLocation } from "@/hooks/use-user-location";
+import { evacuationLocationService } from "@/services/evacuation.service";
 import { socketService } from "@/lib/socket";
 import { toast } from "sonner";
 import type {
   Shelter,
   HazardZone,
   Earthquake,
-  EvacuationRoute,
   PublicFacility,
 } from "@/types";
 import {
@@ -38,7 +36,10 @@ import {
 } from "lucide-react";
 
 const MapClient = dynamic(
-  () => import("@/components/map/map-client").then((mod) => mod.default),
+  () =>
+    import("@/components/map/nearby-evacuation-map").then(
+      (mod) => mod.default,
+    ),
   {
     ssr: false,
     loading: () => (
@@ -131,15 +132,15 @@ export default function MapPage() {
   const [shelters, setShelters] = useState<Shelter[]>([]);
   const [hazardZones, setHazardZones] = useState<HazardZone[]>([]);
   const [earthquakes, setEarthquakes] = useState<Earthquake[]>([]);
-  const [routes, setRoutes] = useState<EvacuationRoute[]>([]);
   const [facilities, setFacilities] = useState<PublicFacility[]>([]);
   const [roadNetwork, setRoadNetwork] = useState<any>(null);
   const [calculatedRoute, setCalculatedRoute] = useState<any>(null);
   const [nearestShelters, setNearestShelters] = useState<Shelter[]>([]);
   const [loading, setLoading] = useState(true);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [nearbyError, setNearbyError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [gettingLocation, setGettingLocation] = useState(false);
   const [selectedEarthquake, setSelectedEarthquake] =
     useState<Earthquake | null>(null);
   const [routingMode, setRoutingMode] = useState(false);
@@ -154,6 +155,18 @@ export default function MapPage() {
 
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const {
+    location: userLocation,
+    status: userLocationStatus,
+    error: userLocationError,
+    isLoading: gettingLocation,
+    requestLocation,
+  } = useUserLocation();
+  const userLocationRef = useRef(userLocation);
+
+  useEffect(() => {
+    userLocationRef.current = userLocation;
+  }, [userLocation]);
 
   const handleCloseEarthquakeDetail = () => {
     setSelectedEarthquake(null);
@@ -162,34 +175,7 @@ export default function MapPage() {
   };
 
   const handleGetCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error("Geolocation tidak didukung oleh browser Anda");
-      return;
-    }
-
-    setGettingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        handleLocationSelect(latitude, longitude);
-        // Also set as route start for manual route calculation
-        setRouteStart({ lat: latitude, lng: longitude });
-        toast.success("Lokasi Anda berhasil didapatkan");
-        setGettingLocation(false);
-      },
-      (error) => {
-        console.error("Error getting location:", error);
-        toast.error(
-          "Gagal mendapatkan lokasi. Pastikan GPS aktif dan izin lokasi diberikan.",
-        );
-        setGettingLocation(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      },
-    );
+    requestLocation();
   };
 
   const handleCalculateRoute = async () => {
@@ -282,65 +268,39 @@ export default function MapPage() {
     shelterLng: number,
     shelterName: string,
   ) => {
-    console.log("calculateRouteToShelter called with:", {
-      shelterLat,
-      shelterLng,
-      shelterName,
-    });
+    const origin = selectedLocation || userLocation;
 
-    // Get current location first
-    if (!navigator.geolocation) {
-      toast.error("Geolocation tidak didukung oleh browser ini");
+    if (!origin) {
+      toast.error("Lokasi pengguna belum tersedia. Aktifkan akses lokasi.");
+      requestLocation();
       return;
     }
 
-    toast.info("Mendapatkan lokasi Anda...");
+    try {
+      setCalculatingRoute(true);
+      toast.info("Menghitung rute terpendek...");
+      const route = await roadApi.calculateRoute(
+        origin.lat,
+        origin.lng,
+        shelterLat,
+        shelterLng,
+      );
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const userLat = position.coords.latitude;
-        const userLng = position.coords.longitude;
-        console.log("User location:", { userLat, userLng });
+      setCalculatedRoute(route);
+      setRouteStart({ lat: origin.lat, lng: origin.lng });
+      setRouteEnd({ lat: shelterLat, lng: shelterLng });
 
-        try {
-          setCalculatingRoute(true);
-          toast.info("Menghitung rute terpendek...");
-          const route = await roadApi.calculateRoute(
-            userLat,
-            userLng,
-            shelterLat,
-            shelterLng,
-          );
-
-          console.log("Route calculated:", route);
-          setCalculatedRoute(route);
-          setRouteStart({ lat: userLat, lng: userLng });
-          setRouteEnd({ lat: shelterLat, lng: shelterLng });
-
-          toast.success(
-            `Rute ke ${shelterName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km, Waktu: ${route.properties.totalTime.toFixed(1)} menit`,
-          );
-        } catch (error) {
-          console.error("Error calculating route:", error);
-          toast.error(
-            "Gagal menghitung rute. Pastikan lokasi Anda terhubung dengan jalan.",
-          );
-        } finally {
-          setCalculatingRoute(false);
-        }
-      },
-      (error) => {
-        console.error("Geolocation error:", error);
-        toast.error(
-          "Gagal mendapatkan lokasi Anda. Pastikan GPS aktif dan izin lokasi diberikan.",
-        );
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000,
-      },
-    );
+      toast.success(
+        `Rute ke ${shelterName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km, Waktu: ${route.properties.totalTime.toFixed(1)} menit`,
+      );
+    } catch (error) {
+      console.error("Error calculating route:", error);
+      toast.error(
+        "Gagal menghitung rute. Pastikan lokasi Anda terhubung dengan jalan.",
+      );
+    } finally {
+      setCalculatingRoute(false);
+    }
   };
 
   const handleEarthquakeClick = (earthquake: Earthquake) => {
@@ -369,40 +329,47 @@ export default function MapPage() {
     [shelters],
   );
 
+  const fetchNearbyEvacuationLocations = useCallback(
+    async (lat: number, lng: number) => {
+      setNearbyLoading(true);
+      setNearbyError(null);
+      try {
+        const response = await evacuationLocationService.getNearby({
+          lat,
+          lng,
+          radius: 23,
+          limit: 10,
+        });
+
+        setShelters(response.data);
+        setNearestShelters(response.data.slice(0, 3));
+      } catch (err) {
+        console.error("Failed to load nearby evacuation locations:", err);
+        setShelters([]);
+        setNearestShelters([]);
+        setNearbyError("Gagal memuat lokasi evakuasi terdekat");
+        toast.error("Gagal memuat lokasi evakuasi terdekat");
+      } finally {
+        setNearbyLoading(false);
+      }
+    },
+    [],
+  );
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [
-        sheltersData,
-        hazardData,
-        earthquakesResponse,
-        routesData,
-        facilitiesData,
-        roadNetworkData,
-      ] = await Promise.all([
-        shelterApi.getAll().catch(() => []),
+      const [hazardData, earthquakesResponse] = await Promise.all([
         hazardZoneApi.getAll().catch(() => []),
         earthquakeApi
           .getAll({ limit: 100 })
           .catch(() => ({ data: [], total: 0, page: 1, limit: 100 })),
-        evacuationApi.getRecommendedRoutes({ limit: 20 }).catch(() => []),
-        publicFacilityApi.getAll().catch(() => []),
-        roadApi
-          .getRoadNetwork({
-            minLat: -8.05,
-            maxLat: -7.75,
-            minLon: 110.15,
-            maxLon: 110.55,
-          })
-          .catch(() => null),
       ]);
-      setShelters(sheltersData as Shelter[]);
       setHazardZones(hazardData as HazardZone[]);
       setEarthquakes(earthquakesResponse.data as Earthquake[]);
-      setRoutes(routesData as EvacuationRoute[]);
-      setFacilities(facilitiesData as PublicFacility[]);
-      setRoadNetwork(roadNetworkData);
+      setFacilities([]);
+      setRoadNetwork(null);
     } catch (err) {
       setError("Gagal memuat data");
       console.error(err);
@@ -484,6 +451,12 @@ export default function MapPage() {
     const unsubscribeRoute = socketService.onRouteUpdate(() => {
       toast.info("Jalur evakuasi telah diperbarui");
       fetchData();
+      if (userLocationRef.current) {
+        fetchNearbyEvacuationLocations(
+          userLocationRef.current.lat,
+          userLocationRef.current.lng,
+        );
+      }
     });
 
     return () => {
@@ -492,6 +465,27 @@ export default function MapPage() {
       socketService.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    if (!userLocation) return;
+
+    setSelectedLocation(userLocation);
+    setRouteStart(null);
+    setRouteEnd(null);
+    setCalculatedRoute(null);
+    fetchNearbyEvacuationLocations(userLocation.lat, userLocation.lng);
+  }, [fetchNearbyEvacuationLocations, userLocation]);
+
+  useEffect(() => {
+    if (userLocationStatus === "denied" || userLocationStatus === "unsupported") {
+      setShelters([]);
+      setNearestShelters([]);
+      toast.warning(
+        userLocationError ||
+          "Aktifkan akses lokasi untuk melihat lokasi evakuasi terdekat.",
+      );
+    }
+  }, [userLocationError, userLocationStatus]);
 
   useEffect(() => {
     const handleClear = () => setSelectedEarthquake(null);
@@ -506,17 +500,23 @@ export default function MapPage() {
     <div className="flex w-full h-[calc(100vh-1rem)] md:h-full">
       <div className="flex-1 relative">
         {/* Loading Indicator Overlay */}
-        {(calculatingRoute || gettingLocation) && (
+        {(calculatingRoute || gettingLocation || nearbyLoading) && (
           <div className="absolute inset-0 z-[2000] bg-white/40 dark:bg-black/60 backdrop-blur-[4px] flex flex-col items-center justify-center rounded-xl transition-all duration-300">
             <div className="bg-white/95 dark:bg-slate-900/95 px-8 py-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
               <Loader2 className="h-12 w-12 animate-spin text-blue-600 dark:text-blue-500" />
               <div className="text-center">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
-                  {gettingLocation ? "Mencari Lokasi Anda" : "Menghitung Rute"}
+                  {gettingLocation
+                    ? "Mencari Lokasi Anda"
+                    : nearbyLoading
+                      ? "Mencari Lokasi Evakuasi"
+                      : "Menghitung Rute"}
                 </h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                   {gettingLocation
                     ? "Sedang melacak posisi GPS..."
+                    : nearbyLoading
+                      ? "Mengambil titik evakuasi terdekat dari database..."
                     : "Mencari jalur tercepat dan teraman..."}
                 </p>
               </div>
@@ -533,6 +533,27 @@ export default function MapPage() {
               </p>
             </div>
           )}
+          {(userLocationStatus === "denied" ||
+            userLocationStatus === "unsupported" ||
+            nearbyError) && (
+            <div className="absolute left-4 top-4 z-[1200] max-w-sm rounded-lg border border-amber-200 bg-white/95 p-4 text-sm shadow-lg dark:border-amber-900/50 dark:bg-zinc-950/95">
+              <div className="font-semibold text-slate-900 dark:text-zinc-50">
+                Lokasi pengguna belum tersedia
+              </div>
+              <p className="mt-1 text-slate-600 dark:text-zinc-400">
+                {nearbyError ||
+                  userLocationError ||
+                  "Aktifkan akses lokasi untuk menampilkan titik evakuasi terdekat."}
+              </p>
+              <Button
+                onClick={requestLocation}
+                className="mt-3 bg-blue-600 text-white hover:bg-blue-700"
+                size="sm"
+              >
+                Coba Lagi
+              </Button>
+            </div>
+          )}
           <MapClient
             shelters={shelters}
             hazardZones={hazardZones}
@@ -544,6 +565,9 @@ export default function MapPage() {
             onCalculateRoute={calculateRouteToShelter}
             roadNetwork={roadNetwork}
             calculatedRoute={calculatedRoute}
+            routeStart={routeStart}
+            routeEnd={routeEnd}
+            selectedEarthquake={selectedEarthquake}
           />
         </div>
 

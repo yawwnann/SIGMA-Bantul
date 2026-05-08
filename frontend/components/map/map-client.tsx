@@ -105,7 +105,7 @@ export default function MapClient({
     shelters: true,
     hazardZones: false,
     earthquakes: false, // Default: tidak tampil
-    facilities: true,
+    facilities: false,
     roads: false,
     bpbdRisk: false,
   });
