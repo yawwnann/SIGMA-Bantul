@@ -6,15 +6,19 @@ import {
   IsOptional,
   IsObject,
 } from 'class-validator';
-import { ShelterCondition } from '@prisma/client';
+import { ShelterCategory, ShelterCondition } from '@prisma/client';
 
 export class CreateShelterDto {
   @IsString()
   @IsNotEmpty()
   name: string;
 
+  @IsEnum(ShelterCategory)
+  category: ShelterCategory;
+
   @IsNumber()
-  capacity: number;
+  @IsOptional()
+  capacity?: number;
 
   @IsObject()
   @IsNotEmpty()

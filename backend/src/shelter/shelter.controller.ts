@@ -13,15 +13,18 @@ import {
 import { ShelterService } from './shelter.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CreateShelterDto } from './dto/create-shelter.dto';
-import { ShelterCondition } from '@prisma/client';
+import { ShelterCategory, ShelterCondition } from '@prisma/client';
 
 @Controller('shelters')
 export class ShelterController {
   constructor(private shelterService: ShelterService) {}
 
   @Get()
-  async findAll(@Query('condition') condition?: ShelterCondition) {
-    return this.shelterService.findAll({ condition });
+  async findAll(
+    @Query('condition') condition?: ShelterCondition,
+    @Query('category') category?: ShelterCategory,
+  ) {
+    return this.shelterService.findAll({ condition, category });
   }
 
   @Get('nearby')

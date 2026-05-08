@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateShelterDto } from './dto/create-shelter.dto';
-import { ShelterCondition, UserRole } from '@prisma/client';
+import { ShelterCategory, ShelterCondition, UserRole } from '@prisma/client';
 
 @Injectable()
 export class ShelterService {
@@ -17,8 +17,14 @@ export class ShelterService {
     });
   }
 
-  async findAll(params?: { condition?: ShelterCondition }) {
-    const where = params?.condition ? { condition: params.condition } : {};
+  async findAll(params?: {
+    condition?: ShelterCondition;
+    category?: ShelterCategory;
+  }) {
+    const where = {
+      ...(params?.condition ? { condition: params.condition } : {}),
+      ...(params?.category ? { category: params.category } : {}),
+    };
     return this.prisma.shelter.findMany({
       where,
       include: {
