@@ -40,6 +40,7 @@ import {
   Car,
   Clock,
   MapPinOff,
+  Activity,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
@@ -165,7 +166,7 @@ export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
   const { theme } = useTheme();
 
-  // Auto-request user location (NEW)
+  // Auto-request user location (NEW) - iOS-optimized with delay and shorter timeout
   const { location: userLocation, loading: locationLoading } =
     useUserLocation(true);
 
@@ -243,11 +244,19 @@ export default function Dashboard() {
     setLoading(true);
     setError(null);
     try {
+      // Calculate 1 day ago for earthquake filter
+      const oneDayAgo = new Date();
+      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+      const startDate = oneDayAgo.toISOString().split("T")[0];
+
       const [hazardData, earthquakesResponse, facilitiesData, roadNetworkData] =
         await Promise.all([
           hazardZoneApi.getAll().catch(() => []),
           earthquakeApi
-            .getAll({ limit: 100 })
+            .getAll({
+              limit: 100,
+              startDate: startDate, // Only get earthquakes from last 24 hours
+            })
             .catch(() => ({ data: [], total: 0, page: 1, limit: 100 })),
           publicFacilityApi.getAll().catch(() => []),
           roadApi
@@ -1596,203 +1605,151 @@ export default function Dashboard() {
           Dashboard Analitik
         </h2>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Chart Widget */}
-          <Card className="lg:col-span-2 border border-slate-200 dark:border-zinc-800/50 bg-white dark:bg-zinc-950/80 shadow-sm flex flex-col pt-2">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-semibold text-slate-800 dark:text-zinc-200">
-                Magnitudo Gempa (10 Terakhir)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 min-h-[250px] pt-4 pr-6">
-              <ResponsiveContainer width="100%" height={250} minWidth={0}>
-                <LineChart data={chartData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke={isDark ? "#27272a" : "#e2e8f0"}
-                  />
-                  <XAxis
-                    dataKey="name"
-                    stroke={isDark ? "#71717a" : "#64748b"}
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    stroke={isDark ? "#71717a" : "#64748b"}
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(val) => `M${val}`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: isDark ? "#18181b" : "#ffffff",
-                      borderColor: isDark ? "#27272a" : "#e2e8f0",
-                      borderRadius: "8px",
-                    }}
-                    itemStyle={{ color: isDark ? "#e4e4e7" : "#0f172a" }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="magnitudes"
-                    stroke="#22c55e"
-                    strokeWidth={3}
-                    dot={{ r: 4, strokeWidth: 2 }}
-                    activeDot={{ r: 6, strokeWidth: 0 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* List Widget */}
-          <Card className="border border-slate-200 dark:border-zinc-800/50 bg-white dark:bg-zinc-950/80 shadow-sm flex flex-col pt-2">
-            <CardHeader className="pb-3 border-b border-slate-100 dark:border-zinc-800/50">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-lg font-semibold text-slate-800 dark:text-zinc-200">
-                  Peringatan Dini
-                </CardTitle>
-                <Badge
-                  variant="outline"
-                  className="dark:text-zinc-400 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900"
-                >
-                  Total: {earthquakes.length}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0 overflow-auto max-h-[290px]">
-              <div className="flex flex-col divide-y divide-slate-100 dark:divide-zinc-800/50">
-                {earthquakes.length === 0 ? (
-                  <div className="p-4 flex items-center justify-center text-slate-500 h-[100px]">
-                    Tidak ada data.
-                  </div>
-                ) : (
-                  earthquakes.slice(0, 5).map((eq, i) => (
-                    <div
-                      key={`eq-${eq.id}-${i}`}
-                      className="p-4 hover:bg-slate-50 dark:hover:bg-zinc-900/30 transition-colors cursor-pointer"
-                      onClick={() => handleEarthquakeClick(eq)}
-                    >
-                      <div className="flex justify-between items-start mb-2 gap-2">
-                        <span className="font-mono text-xs font-bold text-slate-900 dark:text-zinc-200">
-                          {(eq.location || "Lokasi tidak tersedia").slice(
-                            0,
-                            35,
-                          )}
-                          {(eq.location || "").length > 35 ? "..." : ""}
-                        </span>
-                        <Badge
-                          className={
-                            (eq.magnitude || 0) >= 6
-                              ? "bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20"
-                              : (eq.magnitude || 0) >= 5
-                                ? "bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-500/20"
-                                : "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/20"
-                          }
-                        >
-                          {(eq.magnitude || 0) >= 6
-                            ? "Bahaya"
-                            : (eq.magnitude || 0) >= 5
-                              ? "Waspada"
-                              : "Siaga"}
-                        </Badge>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-2">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] uppercase text-slate-500 font-semibold tracking-wider">
-                            Magnitudo
-                          </span>
-                          <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">
-                            M {eq.magnitude ?? "-"}
-                          </span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-[10px] uppercase text-slate-500 font-semibold tracking-wider">
-                            Waktu Waktu
-                          </span>
-                          <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">
-                            {eq.time
-                              ? new Date(eq.time).toLocaleDateString("id-ID", {
-                                  month: "short",
-                                  day: "numeric",
-                                })
-                              : "-"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pb-8">
-          <Card className="border border-slate-200 dark:border-zinc-800/50 bg-white dark:bg-zinc-950/80 shadow-sm col-span-1 lg:col-span-2 pt-2">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold text-slate-800 dark:text-zinc-200">
-                Overview Status Wilayah
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
+          {/* Widget 1: Shelter Statistics */}
+          <Card className="border border-slate-200 dark:border-zinc-800/50 bg-white dark:bg-zinc-950/80 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-blue-600" />
+                Shelter Tersedia
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-4 mt-2 mb-4">
-                <div className="flex-1 h-6 rounded-full overflow-hidden flex ring-1 ring-slate-200 dark:ring-zinc-800">
-                  <div className="bg-green-500 w-[55%]" title="Aman"></div>
-                  <div className="bg-yellow-400 w-[20%]" title="Waspada"></div>
-                  <div className="bg-orange-500 w-[15%]" title="Siaga"></div>
-                  <div className="bg-red-500 w-[10%]" title="Bahaya"></div>
+              <div className="space-y-3">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                    {shelters.length}
+                  </span>
+                  <span className="text-sm text-slate-500 dark:text-zinc-400">
+                    lokasi
+                  </span>
                 </div>
-              </div>
-              <div className="flex gap-4 text-xs font-medium text-slate-600 dark:text-zinc-400">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-green-500" /> Aman
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />{" "}
-                  Waspada
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />{" "}
-                  Siaga
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-red-500" /> Bahaya
+                <div className="pt-2 border-t border-slate-100 dark:border-zinc-800">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-600 dark:text-zinc-400">
+                      Total Kapasitas
+                    </span>
+                    <span className="font-bold text-slate-900 dark:text-zinc-100">
+                      {shelters
+                        .reduce((sum, s) => sum + (s.capacity || 0), 0)
+                        .toLocaleString()}{" "}
+                      orang
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs mt-2">
+                    <span className="text-slate-600 dark:text-zinc-400">
+                      Radius Terdekat
+                    </span>
+                    <span className="font-bold text-green-600 dark:text-green-400">
+                      3 km
+                    </span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border border-slate-200 dark:border-zinc-800/50 bg-white dark:bg-zinc-950/80 shadow-sm flex items-center p-6 gap-6 relative overflow-hidden">
-            <div className="flex items-center justify-center">
-              <div className="text-5xl font-bold text-blue-600 dark:text-blue-400 drop-shadow-sm">
-                +{shelters.length}
+          {/* Widget 2: Earthquake 24h Statistics */}
+          <Card className="border border-slate-200 dark:border-zinc-800/50 bg-white dark:bg-zinc-950/80 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
+                <Activity className="h-4 w-4 text-orange-600" />
+                Gempa 24 Jam Terakhir
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold text-orange-600 dark:text-orange-400">
+                    {earthquakes.length}
+                  </span>
+                  <span className="text-sm text-slate-500 dark:text-zinc-400">
+                    kejadian
+                  </span>
+                </div>
+                <div className="pt-2 border-t border-slate-100 dark:border-zinc-800">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-600 dark:text-zinc-400">
+                      Magnitudo Tertinggi
+                    </span>
+                    <span className="font-bold text-red-600 dark:text-red-400">
+                      {earthquakes.length > 0
+                        ? `M ${Math.max(...earthquakes.map((eq) => eq.magnitude)).toFixed(1)}`
+                        : "M 0.0"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs mt-2">
+                    <span className="text-slate-600 dark:text-zinc-400">
+                      Status
+                    </span>
+                    <span
+                      className={`font-bold ${
+                        earthquakes.some((eq) => eq.magnitude >= 5)
+                          ? "text-red-600 dark:text-red-400"
+                          : earthquakes.some((eq) => eq.magnitude >= 4)
+                            ? "text-yellow-600 dark:text-yellow-400"
+                            : "text-green-600 dark:text-green-400"
+                      }`}
+                    >
+                      {earthquakes.some((eq) => eq.magnitude >= 5)
+                        ? "Waspada"
+                        : earthquakes.some((eq) => eq.magnitude >= 4)
+                          ? "Siaga"
+                          : "Aman"}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="flex flex-col relative z-10">
-              <span className="text-lg font-bold text-slate-800 dark:text-zinc-100">
-                Shelter Aktif
-              </span>
-              <span className="text-xs text-slate-500">Titik tersedia</span>
-            </div>
+            </CardContent>
           </Card>
 
-          <Card className="border border-slate-200 dark:border-zinc-800/50 bg-white dark:bg-zinc-950/80 shadow-sm flex items-center p-6 gap-6 relative overflow-hidden">
-            <div className="flex items-center justify-center">
-              <div className="text-5xl font-bold text-amber-600 dark:text-amber-400 drop-shadow-sm">
-                {wilayahStatus.status}
+          {/* Widget 3: System Status */}
+          <Card className="border border-slate-200 dark:border-zinc-800/50 bg-white dark:bg-zinc-950/80 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
+                <Layers className="h-4 w-4 text-purple-600" />
+                Status Sistem
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-2 px-3 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-100 dark:border-green-900/30">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs font-medium text-slate-700 dark:text-zinc-300">
+                      BMKG Data
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold text-green-600 dark:text-green-400">
+                    Online
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between py-2 px-3 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-100 dark:border-green-900/30">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs font-medium text-slate-700 dark:text-zinc-300">
+                      Database
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold text-green-600 dark:text-green-400">
+                    Active
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between py-2 px-3 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-100 dark:border-green-900/30">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs font-medium text-slate-700 dark:text-zinc-300">
+                      WebSocket
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold text-green-600 dark:text-green-400">
+                    Connected
+                  </span>
+                </div>
               </div>
-            </div>
-            <div className="flex flex-col relative z-10">
-              <span className="text-lg font-bold text-slate-800 dark:text-zinc-100">
-                Status Saat Ini
-              </span>
-              <span className="text-xs text-slate-500">
-                Berdasarkan data rilis
-              </span>
-            </div>
+            </CardContent>
           </Card>
         </div>
       </div>

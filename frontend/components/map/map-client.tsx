@@ -160,11 +160,18 @@ export default function MapClient({
       setBoundaryError(false);
 
       try {
-        // Try to get from localStorage first (instant load!)
-        const cachedBoundary = localStorage.getItem("bantul-boundary");
-        const cacheTimestamp = localStorage.getItem(
-          "bantul-boundary-timestamp",
-        );
+        // iOS-safe localStorage access with try-catch
+        let cachedBoundary: string | null = null;
+        let cacheTimestamp: string | null = null;
+
+        try {
+          cachedBoundary = localStorage.getItem("bantul-boundary");
+          cacheTimestamp = localStorage.getItem("bantul-boundary-timestamp");
+        } catch (storageError) {
+          // localStorage might not be available in iOS private mode
+          console.warn("[MapClient] localStorage not available:", storageError);
+        }
+
         const cacheAge = cacheTimestamp
           ? Date.now() - parseInt(cacheTimestamp)
           : Infinity;
@@ -184,7 +191,7 @@ export default function MapClient({
         const boundary = await analysisApi.getBantulBoundary();
         setBantulBoundary(boundary);
 
-        // Save to localStorage for next time
+        // Save to localStorage for next time (iOS-safe)
         try {
           localStorage.setItem("bantul-boundary", JSON.stringify(boundary));
           localStorage.setItem(
@@ -193,6 +200,7 @@ export default function MapClient({
           );
           console.log("[MapClient] Bantul boundary cached to localStorage");
         } catch (storageError) {
+          // Silently fail if localStorage is not available (iOS private mode)
           console.warn(
             "[MapClient] Failed to cache boundary to localStorage:",
             storageError,

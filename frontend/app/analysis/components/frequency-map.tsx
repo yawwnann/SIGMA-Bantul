@@ -14,11 +14,22 @@ import { useTheme } from "next-themes";
 interface FrequencyMapProps {
   grids: GridCell[];
   showBpbdLayer?: boolean;
+  showEarthquakes?: boolean;
+  earthquakes?: Array<{
+    id: number;
+    lat: number;
+    lon: number;
+    magnitude: number;
+    time: string;
+    location: string;
+  }>;
 }
 
 export default function FrequencyMap({
   grids,
   showBpbdLayer = false,
+  showEarthquakes = false,
+  earthquakes = [],
 }: FrequencyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -26,6 +37,7 @@ export default function FrequencyMap({
   const boundaryLayerRef = useRef<L.GeoJSON | null>(null);
   const maskLayerRef = useRef<L.Polygon | null>(null);
   const bpbdLayerRef = useRef<L.GeoJSON | null>(null);
+  const earthquakeLayerRef = useRef<L.LayerGroup | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const [bantulBoundary, setBantulBoundary] = useState<any>(null);
   const [bpbdData, setBpbdData] = useState<any>(null);
@@ -312,6 +324,75 @@ export default function FrequencyMap({
       .addTo(mapRef.current);
   }, [resolvedTheme]);
 
+  // Manage Earthquake Markers visibility
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    // Remove existing earthquake layer
+    if (earthquakeLayerRef.current) {
+      mapRef.current.removeLayer(earthquakeLayerRef.current);
+      earthquakeLayerRef.current = null;
+    }
+
+    if (showEarthquakes && earthquakes.length > 0) {
+      earthquakeLayerRef.current = L.layerGroup();
+
+      earthquakes.forEach((eq) => {
+        const markerIcon = L.divIcon({
+          className: "earthquake-marker",
+          html: `
+            <div style="position: relative; width: auto; display: flex; flex-direction: column; align-items: center;">
+              <div style="
+                width: 16px;
+                height: 16px;
+                background-color: #ef4444;
+                border: 2px solid white;
+                border-radius: 50%;
+                box-shadow: 0 0 8px rgba(239, 68, 68, 0.6), 0 2px 4px rgba(0,0,0,0.3);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+              ">
+                <div style="width: 4px; height: 4px; background-color: white; border-radius: 50%;"></div>
+              </div>
+            </div>
+          `,
+          iconSize: [16, 16],
+          iconAnchor: [8, 8],
+        });
+
+        const marker = L.marker([eq.lat, eq.lon], {
+          icon: markerIcon,
+        });
+
+        marker.bindPopup(
+          `<div class="p-3 min-w-[200px]">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs font-bold">
+                M ${eq.magnitude}
+              </div>
+            </div>
+            <p class="font-bold text-slate-900 dark:text-zinc-100 mb-1 text-sm">${eq.location}</p>
+            <p class="text-xs text-slate-500 dark:text-zinc-400">
+              ${new Date(eq.time).toLocaleString("id-ID", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })} WIB
+            </p>
+          </div>`,
+        );
+
+        marker.addTo(earthquakeLayerRef.current!);
+      });
+
+      earthquakeLayerRef.current.addTo(mapRef.current);
+    }
+  }, [showEarthquakes, earthquakes]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -343,6 +424,13 @@ export default function FrequencyMap({
           mapRef.current.hasLayer(bpbdLayerRef.current)
         ) {
           mapRef.current.removeLayer(bpbdLayerRef.current);
+        }
+
+        if (
+          earthquakeLayerRef.current &&
+          mapRef.current.hasLayer(earthquakeLayerRef.current)
+        ) {
+          mapRef.current.removeLayer(earthquakeLayerRef.current);
         }
 
         // Remove map

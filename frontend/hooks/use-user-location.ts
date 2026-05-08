@@ -31,6 +31,7 @@ export function useUserLocation(
     setLoading(true);
     setError(null);
 
+    // iOS-friendly: Use shorter timeout and less aggressive options
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
@@ -44,34 +45,48 @@ export function useUserLocation(
       (err) => {
         let errorMessage = "Gagal mendapatkan lokasi Anda";
 
-        switch (err.code) {
-          case err.PERMISSION_DENIED:
-            errorMessage =
-              "Izin lokasi ditolak. Aktifkan di pengaturan browser.";
-            break;
-          case err.POSITION_UNAVAILABLE:
-            errorMessage = "Lokasi tidak tersedia saat ini";
-            break;
-          case err.TIMEOUT:
-            errorMessage = "Waktu permintaan lokasi habis";
-            break;
+        // iOS sometimes returns empty error object, check if err.code exists
+        if (err && typeof err.code !== "undefined") {
+          switch (err.code) {
+            case err.PERMISSION_DENIED:
+              errorMessage =
+                "Izin lokasi ditolak. Aktifkan di pengaturan browser.";
+              break;
+            case err.POSITION_UNAVAILABLE:
+              errorMessage = "Lokasi tidak tersedia saat ini";
+              break;
+            case err.TIMEOUT:
+              errorMessage = "Waktu permintaan lokasi habis";
+              break;
+          }
         }
 
         setError(errorMessage);
         setLoading(false);
-        console.error("[useUserLocation] Error:", err);
+        console.warn(
+          "[useUserLocation] Error:",
+          err || "Unknown geolocation error",
+        );
+
+        // Don't show toast on error to avoid blocking UI on iOS
+        // toast.error(errorMessage);
       },
       {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
+        enableHighAccuracy: false, // Changed to false for iOS compatibility
+        timeout: 5000, // Reduced from 10000 to 5000ms
+        maximumAge: 60000, // Allow cached location up to 1 minute
       },
     );
   };
 
   useEffect(() => {
     if (autoRequest) {
-      requestLocation();
+      // Delay auto-request slightly to let page render first (iOS fix)
+      const timer = setTimeout(() => {
+        requestLocation();
+      }, 500);
+
+      return () => clearTimeout(timer);
     }
   }, [autoRequest]);
 

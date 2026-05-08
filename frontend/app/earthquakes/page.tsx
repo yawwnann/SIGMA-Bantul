@@ -100,7 +100,7 @@ export default function EarthquakesPage() {
             : overrides?.reg !== undefined
               ? overrides.reg
               : regionFilter,
-        limit: 100, 
+        limit: 100,
       });
       setEarthquakes(data.data);
       setCurrentPage(1);
@@ -161,7 +161,9 @@ export default function EarthquakesPage() {
             sekitarnya
           </p>
           <div className="mt-3 text-xs italic text-slate-500 dark:text-slate-400">
-            *Sumber data gempa pada sistem ini berasal dari BMKG (Badan Meteorologi, Klimatologi, dan Geofisika) melalui layanan Data Gempabumi Terbuka BMKG.
+            *Sumber data gempa pada sistem ini berasal dari BMKG (Badan
+            Meteorologi, Klimatologi, dan Geofisika) melalui layanan Data
+            Gempabumi Terbuka BMKG.
           </div>
         </div>
 
@@ -395,16 +397,16 @@ export default function EarthquakesPage() {
             </CardContent>
           </Card>
         ) : earthquakes.length === 0 ? (
-          <Card className="border border-slate-200 shadow-sm bg-white">
+          <Card className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="p-3 bg-slate-100 rounded-full mb-4">
-                  <Activity className="h-8 w-8 text-slate-400" />
+                <div className="p-3 bg-slate-100 dark:bg-zinc-800 rounded-full mb-4">
+                  <Activity className="h-8 w-8 text-slate-400 dark:text-zinc-500" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-zinc-100 mb-2">
                   Tidak Ada Data
                 </h3>
-                <p className="text-slate-500">
+                <p className="text-slate-500 dark:text-zinc-400">
                   Tidak ada data gempa dalam periode yang dipilih
                 </p>
               </div>
