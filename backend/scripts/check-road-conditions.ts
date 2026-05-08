@@ -158,10 +158,18 @@ async function checkRoadConditions() {
     }
 
     const roadsWithoutName = await prisma.road.count({
-      where: { name: null },
+      where: {
+        OR: [
+          { name: '' },
+          { name: { startsWith: 'Jalan Lokal #' } },
+          { name: { startsWith: 'Unnamed Road #' } },
+        ],
+      },
     });
     if (roadsWithoutName > 0) {
-      console.log(`  ⚠️  ${roadsWithoutName} jalan tanpa nama`);
+      console.log(
+        `  ⚠️  ${roadsWithoutName} jalan tanpa nama (placeholder/kosong)`,
+      );
     }
 
     if (

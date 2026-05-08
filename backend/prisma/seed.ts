@@ -14,7 +14,6 @@ async function main() {
   const tableNames = [
     'EvacuationRoute',
     'PublicFacility',
-    'Shelter',
     'HazardZone',
     'Earthquake',
     'User',
@@ -564,222 +563,12 @@ async function main() {
 
   console.log(`✅ Created ${hazardZones.length} hazard zones`);
 
-  // 4. Create Shelters
-  console.log('🏠 Creating shelters...');
-
-  const shelters = [
-    {
-      name: 'GOR Sewon',
-      capacity: 500,
-      lat: -7.856296108383715,
-      lon: 110.3541890723684,
-      address: 'Jl. Parangtritis, Sewon, Bantul',
-      condition: 'GOOD',
-      facilities: 'Toilet, Dapur Umum, Ruang P3K, Area Tidur Luas',
-    },
-    {
-      name: 'Balai Desa Kasihan',
-      capacity: 350,
-      lat: -7.8172463029681545,
-      lon: 110.32738532919865,
-      address: 'Kecamatan Kasihan, Bantul',
-      condition: 'GOOD',
-      facilities: 'Toilet, Ruang Pertemuan, Logistik',
-    },
-    {
-      name: 'Gedung Serbaguna Sedayu',
-      capacity: 300,
-      lat: -7.810991262758507,
-      lon: 110.26710368838619,
-      address: 'Sedayu, Bantul',
-      condition: 'GOOD',
-      facilities: 'Toilet, Mushola, Parkir Luas',
-    },
-    {
-      name: 'Stadion Srandakan',
-      capacity: 1000,
-      lat: -7.983198689076997,
-      lon: 110.23214808212752,
-      address: 'Srandakan, Bantul',
-      condition: 'MODERATE',
-      facilities: 'Lapangan Terbuka, Toilet, Akses Kendaraan Besar',
-    },
-    {
-      name: 'Shelter Pantai Sanden',
-      capacity: 400,
-      lat: -7.997576382455282,
-      lon: 110.26056663018072,
-      address: 'Pesisir Sanden, Bantul',
-      condition: 'GOOD',
-      facilities: 'Toilet, Tower Pantau, Ruang Evakuasi',
-    },
-    {
-      name: 'Pendopo Kecamatan Kretek',
-      capacity: 450,
-      lat: -8.011006967463425,
-      lon: 110.29957717156773,
-      address: 'Jl. Parangtritis Km. 21, Kretek',
-      condition: 'GOOD',
-      facilities: 'Toilet, Dapur Umum, Pusat Informasi',
-    },
-    {
-      name: 'Pusat Evakuasi Pundong',
-      capacity: 300,
-      lat: -7.966843246218961,
-      lon: 110.34330084036814,
-      address: 'Pundong, Bantul',
-      condition: 'GOOD',
-      facilities: 'Toilet, Ruang Medis, Gudang Bantuan',
-    },
-    {
-      name: 'Balai Rehabilitasi Bambanglipuro',
-      capacity: 250,
-      lat: -7.937652158922342,
-      lon: 110.31667473812948,
-      address: 'Bambanglipuro, Bantul',
-      condition: 'GOOD',
-      facilities: 'Toilet, Ruang Rawat, Dapur',
-    },
-    {
-      name: 'Gedung Dakwah Pandak',
-      capacity: 200,
-      lat: -7.92690343469998,
-      lon: 110.2862179446127,
-      address: 'Pandak, Bantul',
-      condition: 'MODERATE',
-      facilities: 'Toilet, Ruang Pertemuan',
-    },
-    {
-      name: 'Shelter Utama Pajangan',
-      capacity: 300,
-      lat: -7.8699648307220444,
-      lon: 110.29329769624071,
-      address: 'Pajangan, Bantul',
-      condition: 'GOOD',
-      facilities: 'Toilet, Air Bersih, Listrik Cadangan',
-    },
-    {
-      name: 'Pendopo Kabupaten Bantul (Pusat)',
-      capacity: 600,
-      lat: -7.894107619527859,
-      lon: 110.33420878643149,
-      address: 'Pusat Kota Bantul',
-      condition: 'GOOD',
-      facilities: 'Fasilitas Lengkap, Pusat Komando, Medis',
-    },
-    {
-      name: 'GOR Jetis',
-      capacity: 400,
-      lat: -7.909525884997565,
-      lon: 110.36451410459532,
-      address: 'Jetis, Bantul',
-      condition: 'GOOD',
-      facilities: 'Toilet, Lapangan Indoor, Dapur Umum',
-    },
-    {
-      name: 'Shelter Budaya Imogiri',
-      capacity: 350,
-      lat: -7.932017147008937,
-      lon: 110.40120957934438,
-      address: 'Kawasan Wisata Imogiri',
-      condition: 'GOOD',
-      facilities: 'Toilet, Pendopo Luas, Air Bersih',
-    },
-    {
-      name: 'Camp Pengungsian Dlingo',
-      capacity: 500,
-      lat: -7.934798532886147,
-      lon: 110.45941807062738,
-      address: 'Dataran Tinggi Dlingo',
-      condition: 'MODERATE',
-      facilities: 'Tenda Besar, Toilet Portable, Dapur Umum',
-    },
-    {
-      name: 'Pusat Logistik Banguntapan',
-      capacity: 700,
-      lat: -7.8200834212668875,
-      lon: 110.40604025360231,
-      address: 'Jl. Gedongkuning, Banguntapan',
-      condition: 'GOOD',
-      facilities: 'Gudang Logistik, Toilet, Ruang P3K',
-    },
-    {
-      name: 'Gedung Pertemuan Pleret',
-      capacity: 300,
-      lat: -7.87444687784069,
-      lon: 110.41206753760906,
-      address: 'Pleret, Bantul',
-      condition: 'GOOD',
-      facilities: 'Toilet, Dapur, Area Parkir',
-    },
-    {
-      name: 'Shelter Piyungan',
-      capacity: 250,
-      lat: -7.840298523727882,
-      lon: 110.46776033793965,
-      address: 'Jl. Wonosari, Piyungan',
-      condition: 'MODERATE',
-      facilities: 'Toilet, Ruang Tunggu, Akses Jalan Raya',
-    },
-  ];
-
-  const createdShelters = [];
-  for (const shelter of shelters) {
-    const result = await prisma.$queryRaw<{ id: number }[]>`
-      INSERT INTO "Shelter" (name, capacity, geometry, geom, address, condition, facilities, "createdAt", "updatedAt")
-      VALUES (
-        ${shelter.name},
-        ${shelter.capacity},
-        ${JSON.stringify({ type: 'Point', coordinates: [shelter.lon, shelter.lat] })}::jsonb,
-        ST_SetSRID(ST_MakePoint(${shelter.lon}, ${shelter.lat}), 4326),
-        ${shelter.address},
-        ${shelter.condition}::"ShelterCondition",
-        ${shelter.facilities},
-        NOW(),
-        NOW()
-      )
-      RETURNING id
-    `;
-    createdShelters.push(result[0]);
-  }
-
-  console.log(`✅ Created ${shelters.length} shelters`);
-
-  // 4.1. Assign Officers to Shelters
-  console.log('👥 Assigning officers to shelters...');
-
-  // Assign each officer to one or more shelters (some officers manage multiple shelters)
-  const assignments = [
-    { officerIndex: 0, shelterIndex: 0 }, // Ahmad Fauzi -> GOR Sewon
-    { officerIndex: 1, shelterIndex: 1 }, // Siti Nurhaliza -> Balai Desa Kasihan
-    { officerIndex: 2, shelterIndex: 2 }, // Budi Santoso -> Gedung Serbaguna Sedayu
-    { officerIndex: 3, shelterIndex: 3 }, // Dewi Lestari -> Stadion Srandakan
-    { officerIndex: 4, shelterIndex: 4 }, // Eko Prasetyo -> Shelter Pantai Sanden
-    { officerIndex: 5, shelterIndex: 5 }, // Fitri Handayani -> Pendopo Kecamatan Kretek
-    { officerIndex: 6, shelterIndex: 6 }, // Gunawan Wijaya -> Pusat Evakuasi Pundong
-    { officerIndex: 7, shelterIndex: 7 }, // Hesti Rahmawati -> Balai Rehabilitasi Bambanglipuro
-    { officerIndex: 8, shelterIndex: 8 }, // Indra Kusuma -> Gedung Dakwah Pandak
-    { officerIndex: 9, shelterIndex: 9 }, // Joko Widodo -> Shelter Utama Pajangan
-    { officerIndex: 10, shelterIndex: 10 }, // Kartika Sari -> Pendopo Kabupaten Bantul
-    { officerIndex: 11, shelterIndex: 11 }, // Lukman Hakim -> GOR Jetis
-    { officerIndex: 12, shelterIndex: 12 }, // Maya Anggraini -> Shelter Budaya Imogiri
-    { officerIndex: 13, shelterIndex: 13 }, // Nugroho Susanto -> Camp Pengungsian Dlingo
-    { officerIndex: 14, shelterIndex: 14 }, // Putri Wulandari -> Pusat Logistik Banguntapan
-    // Some officers manage multiple shelters
-    { officerIndex: 0, shelterIndex: 15 }, // Ahmad Fauzi -> Gedung Pertemuan Pleret
-    { officerIndex: 1, shelterIndex: 16 }, // Siti Nurhaliza -> Shelter Piyungan
-  ];
-
-  for (const assignment of assignments) {
-    await prisma.$executeRaw`
-      UPDATE "Shelter"
-      SET "officerId" = ${createdOfficers[assignment.officerIndex].id}
-      WHERE id = ${createdShelters[assignment.shelterIndex].id}
-    `;
-  }
-
+  // 4. Shelters — managed separately
+  // Shelter data will be imported from lokasi_potensial_evakuasi.geojson
+  // via a separate seeder script
+  const existingShelters = await prisma.shelter.count();
   console.log(
-    `✅ Assigned ${assignments.length} shelter-officer relationships`,
+    `🏠 Shelter table: ${existingShelters} existing shelters (managed by separate import script, not touched by seed).`,
   );
 
   // 5. Roads — managed separately
@@ -856,6 +645,7 @@ async function main() {
   console.log(`✅ Created ${facilities.length} public facilities`);
 
   const finalRoadCount = await prisma.road.count();
+  const finalShelterCount = await prisma.shelter.count();
   console.log('✨ Seeding completed successfully!');
   console.log('\n📊 Summary:');
   console.log(
@@ -863,8 +653,9 @@ async function main() {
   );
   console.log(`   - Earthquakes: ${earthquakes.length}`);
   console.log(`   - Hazard Zones: ${hazardZones.length}`);
-  console.log(`   - Shelters: ${shelters.length}`);
-  console.log(`   - Shelter-Officer Assignments: ${assignments.length}`);
+  console.log(
+    `   - Shelters: ${finalShelterCount} (not cleared — managed by separate import script)`,
+  );
   console.log(
     `   - Roads: ${finalRoadCount} (not cleared — managed by import-roads script)`,
   );
@@ -877,6 +668,8 @@ async function main() {
   console.log(
     '     npm run db:enrich-roads  (adds names from NAMA_RUAS_JALAN.geojson)',
   );
+  console.log('');
+  console.log('💡 If Shelters table is empty, run the shelter import script');
 }
 
 main()

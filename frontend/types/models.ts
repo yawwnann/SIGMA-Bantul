@@ -39,6 +39,12 @@ export enum ShelterCondition {
   DAMAGED = "DAMAGED",
 }
 
+export enum ShelterCategory {
+  SCHOOL = "SCHOOL",
+  FIELD = "FIELD",
+  GOVERNMENT = "GOVERNMENT",
+}
+
 export enum RouteType {
   PRIMARY = "PRIMARY",
   ALTERNATIVE = "ALTERNATIVE",
@@ -95,6 +101,7 @@ export interface HazardZone {
 export interface Shelter {
   id: number;
   name: string;
+  category: ShelterCategory;
   capacity: number;
   currentOccupancy?: number;
   geometry: object;

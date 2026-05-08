@@ -8,10 +8,10 @@ interface RoadFeature {
   type: 'Feature';
   properties: {
     // Dataset A: JALAN_LN_25K.geojson fields
-    NAMOBJ?: string;    // Road name (primary)
-    NAMRJL?: string;    // Also road name (fallback)
-    FCODE?: string;     // Feature code (e.g. AP030 = National, AP030003 = Provincial)
-    RJLKLS?: string;    // Road class/type
+    NAMOBJ?: string; // Road name (primary)
+    NAMRJL?: string; // Also road name (fallback)
+    FCODE?: string; // Feature code (e.g. AP030 = National, AP030003 = Provincial)
+    RJLKLS?: string; // Road class/type
     RJLSURFACE?: string;
     RJLWIDTH?: number;
     SRS_ID?: string;
@@ -29,10 +29,15 @@ interface GeoJSONFeatureCollection {
 }
 
 async function importRoads() {
-  console.log('🚀 Starting road network import from Dataset A (JALAN_LN_25K.geojson)...');
+  console.log(
+    '🚀 Starting road network import from Dataset A (JALAN_LN_25K.geojson)...',
+  );
 
   // Dataset A: JALAN_LN_25K.geojson - primary road geometry layer
-  const geojsonPath = path.join(__dirname, '../Data/GeoJSon/JALAN_LN_25K.geojson');
+  const geojsonPath = path.join(
+    __dirname,
+    '../Data/GeoJSon/JALAN_LN_25K.geojson',
+  );
 
   // Check if GeoJSON exists
   if (!fs.existsSync(geojsonPath)) {
@@ -48,7 +53,9 @@ async function importRoads() {
     fs.readFileSync(geojsonPath, 'utf-8'),
   );
 
-  console.log(`✅ Found ${geojsonData.features.length} road features in Dataset A`);
+  console.log(
+    `✅ Found ${geojsonData.features.length} road features in Dataset A`,
+  );
   console.log('');
   console.log('💡 Note: Road names will be generic placeholders.');
   console.log('   After import, run: npm run db:enrich-roads');
@@ -57,7 +64,9 @@ async function importRoads() {
 
   // Clear existing road network data
   console.log('🗑️  Clearing existing road network...');
-  await prisma.$executeRawUnsafe(`TRUNCATE TABLE "Road" RESTART IDENTITY CASCADE`);
+  await prisma.$executeRawUnsafe(
+    `TRUNCATE TABLE "Road" RESTART IDENTITY CASCADE`,
+  );
 
   console.log('💾 Importing roads to database...');
 
@@ -77,7 +86,8 @@ async function importRoads() {
         properties.NAME;
 
       // Placeholder name — will be enriched by enrich-roads.ts (Dataset B)
-      const name = rawName && rawName.trim() ? rawName.trim() : `Road ${imported + 1}`;
+      const name =
+        rawName && rawName.trim() ? rawName.trim() : `Road ${imported + 1}`;
 
       // Determine road type from FCODE or RJLKLS
       let roadType: 'NATIONAL' | 'PROVINCIAL' | 'REGIONAL' | 'LOCAL' = 'LOCAL';
@@ -88,14 +98,26 @@ async function importRoads() {
       // AP030      = National road
       // AP030003   = Provincial road
       // AP030004   = Regional/Kabupaten road
-      if (fcode === 'AP030' || rjlkls === '1' || rjlkls.startsWith('N') ||
-          name.toLowerCase().includes('nasional')) {
+      if (
+        fcode === 'AP030' ||
+        rjlkls === '1' ||
+        rjlkls.startsWith('N') ||
+        name.toLowerCase().includes('nasional')
+      ) {
         roadType = 'NATIONAL';
-      } else if (fcode === 'AP030003' || rjlkls === '2' || rjlkls.startsWith('P') ||
-                 name.toLowerCase().includes('provinsi')) {
+      } else if (
+        fcode === 'AP030003' ||
+        rjlkls === '2' ||
+        rjlkls.startsWith('P') ||
+        name.toLowerCase().includes('provinsi')
+      ) {
         roadType = 'PROVINCIAL';
-      } else if (fcode === 'AP030004' || rjlkls === '3' || rjlkls.startsWith('K') ||
-                 name.toLowerCase().includes('kabupaten')) {
+      } else if (
+        fcode === 'AP030004' ||
+        rjlkls === '3' ||
+        rjlkls.startsWith('K') ||
+        name.toLowerCase().includes('kabupaten')
+      ) {
         roadType = 'REGIONAL';
       }
 
@@ -232,10 +254,23 @@ async function importRoads() {
   console.log('🔄 Invalidating Redis road-network cache...');
   try {
     const Redis = require('ioredis');
-    const redis = new Redis({
+    const redisConfig: any = {
       host: process.env.REDIS_HOST || '127.0.0.1',
       port: parseInt(process.env.REDIS_PORT || '6379'),
-    });
+      maxRetriesPerRequest: 3,
+    };
+
+    // Add password if provided (for Redis Cloud)
+    if (process.env.REDIS_PASSWORD) {
+      redisConfig.password = process.env.REDIS_PASSWORD;
+    }
+
+    // Add username if provided (for Redis Cloud with ACL)
+    if (process.env.REDIS_USERNAME) {
+      redisConfig.username = process.env.REDIS_USERNAME;
+    }
+
+    const redis = new Redis(redisConfig);
 
     // Delete all road-network cache keys
     const keys = await redis.keys('road-network:*');
@@ -251,8 +286,12 @@ async function importRoads() {
 
     await redis.quit();
   } catch (err) {
-    console.warn(`   ⚠️  Could not invalidate Redis cache (non-fatal): ${err.message}`);
-    console.warn('      Restart the backend server to clear the cache manually.');
+    console.warn(
+      `   ⚠️  Could not invalidate Redis cache (non-fatal): ${err.message}`,
+    );
+    console.warn(
+      '      Restart the backend server to clear the cache manually.',
+    );
   }
 }
 

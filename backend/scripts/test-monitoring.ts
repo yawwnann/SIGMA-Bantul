@@ -60,12 +60,21 @@ async function testMonitoring() {
 
   // Test Redis
   console.log('2️⃣ Testing Redis Connection...');
-  const redis = new Redis({
+  const redisConfig: any = {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD,
     maxRetriesPerRequest: 3,
-  });
+  };
+
+  if (process.env.REDIS_PASSWORD) {
+    redisConfig.password = process.env.REDIS_PASSWORD;
+  }
+
+  if (process.env.REDIS_USERNAME) {
+    redisConfig.username = process.env.REDIS_USERNAME;
+  }
+
+  const redis = new Redis(redisConfig);
 
   try {
     await redis.ping();
@@ -105,11 +114,20 @@ async function testMonitoring() {
   }
 
   // Redis latency
-  const redisTest = new Redis({
+  const redisTestConfig: any = {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD,
-  });
+  };
+
+  if (process.env.REDIS_PASSWORD) {
+    redisTestConfig.password = process.env.REDIS_PASSWORD;
+  }
+
+  if (process.env.REDIS_USERNAME) {
+    redisTestConfig.username = process.env.REDIS_USERNAME;
+  }
+
+  const redisTest = new Redis(redisTestConfig);
 
   try {
     const redisStart = Date.now();

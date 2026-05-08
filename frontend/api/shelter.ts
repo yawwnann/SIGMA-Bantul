@@ -1,8 +1,11 @@
 ﻿import apiClient from "./client";
-import type { Shelter, ShelterCondition } from "@/types";
+import type { Shelter, ShelterCategory, ShelterCondition } from "@/types";
 
 export const shelterApi = {
-  getAll: async (params?: { condition?: ShelterCondition }) => {
+  getAll: async (params?: {
+    condition?: ShelterCondition;
+    category?: ShelterCategory;
+  }) => {
     const response = await apiClient.get<Shelter[]>("/shelters", { params });
     return response.data;
   },

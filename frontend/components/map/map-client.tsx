@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Shelter, HazardZone, Earthquake, PublicFacility } from "@/types";
@@ -10,6 +10,9 @@ import { useTheme } from "next-themes";
 import "leaflet-providers";
 import { BpbdRiskLayer } from "./bpbd-risk-layer";
 import { debounce } from "@/lib/utils";
+import { createEvacuationClusterLayer } from "./evacuation-cluster";
+import { toEvacuationMarkerData } from "./evacuation-marker";
+import { getShelterCategoryLabel } from "./marker-icons";
 
 interface MapClientProps {
   shelters: Shelter[];
@@ -34,39 +37,6 @@ interface MapClientProps {
 }
 
 const BANTUL_CENTER: [number, number] = [-7.888, 110.33];
-
-function createShelterIcon(condition: string, availabilityColor?: string) {
-  // Use availability color if provided, otherwise use condition color
-  const color =
-    availabilityColor ||
-    (condition === "GOOD"
-      ? "#22c55e"
-      : condition === "MODERATE"
-        ? "#eab308"
-        : "#ef4444");
-
-  const shadowColor = availabilityColor
-    ? `${availabilityColor}66` // Add alpha to hex color
-    : condition === "GOOD"
-      ? "rgba(34, 197, 94, 0.4)"
-      : condition === "MODERATE"
-        ? "rgba(234, 179, 8, 0.4)"
-        : "rgba(239, 68, 68, 0.4)";
-
-  return L.divIcon({
-    className: "custom-marker",
-    html: `
-    <div style="display:flex; flex-direction:column; align-items:center;">
-      <div style="background-color: ${color}; width: 28px; height: 28px; border-radius: 50% 50% 50% 0; border: 2.5px solid white; box-shadow: 0 4px 8px ${shadowColor}; display:flex; align-items:center; justify-content:center; transform: rotate(-45deg);">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="14" height="14" style="transform: rotate(45deg);">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-        </svg>
-      </div>
-    </div>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 30],
-  });
-}
 
 function createFacilityIcon(type: string) {
   const colors: Record<string, string> = {
@@ -122,7 +92,7 @@ export default function MapClient({
   const calculatedRouteLayerRef = useRef<L.GeoJSON | null>(null);
   const activeCircleRef = useRef<L.LayerGroup | null>(null);
   const earthquakeLayerGroupRef = useRef<L.LayerGroup | null>(null);
-  const shelterLayerGroupRef = useRef<L.LayerGroup | null>(null);
+  const shelterLayerGroupRef = useRef<L.MarkerClusterGroup | null>(null);
   const facilityLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const earthquakeCirclesRef = useRef<Map<number, L.LayerGroup>>(new Map());
   const locationMarkerRef = useRef<L.Marker | null>(null);
@@ -149,6 +119,10 @@ export default function MapClient({
   const onShelterClickRef = useRef<((shelter: Shelter) => void) | null>(null);
   const onShelterDetailOpenRef = useRef(onShelterDetailOpen);
   const isMountedRef = useRef(true);
+  const evacuationMarkerData = useMemo(
+    () => toEvacuationMarkerData(shelters),
+    [shelters],
+  );
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -214,7 +188,6 @@ export default function MapClient({
       .addTo(mapRef.current);
 
     earthquakeLayerGroupRef.current = L.layerGroup().addTo(mapRef.current);
-    shelterLayerGroupRef.current = L.layerGroup().addTo(mapRef.current);
     facilityLayerGroupRef.current = L.layerGroup().addTo(mapRef.current);
     hazardLayerGroupRef.current = L.layerGroup().addTo(mapRef.current);
 
@@ -387,139 +360,21 @@ export default function MapClient({
   ]);
 
   useEffect(() => {
-    if (!mapRef.current || !shelterLayerGroupRef.current) return;
+    if (!mapRef.current) return;
 
-    shelterLayerGroupRef.current.clearLayers();
+    if (shelterLayerGroupRef.current) {
+      mapRef.current.removeLayer(shelterLayerGroupRef.current);
+      shelterLayerGroupRef.current.clearLayers();
+      shelterLayerGroupRef.current = null;
+    }
 
-    if (!visibleLayers.shelters) return;
+    if (!visibleLayers.shelters || evacuationMarkerData.length === 0) return;
 
-    shelters.forEach((shelter) => {
-      const coords = shelter.geometry as { coordinates: [number, number] };
-      if (coords?.coordinates) {
-        // Calculate availability percentage for color coding
-        const capacity = shelter.capacity || 0;
-        const occupied = shelter.currentOccupancy || 0;
-        const available = Math.max(0, capacity - occupied);
-        const occupancyPercentage =
-          capacity > 0 ? (occupied / capacity) * 100 : 0;
-
-        // Determine marker color based on availability
-        let markerColor = "#10b981"; // Green (> 50% available)
-        if (occupancyPercentage >= 90) {
-          markerColor = "#ef4444"; // Red (< 10% available)
-        } else if (occupancyPercentage >= 70) {
-          markerColor = "#f97316"; // Orange (10-30% available)
-        } else if (occupancyPercentage >= 50) {
-          markerColor = "#eab308"; // Yellow (30-50% available)
-        }
-
-        const marker = L.marker(
-          [coords.coordinates[1], coords.coordinates[0]],
-          {
-            icon: createShelterIcon(shelter.condition, markerColor),
-          },
-        ).addTo(shelterLayerGroupRef.current!);
-
-        // Create popup with inline styles (no Tailwind dependency inside Leaflet)
-        const badgeColor =
-          shelter.condition === "GOOD"
-            ? { bg: "#166534", text: "#4ade80", label: "Baik" }
-            : shelter.condition === "MODERATE"
-              ? { bg: "#854d0e", text: "#facc15", label: "Sedang" }
-              : { bg: "#7f1d1d", text: "#f87171", label: "Buruk" };
-
-        // Color coding for availability in popup (using variables from above)
-        let availColor = "#10b981"; // Green
-        let availBg = "rgba(16, 185, 129, 0.1)";
-        if (occupancyPercentage >= 90) {
-          availColor = "#ef4444"; // Red
-          availBg = "rgba(239, 68, 68, 0.1)";
-        } else if (occupancyPercentage >= 70) {
-          availColor = "#f97316"; // Orange
-          availBg = "rgba(249, 115, 22, 0.1)";
-        } else if (occupancyPercentage >= 50) {
-          availColor = "#eab308"; // Yellow
-          availBg = "rgba(234, 179, 8, 0.1)";
-        }
-
-        const isDark = isDarkMode;
-        const bgMain = isDark ? "#030712" : "#ffffff";
-        const bgCard = isDark ? "#111827" : "#f8fafc";
-        const bgInput = isDark ? "#1f2937" : "#f1f5f9";
-        const textMain = isDark ? "#f1f5f9" : "#0f172a";
-        const textMuted = isDark ? "#9ca3af" : "#64748b";
-        const textLabel = isDark ? "#6b7280" : "#475569";
-        const border = isDark ? "rgba(255,255,255,0.07)" : "#e2e8f0";
-
-        const popupContent = `
-          <div style="width:260px;background:${bgMain};color:${textMain};border-radius:12px;overflow:hidden;font-family:var(--font-sans);border:1px solid ${border};">
-            <!-- Badge -->
-            <div style="padding:12px 14px 8px;">
-              <span style="display:inline-block;background:${badgeColor.bg};color:${badgeColor.text};font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:0.03em;">${badgeColor.label}</span>
-            </div>
-
-            <!-- Title & Address -->
-            <div style="padding:0 14px 10px;">
-              <div style="font-size:15px;font-weight:700;line-height:1.3;margin-bottom:5px;">${shelter.name}</div>
-              <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:${textMuted};">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                ${shelter.address || "Bantul, DIY"}
-              </div>
-            </div>
-
-            <!-- Capacity Grid -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 10px;">
-              <div style="background:${bgCard};border-radius:8px;padding:10px;">
-                <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${textLabel}" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                  <span style="font-size:9px;color:${textLabel};font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">KAPASITAS</span>
-                </div>
-                <div style="font-size:22px;font-weight:800;">${shelter.capacity}</div>
-              </div>
-              <div style="background:${availBg};border:1px solid ${availColor}33;border-radius:8px;padding:10px;">
-                <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${availColor}" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                  <span style="font-size:9px;color:${availColor};font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">TERSEDIA</span>
-                </div>
-                <div style="font-size:22px;font-weight:800;color:${availColor};">${available}</div>
-                <div style="font-size:10px;color:${textMuted};margin-top:4px;">${occupied} / ${capacity} terisi</div>
-              </div>
-            </div>
-
-            <!-- Details -->
-            <div style="padding:0 14px 12px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 8px;margin-bottom:4px;background:${bgCard};border-radius:6px;">
-                <span style="font-size:12px;color:${textMuted};">Jenis Fasilitas</span>
-                <span style="font-size:12px;font-weight:600;">Ruang Publik</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 8px;background:${bgCard};border-radius:6px;">
-                <span style="font-size:12px;color:${textMuted};">Jam Operasional</span>
-                <span style="font-size:12px;font-weight:600;">24 Jam (Siaga)</span>
-              </div>
-            </div>
-
-            <!-- Button -->
-            <button
-              id="route-btn-${shelter.id}"
-              style="width:100%;background:#2563eb;color:#fff;font-size:13px;font-weight:700;padding:11px 16px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:0.02em;"
-              onmouseover="this.style.background='#1d4ed8'"
-              onmouseout="this.style.background='#2563eb'"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
-              Rute Evakuasi
-            </button>
-          </div>
-        `;
-
-        // Add click handler to show in sidebar instead (no popup)
-        marker.on("click", () => {
-          if (onShelterClickRef.current) {
-            onShelterClickRef.current(shelter);
-          }
-        });
-      }
-    });
-  }, [shelters, visibleLayers.shelters, isDarkMode]);
+    shelterLayerGroupRef.current = createEvacuationClusterLayer(
+      evacuationMarkerData,
+      (shelter) => onShelterClickRef.current?.(shelter),
+    ).addTo(mapRef.current);
+  }, [evacuationMarkerData, visibleLayers.shelters]);
 
   useEffect(() => {
     if (!mapRef.current || !facilityLayerGroupRef.current) return;
@@ -1353,6 +1208,113 @@ export default function MapClient({
         .custom-popup .leaflet-popup-content {
           margin: 0;
         }
+        .evacuation-marker-icon {
+          background: transparent;
+          border: 0;
+        }
+        .evacuation-marker-pin {
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--marker-color);
+          border: 2px solid #ffffff;
+          border-radius: 50% 50% 50% 0;
+          box-shadow: 0 8px 18px rgba(15, 23, 42, 0.28);
+          transform: rotate(-45deg);
+          will-change: transform;
+        }
+        .evacuation-marker-pin svg {
+          width: 16px;
+          height: 16px;
+          transform: rotate(45deg);
+        }
+        .evacuation-cluster-wrapper {
+          background: transparent;
+          border: 0;
+        }
+        .evacuation-cluster {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 13px;
+          font-weight: 800;
+          background: #0f766e;
+          border: 3px solid #ffffff;
+          border-radius: 999px;
+          box-shadow:
+            0 0 0 6px rgba(15, 118, 110, 0.18),
+            0 10px 22px rgba(15, 23, 42, 0.2);
+        }
+        .evacuation-cluster-medium {
+          background: #2563eb;
+          box-shadow:
+            0 0 0 7px rgba(37, 99, 235, 0.18),
+            0 10px 22px rgba(15, 23, 42, 0.2);
+        }
+        .evacuation-cluster-large {
+          background: #dc2626;
+          font-size: 14px;
+          box-shadow:
+            0 0 0 8px rgba(220, 38, 38, 0.18),
+            0 10px 22px rgba(15, 23, 42, 0.2);
+        }
+        .evacuation-popup {
+          width: 250px;
+          overflow: hidden;
+          background: #ffffff;
+          color: #0f172a;
+        }
+        .evacuation-popup__header {
+          padding: 10px 12px 0;
+        }
+        .evacuation-popup__header span {
+          display: inline-flex;
+          border-radius: 999px;
+          background: #eff6ff;
+          color: #1d4ed8;
+          padding: 3px 9px;
+          font-size: 11px;
+          font-weight: 800;
+        }
+        .evacuation-popup__body {
+          padding: 8px 12px 12px;
+        }
+        .evacuation-popup h3 {
+          margin: 0 0 10px;
+          font-size: 15px;
+          line-height: 1.3;
+          font-weight: 800;
+        }
+        .evacuation-popup dl {
+          display: grid;
+          gap: 7px;
+          margin: 0;
+        }
+        .evacuation-popup dl div {
+          display: grid;
+          grid-template-columns: 76px 1fr;
+          gap: 8px;
+          align-items: start;
+          border-radius: 6px;
+          background: #f8fafc;
+          padding: 7px 8px;
+        }
+        .evacuation-popup dt {
+          color: #64748b;
+          font-size: 11px;
+          font-weight: 700;
+        }
+        .evacuation-popup dd {
+          margin: 0;
+          color: #0f172a;
+          font-size: 12px;
+          font-weight: 700;
+        }
       `}</style>
 
       {/* Shelter Detail Sidebar */}
@@ -1494,10 +1456,10 @@ export default function MapClient({
           <div className="p-4 space-y-2 border-b border-slate-200/80 dark:border-zinc-800/60">
             <div className="flex justify-between items-center py-2 px-3 bg-slate-50 dark:bg-zinc-900/50 rounded-lg">
               <span className="text-xs text-slate-500 dark:text-zinc-400">
-                Jenis Fasilitas
+                Kategori
               </span>
               <span className="text-xs font-semibold text-slate-900 dark:text-zinc-100">
-                Ruang Publik
+                {getShelterCategoryLabel(selectedShelter.category)}
               </span>
             </div>
             <div className="flex justify-between items-center py-2 px-3 bg-slate-50 dark:bg-zinc-900/50 rounded-lg">
