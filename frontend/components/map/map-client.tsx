@@ -34,6 +34,9 @@ interface MapClientProps {
   selectedEarthquake?: Earthquake | null;
   flyToLocation?: { lat: number; lon: number; zoom?: number } | null;
   onShelterDetailOpen?: (isOpen: boolean) => void;
+  center?: [number, number];
+  zoom?: number;
+  children?: React.ReactNode;
 }
 
 const BANTUL_CENTER: [number, number] = [-7.888, 110.33];
@@ -82,6 +85,9 @@ export default function MapClient({
   selectedEarthquake,
   flyToLocation,
   onShelterDetailOpen,
+  center,
+  zoom,
+  children,
 }: MapClientProps) {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -100,6 +106,8 @@ export default function MapClient({
     string,
     unknown
   > | null>(null);
+  const [boundaryLoading, setBoundaryLoading] = useState(true);
+  const [boundaryError, setBoundaryError] = useState(false);
   const [visibleLayers, setVisibleLayers] = useState({
     boundary: true,
     shelters: true,
@@ -148,13 +156,59 @@ export default function MapClient({
 
   useEffect(() => {
     const fetchBoundary = async () => {
+      setBoundaryLoading(true);
+      setBoundaryError(false);
+
       try {
+        // Try to get from localStorage first (instant load!)
+        const cachedBoundary = localStorage.getItem("bantul-boundary");
+        const cacheTimestamp = localStorage.getItem(
+          "bantul-boundary-timestamp",
+        );
+        const cacheAge = cacheTimestamp
+          ? Date.now() - parseInt(cacheTimestamp)
+          : Infinity;
+        const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
+        if (cachedBoundary && cacheAge < CACHE_DURATION) {
+          console.log(
+            "[MapClient] Loading Bantul boundary from localStorage (instant)",
+          );
+          setBantulBoundary(JSON.parse(cachedBoundary));
+          setBoundaryLoading(false);
+          return;
+        }
+
+        // If no cache or expired, fetch from API
+        console.log("[MapClient] Loading Bantul boundary from API...");
         const boundary = await analysisApi.getBantulBoundary();
         setBantulBoundary(boundary);
+
+        // Save to localStorage for next time
+        try {
+          localStorage.setItem("bantul-boundary", JSON.stringify(boundary));
+          localStorage.setItem(
+            "bantul-boundary-timestamp",
+            Date.now().toString(),
+          );
+          console.log("[MapClient] Bantul boundary cached to localStorage");
+        } catch (storageError) {
+          console.warn(
+            "[MapClient] Failed to cache boundary to localStorage:",
+            storageError,
+          );
+        }
+
+        console.log("[MapClient] Bantul boundary loaded successfully from API");
       } catch (error) {
         console.error("Failed to load Bantul boundary:", error);
+        setBoundaryError(true);
+      } finally {
+        setBoundaryLoading(false);
       }
     };
+
+    // Load boundary in background (non-blocking)
     fetchBoundary();
   }, []);
 
@@ -1009,8 +1063,10 @@ export default function MapClient({
 
     if (topLayer) {
       mapRef.current.flyToBounds(topLayer.getBounds(), {
-        padding: [80, 80],
+        paddingTopLeft: [80, 80], // padding kiri dan atas
+        paddingBottomRight: [80, 200], // padding kanan dan bawah (lebih besar)
         duration: 1.5,
+        maxZoom: 16, // Batasi zoom maksimal agar tidak terlalu dekat
       });
     }
   }, [calculatedRoute]);
@@ -1029,6 +1085,26 @@ export default function MapClient({
       {isMapReady && mapInstance && (
         <BpbdRiskLayer map={mapInstance} visible={visibleLayers.bpbdRisk} />
       )}
+
+      {/* Boundary Loading Indicator */}
+      {boundaryLoading && (
+        <div className="absolute bottom-4 left-4 z-[60] bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg border border-slate-200 dark:border-zinc-800 flex items-center gap-2 text-xs">
+          <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-slate-600 dark:text-zinc-400">
+            Memuat batas wilayah...
+          </span>
+        </div>
+      )}
+
+      {/* Boundary Error Indicator */}
+      {boundaryError && !boundaryLoading && (
+        <div className="absolute bottom-4 left-4 z-[60] bg-red-50/95 dark:bg-red-900/20 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg border border-red-200 dark:border-red-800 flex items-center gap-2 text-xs">
+          <span className="text-red-600 dark:text-red-400">
+            ⚠️ Gagal memuat batas wilayah
+          </span>
+        </div>
+      )}
+
       <div className="absolute top-4 left-4 md:left-4 z-[60] md:z-[500] flex flex-col items-start gap-2">
         <button
           onClick={(e) => {
@@ -1193,10 +1269,18 @@ export default function MapClient({
         }
         .custom-shelter-popup .leaflet-popup-close-button {
           color: #64748b !important;
-          font-size: 18px !important;
+          font-size: 20px !important;
           top: 8px !important;
           right: 8px !important;
-          z-index: 10;
+          z-index: 9999 !important;
+          width: 24px !important;
+          height: 24px !important;
+          padding: 0 !important;
+          background: rgba(255, 255, 255, 0.9) !important;
+          border-radius: 4px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
         }
         .custom-shelter-popup .leaflet-popup-close-button:hover {
           color: #0f172a !important;
@@ -1319,11 +1403,11 @@ export default function MapClient({
 
       {/* Shelter Detail Sidebar */}
       {selectedShelter && (
-        <div className="absolute bottom-4 left-4 right-4 sm:bottom-auto sm:top-4 sm:left-auto sm:right-4 z-[70] md:z-[600] sm:w-[320px] bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md rounded-xl shadow-2xl border border-slate-200/80 dark:border-zinc-800/60 overflow-y-auto overflow-x-hidden animate-in slide-in-from-bottom-5 sm:slide-in-from-right-5 fade-in duration-300 max-h-[50%] sm:max-h-none">
+        <div className="absolute bottom-4 left-4 right-4 sm:bottom-auto sm:top-20 sm:left-auto sm:right-4 z-[70] md:z-[600] sm:w-[320px] bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md rounded-xl shadow-2xl border border-slate-200/80 dark:border-zinc-800/60 overflow-y-auto overflow-x-hidden animate-in slide-in-from-bottom-5 sm:slide-in-from-right-5 fade-in duration-300 max-h-[50%] sm:max-h-[calc(100vh-6rem)]">
           {/* Header */}
-          <div className="p-3 sm:p-4 border-b border-slate-200/80 dark:border-zinc-800/60">
-            <div className="flex items-start justify-between mb-1 sm:mb-2">
-              <span className="inline-block bg-green-500/20 text-green-400 text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-green-500/30">
+          <div className="p-3 sm:p-4 border-b border-slate-200/80 dark:border-zinc-800/60 relative">
+            <div className="flex items-start justify-between mb-1 sm:mb-2 gap-2">
+              <span className="inline-block bg-green-500/20 text-green-400 text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-green-500/30 flex-shrink-0">
                 {selectedShelter.condition === "GOOD"
                   ? "Baik"
                   : selectedShelter.condition === "MODERATE"
@@ -1332,9 +1416,11 @@ export default function MapClient({
               </span>
               <button
                 onClick={() => setSelectedShelter(null)}
-                className="text-slate-400 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 transition-colors p-1 hover:bg-slate-100 dark:hover:bg-zinc-800/50 rounded-lg"
+                className="text-slate-400 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 transition-colors p-1.5 hover:bg-slate-100 dark:hover:bg-zinc-800/50 rounded-lg flex-shrink-0"
+                style={{ position: "relative", zIndex: 9999 }}
+                aria-label="Close"
               >
-                <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
             <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-50 mb-0.5 sm:mb-1 leading-tight">

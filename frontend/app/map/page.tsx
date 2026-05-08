@@ -8,21 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  earthquakeApi,
-  hazardZoneApi,
-  roadApi,
-} from "@/api";
+import { earthquakeApi, hazardZoneApi, roadApi } from "@/api";
 import { useUserLocation } from "@/hooks/use-user-location";
-import { evacuationLocationService } from "@/services/evacuation.service";
+import { evacuationService } from "@/services/evacuation.service";
 import { socketService } from "@/lib/socket";
 import { toast } from "sonner";
-import type {
-  Shelter,
-  HazardZone,
-  Earthquake,
-  PublicFacility,
-} from "@/types";
+import type { Shelter, HazardZone, Earthquake, PublicFacility } from "@/types";
 import {
   Loader2,
   Layers,
@@ -37,9 +28,7 @@ import {
 
 const MapClient = dynamic(
   () =>
-    import("@/components/map/nearby-evacuation-map").then(
-      (mod) => mod.default,
-    ),
+    import("@/components/map/nearby-evacuation-map").then((mod) => mod.default),
   {
     ssr: false,
     loading: () => (
@@ -157,9 +146,8 @@ export default function MapPage() {
   const isDark = theme === "dark";
   const {
     location: userLocation,
-    status: userLocationStatus,
+    loading: gettingLocation,
     error: userLocationError,
-    isLoading: gettingLocation,
     requestLocation,
   } = useUserLocation();
   const userLocationRef = useRef(userLocation);
@@ -334,15 +322,15 @@ export default function MapPage() {
       setNearbyLoading(true);
       setNearbyError(null);
       try {
-        const response = await evacuationLocationService.getNearby({
+        const response = await evacuationService.getNearbyShelters({
           lat,
           lng,
           radius: 23,
           limit: 10,
         });
 
-        setShelters(response.data);
-        setNearestShelters(response.data.slice(0, 3));
+        setShelters(response);
+        setNearestShelters(response.slice(0, 3));
       } catch (err) {
         console.error("Failed to load nearby evacuation locations:", err);
         setShelters([]);
@@ -477,7 +465,7 @@ export default function MapPage() {
   }, [fetchNearbyEvacuationLocations, userLocation]);
 
   useEffect(() => {
-    if (userLocationStatus === "denied" || userLocationStatus === "unsupported") {
+    if (userLocationError) {
       setShelters([]);
       setNearestShelters([]);
       toast.warning(
@@ -485,7 +473,7 @@ export default function MapPage() {
           "Aktifkan akses lokasi untuk melihat lokasi evakuasi terdekat.",
       );
     }
-  }, [userLocationError, userLocationStatus]);
+  }, [userLocationError]);
 
   useEffect(() => {
     const handleClear = () => setSelectedEarthquake(null);
@@ -517,7 +505,7 @@ export default function MapPage() {
                     ? "Sedang melacak posisi GPS..."
                     : nearbyLoading
                       ? "Mengambil titik evakuasi terdekat dari database..."
-                    : "Mencari jalur tercepat dan teraman..."}
+                      : "Mencari jalur tercepat dan teraman..."}
                 </p>
               </div>
             </div>
@@ -533,9 +521,7 @@ export default function MapPage() {
               </p>
             </div>
           )}
-          {(userLocationStatus === "denied" ||
-            userLocationStatus === "unsupported" ||
-            nearbyError) && (
+          {(userLocationError || nearbyError) && (
             <div className="absolute left-4 top-4 z-[1200] max-w-sm rounded-lg border border-amber-200 bg-white/95 p-4 text-sm shadow-lg dark:border-amber-900/50 dark:bg-zinc-950/95">
               <div className="font-semibold text-slate-900 dark:text-zinc-50">
                 Lokasi pengguna belum tersedia

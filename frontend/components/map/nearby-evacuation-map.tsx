@@ -33,6 +33,8 @@ type NearbyEvacuationMapProps = {
   selectedEarthquake?: Earthquake | null;
 };
 
+import { NearbyShelter } from "@/services/evacuation.service";
+
 function getShelterCoordinates(shelter: Shelter) {
   const geometry = shelter.geometry as
     | { coordinates?: [number, number] }
@@ -41,6 +43,25 @@ function getShelterCoordinates(shelter: Shelter) {
   if (!coordinates || coordinates.length < 2) return null;
 
   return { lng: coordinates[0], lat: coordinates[1] };
+}
+
+function calculateDistance(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
 const RecenterMap = memo(function RecenterMap({
@@ -72,6 +93,29 @@ export default function NearbyEvacuationMap({
     ? getShelterCoordinates(selectedShelter)
     : null;
 
+  // Transform Shelter[] to NearbyShelter[] with distance and available capacity
+  const nearbyShelters = useMemo<NearbyShelter[]>(() => {
+    if (!selectedLocation) return [];
+
+    return shelters.map((shelter) => {
+      const coords = getShelterCoordinates(shelter);
+      const distanceKm = coords
+        ? calculateDistance(
+            selectedLocation.lat,
+            selectedLocation.lng,
+            coords.lat,
+            coords.lng,
+          )
+        : 0;
+
+      return {
+        ...shelter,
+        distanceKm,
+        availableCapacity: shelter.capacity, // Assuming full capacity available
+      };
+    });
+  }, [shelters, selectedLocation]);
+
   return (
     <div className="relative h-full w-full overflow-hidden rounded-xl">
       <MapContainer
@@ -93,10 +137,15 @@ export default function NearbyEvacuationMap({
           maxZoom={19}
         />
         <RecenterMap location={selectedLocation} />
-        {selectedLocation && <UserLocationMarker location={selectedLocation} />}
+        {selectedLocation && (
+          <UserLocationMarker
+            lat={selectedLocation.lat}
+            lng={selectedLocation.lng}
+          />
+        )}
         <NearbyEvacuationMarkers
-          shelters={shelters}
-          onMarkerClick={setSelectedShelter}
+          shelters={nearbyShelters}
+          onShelterClick={setSelectedShelter}
         />
         {routeData?.geometry && (
           <GeoJSON

@@ -51,9 +51,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-// Import hook dan service baru untuk nearby shelters
-import { useUserLocation } from "@/hooks/use-user-location";
-import { evacuationService } from "@/services/evacuation.service";
 
 const MapClient = dynamic(
   () => import("@/components/map/map-client").then((mod) => mod.default),
@@ -165,10 +162,6 @@ export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
   const { theme } = useTheme();
 
-  // Auto-request user location (NEW)
-  const { location: userLocation, loading: locationLoading } =
-    useUserLocation(true);
-
   // Data State
   const [earthquakes, setEarthquakes] = useState<Earthquake[]>([]);
   const [shelters, setShelters] = useState<Shelter[]>([]);
@@ -243,23 +236,29 @@ export default function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [hazardData, earthquakesResponse, facilitiesData, roadNetworkData] =
-        await Promise.all([
-          hazardZoneApi.getAll().catch(() => []),
-          earthquakeApi
-            .getAll({ limit: 100 })
-            .catch(() => ({ data: [], total: 0, page: 1, limit: 100 })),
-          publicFacilityApi.getAll().catch(() => []),
-          roadApi
-            .getRoadNetwork({
-              minLat: -8.05,
-              maxLat: -7.75,
-              minLon: 110.15,
-              maxLon: 110.55,
-            })
-            .catch(() => null),
-        ]);
-      // Don't fetch all shelters here - will fetch nearby shelters based on user location
+      const [
+        sheltersData,
+        hazardData,
+        earthquakesResponse,
+        facilitiesData,
+        roadNetworkData,
+      ] = await Promise.all([
+        shelterApi.getAll().catch(() => []),
+        hazardZoneApi.getAll().catch(() => []),
+        earthquakeApi
+          .getAll({ limit: 100 })
+          .catch(() => ({ data: [], total: 0, page: 1, limit: 100 })),
+        publicFacilityApi.getAll().catch(() => []),
+        roadApi
+          .getRoadNetwork({
+            minLat: -8.05,
+            maxLat: -7.75,
+            minLon: 110.15,
+            maxLon: 110.55,
+          })
+          .catch(() => null),
+      ]);
+      setShelters(sheltersData as Shelter[]);
       setHazardZones(hazardData as HazardZone[]);
       setEarthquakes((earthquakesResponse as any).data as Earthquake[]);
       setFacilities(facilitiesData as PublicFacility[]);
@@ -271,71 +270,6 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
-
-  // NEW: Fetch nearby shelters when user location is available
-  useEffect(() => {
-    if (!userLocation) return;
-
-    const fetchNearbyShelters = async () => {
-      try {
-        console.log(
-          "[Dashboard] Fetching nearby shelters for location:",
-          userLocation,
-        );
-        const nearbyShelters = await evacuationService.getNearbyShelters({
-          lat: userLocation.lat,
-          lng: userLocation.lng,
-          radius: 3, // 3 km radius
-          limit: 10, // max 10 shelters
-        });
-
-        console.log(
-          "[Dashboard] Found nearby shelters:",
-          nearbyShelters.length,
-        );
-        setShelters(nearbyShelters as Shelter[]);
-
-        if (nearbyShelters.length > 0) {
-          toast.success(
-            `Ditemukan ${nearbyShelters.length} lokasi evakuasi terdekat`,
-          );
-        }
-      } catch (error) {
-        console.error("[Dashboard] Error fetching nearby shelters:", error);
-        toast.error("Gagal memuat lokasi evakuasi terdekat");
-        setShelters([]); // Set empty if error
-      }
-    };
-
-    fetchNearbyShelters();
-  }, [userLocation]);
-
-  // NEW: Auto set selected location and fly to user location when available
-  useEffect(() => {
-    if (!userLocation) return;
-
-    console.log(
-      "[Dashboard] Setting user location and flying to:",
-      userLocation,
-    );
-
-    // Set selected location
-    setSelectedLocation({
-      lat: userLocation.lat,
-      lng: userLocation.lng,
-    });
-
-    // Fly to user location
-    setFlyToLocation({
-      lat: userLocation.lat,
-      lon: userLocation.lng,
-      zoom: 15, // Zoom level untuk melihat detail area
-    });
-
-    toast.success("Lokasi Anda ditemukan", {
-      description: `${userLocation.lat.toFixed(6)}, ${userLocation.lng.toFixed(6)}`,
-    });
-  }, [userLocation]);
 
   useEffect(() => {
     fetchData();
@@ -810,13 +744,11 @@ export default function Dashboard() {
     <>
       {/* Global Loading Overlay for Routing */}
       {gettingLocation && (
-        <div className="fixed inset-0 z-[9999] bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-8 rounded-2xl flex flex-col items-center shadow-2xl max-w-sm text-center">
+        <div className="fixed inset-0 z-[9999] bg-zinc-950/80 backdrop-blur-sm flex flex-col items-center justify-center text-white animate-in fade-in duration-300">
+          <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl flex flex-col items-center shadow-2xl max-w-sm text-center">
             <Loader2 className="w-16 h-16 text-blue-500 animate-spin mb-6" />
-            <h2 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">
-              Mencari Rute Evakuasi...
-            </h2>
-            <p className="text-slate-600 dark:text-zinc-400 text-sm">
+            <h2 className="text-xl font-bold mb-2">Mencari Rute Evakuasi...</h2>
+            <p className="text-zinc-400 text-sm">
               Sedang melacak lokasi Anda dan menghitung rute teraman menuju
               shelter terdekat. Mohon tunggu sebentar.
             </p>
@@ -935,7 +867,7 @@ export default function Dashboard() {
               </div>
             </div>
           )}
-          <div className="absolute top-4 right-4 z-[1000] flex flex-row gap-2">
+          <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
             {/* Info Panel Toggle */}
             <Sheet open={sheetOpen} onOpenChange={setSheetOpen} modal={false}>
               <SheetTrigger className="inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-800 shadow-lg bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors h-10 w-10">
@@ -975,112 +907,93 @@ export default function Dashboard() {
                     </div>
                   )}
                   {/* Nearest Shelter Module */}
-                  {shelters.length > 0 && selectedLocation && (
+                  {nearestShelters.length > 0 && (
                     <div className="space-y-3">
-                      <h2 className="text-sm font-bold text-slate-900 dark:text-zinc-100 border-b border-slate-200 dark:border-zinc-800 pb-2 flex items-center justify-between">
-                        <span>5 Shelter Terdekat</span>
-                        <Badge variant="outline" className="text-xs">
-                          {shelters.length} total
-                        </Badge>
+                      <h2 className="text-sm font-bold text-slate-900 dark:text-zinc-100 border-b border-slate-200 dark:border-zinc-800 pb-2">
+                        Shelter Terdekat
                       </h2>
                       <div className="space-y-2">
-                        {shelters.slice(0, 5).map((shelter, i) => {
-                          const coords = shelter.geometry as {
-                            coordinates: [number, number];
-                          };
-                          const distance = selectedLocation
-                            ? calculateDistance(
-                                selectedLocation.lat,
-                                selectedLocation.lng,
-                                coords.coordinates[1],
-                                coords.coordinates[0],
+                        {nearestShelters.map((shelter, i) => (
+                          <Card
+                            key={shelter.id}
+                            className={`bg-white dark:bg-zinc-900 shadow-sm cursor-pointer transition-colors ${expandedShelterId === shelter.id ? "border-primary ring-1 ring-primary" : "border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700"}`}
+                            onClick={() =>
+                              setExpandedShelterId(
+                                expandedShelterId === shelter.id
+                                  ? null
+                                  : shelter.id,
                               )
-                            : 0;
-
-                          return (
-                            <Card
-                              key={shelter.id}
-                              className={`bg-white dark:bg-zinc-900 shadow-sm cursor-pointer transition-colors ${expandedShelterId === shelter.id ? "border-primary ring-1 ring-primary" : "border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700"}`}
-                              onClick={() =>
-                                setExpandedShelterId(
-                                  expandedShelterId === shelter.id
-                                    ? null
-                                    : shelter.id,
-                                )
-                              }
-                            >
-                              <CardContent className="pt-4 pb-4 flex flex-col gap-2 text-sm">
-                                <div className="flex justify-between items-start">
-                                  <div className="pr-2">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                                        #{i + 1}
-                                      </span>
-                                      <p className="font-semibold text-slate-800 dark:text-zinc-200">
-                                        {shelter.name}
-                                      </p>
-                                    </div>
-                                    <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
-                                      {distance.toFixed(2)} km
-                                    </p>
-                                  </div>
+                            }
+                          >
+                            <CardContent className="pt-4 pb-4 flex flex-col gap-2 text-sm">
+                              <div className="flex justify-between items-start">
+                                <div className="pr-2">
+                                  <p className="font-semibold text-slate-800 dark:text-zinc-200">
+                                    {shelter.name}
+                                  </p>
+                                  <p className="text-xs text-slate-500">
+                                    {shelter.distance.toFixed(2)} km
+                                  </p>
                                 </div>
+                                <Badge variant="outline" className="shrink-0">
+                                  #{i + 1}
+                                </Badge>
+                              </div>
 
-                                {expandedShelterId === shelter.id && (
-                                  <div className="mt-2 pt-3 border-t border-slate-100 dark:border-zinc-800/60 animate-in fade-in slide-in-from-top-2 flex flex-col gap-2.5">
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <div>
-                                        <p className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">
-                                          Kondisi
-                                        </p>
-                                        <p className="text-xs font-medium text-slate-700 dark:text-zinc-300">
-                                          {shelter.condition}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">
-                                          Kapasitas
-                                        </p>
-                                        <p className="text-xs font-medium text-slate-700 dark:text-zinc-300">
-                                          {shelter.capacity} Orang
-                                        </p>
-                                      </div>
+                              {expandedShelterId === shelter.id && (
+                                <div className="mt-2 pt-3 border-t border-slate-100 dark:border-zinc-800/60 animate-in fade-in slide-in-from-top-2 flex flex-col gap-2.5">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <p className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">
+                                        Kondisi
+                                      </p>
+                                      <p className="text-xs font-medium text-slate-700 dark:text-zinc-300">
+                                        {shelter.condition}
+                                      </p>
                                     </div>
                                     <div>
                                       <p className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">
-                                        Alamat
+                                        Kapasitas
                                       </p>
-                                      <p
-                                        className="text-xs font-medium text-slate-700 dark:text-zinc-300 line-clamp-2"
-                                        title={shelter.address || ""}
-                                      >
-                                        {shelter.address || "-"}
+                                      <p className="text-xs font-medium text-slate-700 dark:text-zinc-300">
+                                        {shelter.capacity} Orang
                                       </p>
                                     </div>
-                                    <Button
-                                      size="sm"
-                                      className="w-full mt-1 bg-blue-600 hover:bg-blue-700 text-white"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const coords = shelter.geometry as {
-                                          coordinates: [number, number];
-                                        };
-                                        calculateRouteToShelter(
-                                          coords.coordinates[1],
-                                          coords.coordinates[0],
-                                          shelter.name,
-                                        );
-                                      }}
-                                    >
-                                      <Navigation className="w-3 h-3 mr-2" />
-                                      Dapatkan Rute
-                                    </Button>
                                   </div>
-                                )}
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
+                                  <div>
+                                    <p className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">
+                                      Alamat
+                                    </p>
+                                    <p
+                                      className="text-xs font-medium text-slate-700 dark:text-zinc-300 line-clamp-2"
+                                      title={shelter.address || ""}
+                                    >
+                                      {shelter.address || "-"}
+                                    </p>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    className="w-full mt-1 bg-blue-600 hover:bg-blue-700 text-white"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const coords = shelter.geometry as {
+                                        coordinates: [number, number];
+                                      };
+                                      calculateRouteToShelter(
+                                        coords.coordinates[1],
+                                        coords.coordinates[0],
+                                        shelter.name,
+                                      );
+                                    }}
+                                  >
+                                    <Navigation className="w-3 h-3 mr-2" />
+                                    Dapatkan Rute
+                                  </Button>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -1139,6 +1052,34 @@ export default function Dashboard() {
               )}
             </Button>
           </div>
+
+          {/* GPS Location Button */}
+          <Button
+            onClick={handleGetCurrentLocation}
+            disabled={gettingLocation}
+            className="absolute bottom-24 right-4 z-[80] md:z-[500] h-12 w-12 shadow-lg bg-blue-600 hover:bg-blue-700 border-0 rounded-full transition-colors flex items-center justify-center"
+            size="icon"
+          >
+            {gettingLocation ? (
+              <Loader2 className="h-5 w-5 text-white animate-spin" />
+            ) : (
+              <Navigation className="h-5 w-5 text-white" />
+            )}
+          </Button>
+
+          {/* Routing Mode Toggle Button */}
+          <Button
+            onClick={handleToggleRoutingMode}
+            className={`absolute bottom-8 right-4 z-[80] md:z-[500] h-12 w-12 shadow-lg border-0 rounded-full transition-colors flex items-center justify-center ${
+              routingMode
+                ? "bg-green-600 hover:bg-green-700"
+                : "bg-slate-800 dark:bg-zinc-800 hover:bg-slate-900"
+            }`}
+            size="icon"
+            title={routingMode ? "Mode Routing Aktif" : "Aktifkan Mode Routing"}
+          >
+            <MapPin className="h-5 w-5 text-white" />
+          </Button>
 
           {/* Selected Earthquake Floating Detail - Compact Bottom */}
           {selectedEarthquake && (
@@ -1557,16 +1498,58 @@ export default function Dashboard() {
             </Card>
           )}
 
-          {/* Selected Location Floating Detail - REMOVED */}
+          {/* Selected Location Floating Detail */}
+          {selectedLocation &&
+            !routingMode &&
+            !calculatedRoute &&
+            !isShelterDetailOpen && (
+              <div className="absolute bottom-6 left-1/2 md:bottom-8 md:left-8 transform -translate-x-1/2 md:translate-x-0 z-[90] md:z-[1000] w-[calc(100%-2rem)] sm:w-[340px] shadow-2xl bg-white dark:bg-zinc-950/95 backdrop-blur-md border border-slate-200/80 dark:border-zinc-800/60 rounded-xl overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-300">
+                <div className="flex items-center justify-between p-3 border-b border-slate-100 dark:border-zinc-800/60">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center border border-blue-100 dark:border-blue-900/30">
+                      <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-500" />
+                    </div>
+                    <span className="text-sm font-bold text-slate-800 dark:text-zinc-100">
+                      Lokasi Titik
+                    </span>
+                  </div>
+                  <button
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 p-0.5"
+                    onClick={() => {
+                      setSelectedLocation(null);
+                      setNearestShelters([]);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="p-2.5 md:p-3 space-y-1.5 bg-slate-50 dark:bg-zinc-900/30">
+                  <div className="font-mono text-[10px] md:text-xs font-semibold bg-white dark:bg-zinc-900 p-1.5 md:p-2 rounded border border-slate-100 dark:border-zinc-800 text-slate-700 dark:text-zinc-300">
+                    {selectedLocation.lat.toFixed(5)},{" "}
+                    {selectedLocation.lng.toFixed(5)}
+                  </div>
+                  {nearestShelters.length > 0 && (
+                    <div className="text-[10px] md:text-xs text-slate-600 dark:text-zinc-400 leading-tight">
+                      Ada{" "}
+                      <span className="font-bold text-slate-800 dark:text-zinc-200">
+                        {nearestShelters.length} shelter
+                      </span>{" "}
+                      terdekat.{" "}
+                      <span className="hidden md:inline">
+                        Buka panel Info Lokasi (kanan atas) untuk detail.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
           <div className="relative h-full w-full dark-map-container flex-1">
             {loading && (
-              <div className="absolute inset-0 z-[2000] bg-white/95 dark:bg-zinc-950/95 backdrop-blur-sm flex flex-col items-center justify-center">
+              <div className="absolute inset-0 z-[2000] bg-zinc-950/95 backdrop-blur-sm flex flex-col items-center justify-center">
                 <Loader2 className="h-12 w-12 animate-spin text-blue-500 mb-4" />
-                <p className="text-slate-700 dark:text-zinc-300 font-medium">
-                  Memuat data peta...
-                </p>
-                <p className="text-slate-500 dark:text-zinc-500 text-sm mt-2">
+                <p className="text-zinc-300 font-medium">Memuat data peta...</p>
+                <p className="text-zinc-500 text-sm mt-2">
                   Mengambil data shelter, gempa, dan zona rawan
                 </p>
               </div>

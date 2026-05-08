@@ -1,70 +1,79 @@
-"use client";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
-import { useCallback, useEffect, useState } from "react";
-
-export type UserLocation = {
+export interface UserLocation {
   lat: number;
   lng: number;
-};
+}
 
-type LocationState =
-  | "idle"
-  | "requesting"
-  | "granted"
-  | "denied"
-  | "unsupported"
-  | "error";
+export interface UseUserLocationReturn {
+  location: UserLocation | null;
+  loading: boolean;
+  error: string | null;
+  requestLocation: () => void;
+}
 
-export function useUserLocation() {
+export function useUserLocation(
+  autoRequest: boolean = true,
+): UseUserLocationReturn {
   const [location, setLocation] = useState<UserLocation | null>(null);
-  const [status, setStatus] = useState<LocationState>("idle");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const requestLocation = useCallback(() => {
+  const requestLocation = () => {
     if (!navigator.geolocation) {
-      setStatus("unsupported");
-      setError("Browser tidak mendukung Geolocation API.");
+      const errorMsg = "Geolocation tidak didukung oleh browser Anda";
+      setError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
-    setStatus("requesting");
+    setLoading(true);
     setError(null);
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
+        const { latitude, longitude } = position.coords;
+        setLocation({ lat: latitude, lng: longitude });
+        setLoading(false);
+        console.log("[useUserLocation] Location obtained:", {
+          lat: latitude,
+          lng: longitude,
         });
-        setStatus("granted");
       },
-      (geoError) => {
-        if (geoError.code === geoError.PERMISSION_DENIED) {
-          setStatus("denied");
-          setError("Akses lokasi ditolak.");
-          return;
+      (err) => {
+        let errorMessage = "Gagal mendapatkan lokasi Anda";
+
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
+            errorMessage =
+              "Izin lokasi ditolak. Aktifkan di pengaturan browser.";
+            break;
+          case err.POSITION_UNAVAILABLE:
+            errorMessage = "Lokasi tidak tersedia saat ini";
+            break;
+          case err.TIMEOUT:
+            errorMessage = "Waktu permintaan lokasi habis";
+            break;
         }
 
-        setStatus("error");
-        setError(geoError.message || "Gagal mendapatkan lokasi pengguna.");
+        setError(errorMessage);
+        setLoading(false);
+        console.error("[useUserLocation] Error:", err);
       },
       {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 60000,
+        maximumAge: 0,
       },
     );
-  }, []);
+  };
 
   useEffect(() => {
-    requestLocation();
-  }, [requestLocation]);
+    if (autoRequest) {
+      requestLocation();
+    }
+  }, [autoRequest]);
 
-  return {
-    location,
-    status,
-    error,
-    isLoading: status === "idle" || status === "requesting",
-    requestLocation,
-  };
+  return { location, loading, error, requestLocation };
 }
