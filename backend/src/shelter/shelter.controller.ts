@@ -32,11 +32,13 @@ export class ShelterController {
     @Query('lat') lat: string,
     @Query('lon') lon: string,
     @Query('radius') radius?: string,
+    @Query('limit') limit?: string,
   ) {
     return this.shelterService.getNearby(
       parseFloat(lat),
       parseFloat(lon),
-      radius ? parseFloat(radius) : 10,
+      radius ? parseFloat(radius) : 3,
+      limit ? parseInt(limit) : 10,
     );
   }
 

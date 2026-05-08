@@ -97,47 +97,61 @@ export class ShelterService {
     });
   }
 
-  async getNearby(lat: number, lon: number, radiusKm: number = 10) {
-    const shelters = await this.prisma.shelter.findMany();
+  async getNearby(
+    lat: number,
+    lon: number,
+    radiusKm: number = 3,
+    limit: number = 10,
+  ) {
+    // Use PostGIS spatial query for optimal performance
+    // ST_DWithin uses spatial index (GIST) for fast filtering
+    const radiusMeters = radiusKm * 1000;
 
-    return shelters.filter((shelter) => {
-      const geom = shelter.geometry as {
-        type: string;
-        coordinates: number[] | number[][];
-      } | null;
-      if (!geom?.coordinates) return false;
+    const shelters = await this.prisma.$queryRaw<
+      Array<{
+        id: number;
+        name: string;
+        category: ShelterCategory;
+        capacity: number;
+        currentOccupancy: number;
+        geometry: any;
+        address: string | null;
+        condition: ShelterCondition;
+        status: string;
+        facilities: string | null;
+        distance: number;
+      }>
+    >`
+      SELECT 
+        id,
+        name,
+        category,
+        capacity,
+        "currentOccupancy",
+        geometry,
+        address,
+        condition,
+        status,
+        facilities,
+        ST_Distance(
+          geom::geography,
+          ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)::geography
+        ) as distance
+      FROM "Shelter"
+      WHERE ST_DWithin(
+        geom::geography,
+        ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)::geography,
+        ${radiusMeters}
+      )
+      ORDER BY geom <-> ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)
+      LIMIT ${limit}
+    `;
 
-      let shelterLat: number;
-      let shelterLon: number;
-
-      if (
-        geom.type === 'Point' &&
-        Array.isArray(geom.coordinates) &&
-        geom.coordinates.length >= 2
-      ) {
-        shelterLat = geom.coordinates[1] as number;
-        shelterLon = geom.coordinates[0] as number;
-      } else if (
-        Array.isArray(geom.coordinates) &&
-        geom.coordinates.length > 0
-      ) {
-        const firstCoord = geom.coordinates[0];
-        if (Array.isArray(firstCoord) && firstCoord.length >= 2) {
-          shelterLat = firstCoord[1];
-          shelterLon = firstCoord[0];
-        } else {
-          return false;
-        }
-      } else {
-        return false;
-      }
-
-      if (typeof shelterLat !== 'number' || typeof shelterLon !== 'number')
-        return false;
-
-      const distance = this.calculateDistance(lat, lon, shelterLat, shelterLon);
-      return distance <= radiusKm;
-    });
+    return shelters.map((shelter) => ({
+      ...shelter,
+      distanceKm: Math.round((shelter.distance / 1000) * 100) / 100,
+      availableCapacity: shelter.capacity - (shelter.currentOccupancy || 0),
+    }));
   }
 
   private calculateDistance(
