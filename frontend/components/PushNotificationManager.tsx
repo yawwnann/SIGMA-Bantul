@@ -48,6 +48,7 @@ export function PushNotificationManager() {
   const hasShownBlockedToastRef = useRef(false);
   const [isAudioEnabled, setIsAudioEnabled] = useState(false);
   const [isAudioBlocked, setIsAudioBlocked] = useState(false);
+  const [showAudioEnableModal, setShowAudioEnableModal] = useState(false);
 
   const playEmergencyAudio = useCallback(async () => {
     const audio = audioRef.current;
@@ -98,7 +99,10 @@ export function PushNotificationManager() {
 
   const handleEnableAudioClick = useCallback(async () => {
     await unlockAudio();
-    await playEmergencyAudio();
+    const played = await playEmergencyAudio();
+    if (played) {
+      setShowAudioEnableModal(false);
+    }
   }, [playEmergencyAudio, unlockAudio]);
 
   useEffect(() => {
@@ -111,6 +115,9 @@ export function PushNotificationManager() {
       localStorage.getItem("emergency-audio-enabled") === "true";
     if (persistedAudioState) {
       setIsAudioEnabled(true);
+      setShowAudioEnableModal(false);
+    } else {
+      setShowAudioEnableModal(true);
     }
 
     const firstInteractionEvents: (keyof WindowEventMap)[] = [
@@ -286,30 +293,41 @@ export function PushNotificationManager() {
     };
   }, [playEmergencyAudio, unlockAudio]);
 
-  return (
-    <div className="fixed bottom-4 right-4 z-[1200] flex items-center gap-2 rounded-lg border border-slate-300 bg-white/95 p-2 shadow-lg backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95">
-      <button
-        type="button"
-        onClick={handleEnableAudioClick}
-        className="rounded-md bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700"
-      >
-        Aktifkan Suara Peringatan
-      </button>
-      <span
-        className={`text-xs font-medium ${
-          isAudioEnabled
-            ? "text-emerald-600 dark:text-emerald-400"
-            : isAudioBlocked
-              ? "text-amber-600 dark:text-amber-400"
-              : "text-slate-600 dark:text-zinc-300"
-        }`}
-      >
-        {isAudioEnabled
-          ? "Audio aktif"
-          : isAudioBlocked
-            ? "Perlu interaksi"
-            : "Audio belum aktif"}
-      </span>
+  return showAudioEnableModal ? (
+    <div className="fixed inset-0 z-[1400] flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">
+          Aktifkan Suara Peringatan Gempa
+        </h3>
+        <p className="mt-2 text-sm text-slate-600 dark:text-zinc-300">
+          Untuk memastikan alarm gempa berbunyi di perangkat mobile, aktifkan
+          suara sekali melalui tombol di bawah.
+        </p>
+        <div className="mt-4 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleEnableAudioClick}
+            className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+          >
+            Aktifkan Suara Peringatan
+          </button>
+          <span
+            className={`text-xs font-medium ${
+              isAudioEnabled
+                ? "text-emerald-600 dark:text-emerald-400"
+                : isAudioBlocked
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-slate-600 dark:text-zinc-300"
+            }`}
+          >
+            {isAudioEnabled
+              ? "Audio aktif"
+              : isAudioBlocked
+                ? "Perlu interaksi"
+                : "Menunggu aktivasi"}
+          </span>
+        </div>
+      </div>
     </div>
-  );
+  ) : null;
 }
