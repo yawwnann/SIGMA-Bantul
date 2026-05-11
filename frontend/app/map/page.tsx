@@ -428,7 +428,7 @@ export default function MapPage() {
               action: {
                 label: "Lihat Rute Evakuasi",
                 onClick: () =>
-                  (window.location.href = "/evacuation?emergency=true"),
+                  (window.location.href = "/?emergency=true"),
               },
             },
           );

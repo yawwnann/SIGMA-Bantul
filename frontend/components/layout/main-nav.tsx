@@ -26,11 +26,6 @@ const menuItems = [
     description: "Histori dan data gempa bumi dari BMKG",
   },
   {
-    title: "Manajemen Evakuasi",
-    href: "/evacuation",
-    description: "Rekomendasi jalur evakuasi utama dan alternatif",
-  },
-  {
     title: "Edukasi",
     href: "/education",
     description: "Tips evakuasi dan SOP gempa bumi",
@@ -130,14 +125,6 @@ export function MainNav() {
                   className={navigationMenuTriggerStyle()}
                 >
                   Gempa
-                </Link>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <Link
-                  href="/evacuation"
-                  className={navigationMenuTriggerStyle()}
-                >
-                  Evakuasi
                 </Link>
               </NavigationMenuItem>
             </NavigationMenuList>

@@ -19,6 +19,7 @@ interface MapClientProps {
   hazardZones: HazardZone[];
   earthquakes: Earthquake[];
   facilities: PublicFacility[];
+  userLocation?: { lat: number; lng: number } | null;
   selectedLocation: { lat: number; lng: number } | null;
   onLocationSelect: (lat: number, lng: number) => void;
   onEarthquakeClick?: (earthquake: Earthquake) => void;
@@ -74,6 +75,7 @@ export default function MapClient({
   hazardZones,
   earthquakes,
   facilities,
+  userLocation,
   selectedLocation,
   onLocationSelect,
   onEarthquakeClick,
@@ -787,9 +789,13 @@ export default function MapClient({
       locationMarkerRef.current = null;
     }
 
-    if (selectedLocation) {
+    // Use userLocation (GPS) as primary position, fall back to selectedLocation
+    const displayPosition = userLocation ?? selectedLocation;
+
+    if (displayPosition) {
+      const isGpsLocation = userLocation !== null;
       locationMarkerRef.current = L.marker(
-        [selectedLocation.lat, selectedLocation.lng],
+        [displayPosition.lat, displayPosition.lng],
         {
           icon: L.divIcon({
             className: "selected-location",
@@ -801,21 +807,12 @@ export default function MapClient({
       )
         .addTo(mapRef.current)
         .bindPopup(
-          `Lokasi Terpilih: ${selectedLocation.lat.toFixed(4)}, ${selectedLocation.lng.toFixed(4)}`,
+          isGpsLocation
+            ? "Lokasi Saya"
+            : `Lokasi Terpilih: ${displayPosition.lat.toFixed(4)}, ${displayPosition.lng.toFixed(4)}`,
         );
-
-      const currentZoom = mapRef.current.getZoom();
-      const targetZoom = Math.max(currentZoom, 15);
-
-      mapRef.current.flyTo(
-        [selectedLocation.lat, selectedLocation.lng],
-        targetZoom,
-        {
-          duration: 1.5,
-        },
-      );
     }
-  }, [selectedLocation]);
+  }, [userLocation, selectedLocation]);
 
   useEffect(() => {
     if (!mapRef.current || !roadNetwork) return;

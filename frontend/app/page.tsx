@@ -1585,6 +1585,7 @@ export default function Dashboard() {
               shelters={shelters}
               hazardZones={hazardZones}
               facilities={facilities}
+              userLocation={userLocation}
               selectedLocation={selectedLocation}
               onLocationSelect={handleMapClick}
               onEarthquakeClick={handleEarthquakeClick}

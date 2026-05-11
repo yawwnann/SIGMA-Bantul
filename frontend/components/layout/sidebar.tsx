@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   Map,
   Activity,
-  Route,
   BookOpen,
   BarChart3,
   Moon,
@@ -38,11 +37,6 @@ const navItems = [
     title: "Analisis Frekuensi",
     href: "/analysis",
     icon: BarChart3,
-  },
-  {
-    title: "Manajemen Evakuasi",
-    href: "/evacuation",
-    icon: Route,
   },
   {
     title: "Edukasi",

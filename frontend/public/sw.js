@@ -6,6 +6,31 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+function buildEarthquakeNotificationOptions({
+  body,
+  url,
+  icon,
+  badge,
+  tag,
+  vibrate,
+}) {
+  return {
+    body: body || "Silahkan periksa jalur evakuasi Anda.",
+    icon: icon || "/logo.png",
+    badge: badge || "/logo.png",
+    data: { url: url || "/?emergency=true" },
+    // Vibrate pattern emergency alert
+    vibrate: vibrate || [200, 100, 200, 100, 200, 100, 200],
+    tag: tag || "earthquake-alert",
+    renotify: true,
+    requireInteraction: true,
+    actions: [
+      { action: "view", title: "Lihat Rute" },
+      { action: "dismiss", title: "Tutup" },
+    ],
+  };
+}
+
 self.addEventListener("push", function (event) {
   console.log("[SW] Push event received:", event);
   console.log("[SW] Push data type:", event.data ? event.data.type : "none");
@@ -36,20 +61,10 @@ self.addEventListener("push", function (event) {
     console.error("[SW] Error parsing push data:", e);
   }
 
-  const options = {
-    body: body,
-    icon: "/logo.png",
-    badge: "/logo.png",
-    data: { url: url },
-    vibrate: [200, 100, 200, 100, 200, 100, 200],
-    tag: "earthquake-alert",
-    renotify: true,
-    requireInteraction: true,
-    actions: [
-      { action: "view", title: "Lihat Rute" },
-      { action: "dismiss", title: "Tutup" },
-    ],
-  };
+  const options = buildEarthquakeNotificationOptions({
+    body,
+    url,
+  });
 
   console.log("[SW] Showing notification:", title, body);
 
@@ -168,6 +183,23 @@ self.addEventListener("notificationclick", function (event) {
 // Handle notification close (for analytics if needed)
 self.addEventListener("notificationclose", function (event) {
   console.log("[SW] Notification closed");
+});
+
+self.addEventListener("message", (event) => {
+  if (!event.data || event.data.type !== "SHOW_EARTHQUAKE_NOTIFICATION") return;
+
+  const payload = event.data.payload || {};
+  const title = payload.title || "Peringatan Gempa";
+  const options = buildEarthquakeNotificationOptions({
+    body: payload.body,
+    url: payload.url,
+    icon: payload.icon,
+    badge: payload.badge,
+    tag: payload.tag || "earthquake-alert-foreground",
+    vibrate: [300, 120, 300, 120, 300],
+  });
+
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 // Satisfy PWA requirement for installability

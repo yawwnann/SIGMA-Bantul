@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import apiClient from "@/api/client";
 import toast from "@/lib/toast-utils";
+import { socketService } from "@/lib/socket";
+import type { Earthquake } from "@/types";
 
 // Use the public key from backend .env - MUST match exactly!
 const publicVapidKey =
@@ -24,8 +26,90 @@ function urlBase64ToUint8Array(base64String: string) {
   return outputArray;
 }
 
+function getEarthquakeNotificationMessage(earthquake: Earthquake): {
+  title: string;
+  body: string;
+  url: string;
+} {
+  const magnitude = Number(earthquake.magnitude || 0).toFixed(1);
+  const depth = Number(earthquake.depth || 0).toFixed(0);
+  const location = earthquake.location || earthquake.region || "wilayah terdekat";
+
+  return {
+    title: `Peringatan Gempa M${magnitude}`,
+    body: `${location} • Kedalaman ${depth} km. Segera cek info evakuasi.`,
+    url: "/?emergency=true",
+  };
+}
+
 export function PushNotificationManager() {
   useEffect(() => {
+    let hasInteracted = false;
+    const emergencyAudio = new Audio("/notification.mp3");
+    emergencyAudio.preload = "auto";
+    emergencyAudio.volume = 1;
+
+    const playEmergencyAudio = async () => {
+      try {
+        emergencyAudio.currentTime = 0;
+        emergencyAudio.volume = 1;
+        await emergencyAudio.play();
+      } catch (error) {
+        // Fallback handling saat autoplay diblok browser
+        console.warn("[Audio Alert] Autoplay blocked:", error);
+        toast.warning("Alarm darurat diblok browser", {
+          description:
+            "Ketuk layar sekali untuk mengaktifkan suara peringatan gempa.",
+        });
+      }
+    };
+
+    const unlockAudio = async () => {
+      if (hasInteracted) return;
+      hasInteracted = true;
+      try {
+        emergencyAudio.muted = true;
+        await emergencyAudio.play();
+        emergencyAudio.pause();
+        emergencyAudio.currentTime = 0;
+      } catch (error) {
+        console.warn("[Audio Alert] Initial unlock failed:", error);
+      } finally {
+        emergencyAudio.muted = false;
+      }
+    };
+
+    const firstInteractionEvents: (keyof WindowEventMap)[] = [
+      "pointerdown",
+      "touchstart",
+      "keydown",
+      "click",
+    ];
+    firstInteractionEvents.forEach((eventName) => {
+      window.addEventListener(eventName, unlockAudio, { once: true });
+    });
+
+    const triggerLocalVibration = () => {
+      if ("vibrate" in navigator) {
+        navigator.vibrate([300, 120, 300, 120, 300]);
+      }
+    };
+
+    const showEmergencyViaServiceWorker = async (
+      title: string,
+      body: string,
+      url: string,
+    ) => {
+      if (!("serviceWorker" in navigator)) return;
+      if (Notification.permission !== "granted") return;
+
+      const registration = await navigator.serviceWorker.ready;
+      registration.active?.postMessage({
+        type: "SHOW_EARTHQUAKE_NOTIFICATION",
+        payload: { title, body, url },
+      });
+    };
+
     async function setupPush() {
       if (!("serviceWorker" in navigator && "PushManager" in window)) {
         console.warn("Push notifications not supported in this browser");
@@ -124,14 +208,18 @@ export function PushNotificationManager() {
       }
     }
 
+    // Ensure realtime earthquake listener aktif di seluruh aplikasi
+    socketService.connect();
     setupPush();
 
     // Dengarkan pesan "PUSH_RECEIVED" langsung dari ServiceWorker jika web sedang aktif/terbuka
     const handleSWMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === "PUSH_RECEIVED") {
-        toast.emergency.alert(event.data.title, event.data.body, () =>
-          window.open(event.data.url, "_blank"),
-        );
+        playEmergencyAudio();
+        triggerLocalVibration();
+        toast.emergency.alert(event.data.title, event.data.body, () => {
+          window.location.href = event.data.url;
+        });
       }
 
       // Handle navigation request from service worker (when notification is clicked)
@@ -142,8 +230,24 @@ export function PushNotificationManager() {
     };
     navigator.serviceWorker?.addEventListener("message", handleSWMessage);
 
+    // Realtime alert ketika backend broadcast event gempa baru
+    const unsubscribeEarthquake = socketService.onNewEarthquake((earthquake) => {
+      const { title, body, url } = getEarthquakeNotificationMessage(earthquake);
+      playEmergencyAudio();
+      triggerLocalVibration();
+      toast.emergency.alert(title, body, () => {
+        window.location.href = url;
+      });
+      void showEmergencyViaServiceWorker(title, body, url);
+    });
+
     return () => {
+      unsubscribeEarthquake();
       navigator.serviceWorker?.removeEventListener("message", handleSWMessage);
+      firstInteractionEvents.forEach((eventName) => {
+        window.removeEventListener(eventName, unlockAudio);
+      });
+      emergencyAudio.pause();
     };
   }, []);
 

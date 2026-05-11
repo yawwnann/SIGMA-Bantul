@@ -18,6 +18,7 @@ type NearbyEvacuationMapProps = {
   hazardZones?: HazardZone[];
   earthquakes?: Earthquake[];
   facilities?: PublicFacility[];
+  userLocation?: UserLocation | null;
   selectedLocation: UserLocation | null;
   onLocationSelect?: (lat: number, lng: number) => void;
   onEarthquakeClick?: (earthquake: Earthquake) => void;
@@ -83,6 +84,7 @@ const RecenterMap = memo(function RecenterMap({
 
 export default function NearbyEvacuationMap({
   shelters,
+  userLocation,
   selectedLocation,
   onCalculateRoute,
   calculatedRoute,
@@ -136,11 +138,11 @@ export default function NearbyEvacuationMap({
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           maxZoom={19}
         />
-        <RecenterMap location={selectedLocation} />
-        {selectedLocation && (
+        <RecenterMap location={userLocation ?? selectedLocation} />
+        {(userLocation ?? selectedLocation) && (
           <UserLocationMarker
-            lat={selectedLocation.lat}
-            lng={selectedLocation.lng}
+            lat={(userLocation ?? selectedLocation)!.lat}
+            lng={(userLocation ?? selectedLocation)!.lng}
           />
         )}
         <NearbyEvacuationMarkers
