@@ -519,49 +519,54 @@ export default function Dashboard() {
         BANTUL_LON,
       );
 
-      if (zone === "RED") {
-        toast.warning(
-          `ZONA MERAH: Gempa M${newEq.magnitude} di ${newEq.location}`,
-          {
-            icon: <AlertTriangle className="w-5 h-5 text-red-600" />,
-            description: `Kedalaman: ${newEq.depth} km · ${eqFromBantul.toFixed(1)}km dari Bantul · Anda berada di zona dampak utama — TETAP BERLINDUNG di tempat aman!`,
-            duration: 15000,
-          },
-        );
-        toast.error(
-          "Rute evakuasi dinonaktifkan sementara karena risiko tinggi.",
-          { duration: 5000 },
-        );
-      } else if (zone === "YELLOW") {
-        toast.warning(
-          `ZONA KUNING: Gempa M${newEq.magnitude} di ${newEq.location}`,
-          {
-            icon: <AlertTriangle className="w-5 h-5 text-yellow-600" />,
-            description: `Kedalaman: ${newEq.depth} km · ${eqFromBantul.toFixed(1)}km dari Bantul · Anda di area waspada, segera evakuasi!`,
-            duration: 15000,
-            action: {
-              label: "Lihat Rute Evakuasi",
-              onClick: () => emergencyHandlerRef.current(),
-            },
-          },
-        );
-      } else {
-        toast.info(
-          `ZONA HIJAU: Gempa M${newEq.magnitude} di ${newEq.location}`,
-          {
-            icon: <Info className="w-5 h-5 text-green-600" />,
-            description: `Kedalaman: ${newEq.depth} km · ${eqFromBantul.toFixed(1)}km dari Bantul · Anda di luar zona bahaya.`,
-            duration: 10000,
-            action: {
-              label: "Lihat di Peta",
-              onClick: () => {
-                setFlyToLocation({ lat: newEq.lat, lon: newEq.lon, zoom: 11 });
-                setSelectedEarthquake(newEq);
-              },
-            },
-          },
-        );
-      }
+      const handleClickToast = () => {
+        setFlyToLocation({ lat: newEq.lat, lon: newEq.lon, zoom: 11 });
+        setSelectedEarthquake(newEq);
+      };
+
+      const zoneLabel =
+        zone === "RED"
+          ? "ZONA MERAH"
+          : zone === "YELLOW"
+            ? "ZONA KUNING"
+            : "ZONA HIJAU";
+
+      const zoneAction =
+        zone === "RED"
+          ? "Tetap berlindung di tempat aman!"
+          : zone === "YELLOW"
+            ? "Segera evakuasi ke shelter terdekat!"
+            : "Pantau informasi gempa lebih lanjut.";
+
+      const borderColor =
+        zone === "RED"
+          ? "border-l-red-600"
+          : zone === "YELLOW"
+            ? "border-l-yellow-500"
+            : "border-l-green-500";
+
+      toast(
+        <div
+          onClick={handleClickToast}
+          className={`cursor-pointer border-l-4 ${borderColor} pl-3 py-1`}
+        >
+          <div className="font-semibold text-sm">
+            {zone === "RED" ? "🔴" : zone === "YELLOW" ? "🟡" : "🟢"} Gempa M
+            {newEq.magnitude} di {newEq.location}
+          </div>
+          <div className="text-xs text-muted-foreground mt-0.5">
+            Kedalaman: {newEq.depth} km &middot;{" "}
+            {eqFromBantul.toFixed(1)} km dari Bantul
+          </div>
+          <div className="text-xs mt-1 font-medium">
+            Kamu berada di {zoneLabel}. {zoneAction}
+          </div>
+          <div className="text-xs text-blue-600 mt-1">
+            Klik untuk melihat detail
+          </div>
+        </div>,
+        { duration: 15000 },
+      );
 
       setEarthquakes((prev) => [newEq, ...prev.slice(0, 99)]);
     });

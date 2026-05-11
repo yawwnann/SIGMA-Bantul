@@ -24,10 +24,6 @@ function buildEarthquakeNotificationOptions({
     tag: tag || "earthquake-alert",
     renotify: true,
     requireInteraction: true,
-    actions: [
-      { action: "view", title: "Lihat Rute" },
-      { action: "dismiss", title: "Tutup" },
-    ],
   };
 }
 
@@ -96,12 +92,6 @@ self.addEventListener("notificationclick", function (event) {
   console.log("[SW] Notification clicked:", event.action);
 
   event.notification.close();
-
-  // Handle different actions
-  if (event.action === "dismiss") {
-    console.log("[SW] Notification dismissed by user");
-    return;
-  }
 
   // Get the URL to open from notification data
   const urlToOpen = new URL(
