@@ -76,19 +76,16 @@ export class NotificationsService {
   ) {
     this.logger.log(`Broadcasting earthquake alert: ${eqTitle}`);
 
-    // Get frontend URL from environment or use default
-    const frontendUrl =
-      process.env.FRONTEND_URL || 'https://sigma-bantul.vercel.app';
-
     // Create proper payload - web-push will handle the encoding
+    // IMPORTANT: Gunakan relative path agar SW bisa resolve ke origin yang benar
     const notificationPayload = {
       title: eqTitle,
       body: eqBody,
       data: {
-        url: `${frontendUrl}/?emergency=${emergencyParam}`,
+        url: `/?emergency=${emergencyParam}`,
       },
-      icon: `${frontendUrl}/logo.png`,
-      badge: `${frontendUrl}/logo.png`,
+      icon: '/logo.png',
+      badge: '/logo.png',
       tag: 'earthquake-alert',
       requireInteraction: true,
     };
