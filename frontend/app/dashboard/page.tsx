@@ -330,6 +330,14 @@ export default function DashboardPage() {
           setRouteStart({ lat: userLat, lng: userLng });
           setRouteEnd({ lat: shelterLat, lng: shelterLng });
 
+          // Auto-select threatening earthquake to show impact radius
+          const threateningEq = earthquakes.find((eq) =>
+            isThreatened(userLat, userLng, eq.lat, eq.lon, eq.magnitude),
+          );
+          if (threateningEq) {
+            setSelectedEarthquake(threateningEq);
+          }
+
           toast.success(
             `Rute ke ${shelterName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
           );
@@ -512,6 +520,9 @@ export default function DashboardPage() {
                     onCalculateRoute={calculateRouteToShelter}
                     roadNetwork={roadNetwork}
                     calculatedRoute={calculatedRoute}
+                    routeStart={routeStart}
+                    routeEnd={routeEnd}
+                    selectedEarthquake={selectedEarthquake}
                   />
                 </div>
               </CardContent>
