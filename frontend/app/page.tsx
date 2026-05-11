@@ -243,6 +243,8 @@ export default function Dashboard() {
   // Refs untuk menghindari stale closure di socket callback
   const sheltersRef = useRef(shelters);
   useEffect(() => { sheltersRef.current = shelters; }, [shelters]);
+  const userLocationRef = useRef(userLocation);
+  useEffect(() => { userLocationRef.current = userLocation; }, [userLocation]);
 
   const emergencyHandlerRef = useRef<() => void>(() => {});
 
@@ -483,59 +485,82 @@ export default function Dashboard() {
     socketService.connect();
 
     const unsubscribeEarthquake = socketService.onNewEarthquake((newEq) => {
-      const isInsideBantul = isWithinBantul(newEq.lat, newEq.lon);
+      const eqInBantul = isWithinBantul(newEq.lat, newEq.lon);
+      const impactRadius = calculateImpactRadius(newEq.magnitude);
 
-      // Check if user location is threatened (if available)
-      let userThreatened = false;
-      if (selectedLocation) {
-        userThreatened = isThreatened(
-          selectedLocation.lat,
-          selectedLocation.lng,
+      const loc = userLocationRef.current;
+
+      let zone: "RED" | "YELLOW" | "GREEN" = "GREEN";
+      let distToUser = Infinity;
+
+      if (loc) {
+        distToUser = calculateDistance(
+          loc.lat,
+          loc.lng,
           newEq.lat,
           newEq.lon,
-          newEq.magnitude,
         );
+
+        if (eqInBantul || distToUser <= impactRadius) {
+          zone = "RED";
+        } else if (distToUser <= impactRadius * 3) {
+          zone = "YELLOW";
+        }
+      } else {
+        if (eqInBantul) {
+          zone = "RED";
+        }
       }
 
-      // Trigger emergency routing if:
-      // 1. Earthquake is within Bantul administrative boundary, OR
-      // 2. User location is within earthquake impact radius
-      const shouldTriggerEmergency = isInsideBantul || userThreatened;
+      const eqFromBantul = calculateDistance(
+        newEq.lat,
+        newEq.lon,
+        BANTUL_LAT,
+        BANTUL_LON,
+      );
 
-      if (shouldTriggerEmergency) {
-        // Gempa mengancam → tampilkan dengan tombol rute evakuasi
-        const locationDesc = isInsideBantul
-          ? "Dalam wilayah Bantul"
-          : `Jarak ${calculateDistance(newEq.lat, newEq.lon, BANTUL_LAT, BANTUL_LON).toFixed(1)}km dari Bantul`;
-
-        toast.error(`Gempa M${newEq.magnitude} di ${newEq.location}`, {
-          icon: <AlertTriangle className="w-5 h-5 text-red-600" />,
-          description: `Kedalaman: ${newEq.depth} km · ${locationDesc}`,
-          duration: 10000,
-          action: {
-            label: "Lihat Rute",
-            onClick: () => emergencyHandlerRef.current(),
+      if (zone === "RED") {
+        toast.warning(
+          `ZONA MERAH: Gempa M${newEq.magnitude} di ${newEq.location}`,
+          {
+            icon: <AlertTriangle className="w-5 h-5 text-red-600" />,
+            description: `Kedalaman: ${newEq.depth} km · ${eqFromBantul.toFixed(1)}km dari Bantul · Anda berada di zona dampak utama — TETAP BERLINDUNG di tempat aman!`,
+            duration: 15000,
           },
-        });
-      } else {
-        // Gempa di luar wilayah dan tidak mengancam → hanya info
-        const distance = calculateDistance(
-          newEq.lat,
-          newEq.lon,
-          BANTUL_LAT,
-          BANTUL_LON,
         );
-        toast.warning(`Terjadi gempa di ${newEq.location}`, {
-          description: `M${newEq.magnitude} · Kedalaman: ${newEq.depth} km · ${distance.toFixed(1)}km dari Bantul`,
-          duration: 10000,
-          action: {
-            label: "Lihat di Peta",
-            onClick: () => {
-              setFlyToLocation({ lat: newEq.lat, lon: newEq.lon, zoom: 11 });
-              setSelectedEarthquake(newEq);
+        toast.error(
+          "Rute evakuasi dinonaktifkan sementara karena risiko tinggi.",
+          { duration: 5000 },
+        );
+      } else if (zone === "YELLOW") {
+        toast.warning(
+          `ZONA KUNING: Gempa M${newEq.magnitude} di ${newEq.location}`,
+          {
+            icon: <AlertTriangle className="w-5 h-5 text-yellow-600" />,
+            description: `Kedalaman: ${newEq.depth} km · ${eqFromBantul.toFixed(1)}km dari Bantul · Anda di area waspada, segera evakuasi!`,
+            duration: 15000,
+            action: {
+              label: "Lihat Rute Evakuasi",
+              onClick: () => emergencyHandlerRef.current(),
             },
           },
-        });
+        );
+      } else {
+        toast.info(
+          `ZONA HIJAU: Gempa M${newEq.magnitude} di ${newEq.location}`,
+          {
+            icon: <Info className="w-5 h-5 text-green-600" />,
+            description: `Kedalaman: ${newEq.depth} km · ${eqFromBantul.toFixed(1)}km dari Bantul · Anda di luar zona bahaya.`,
+            duration: 10000,
+            action: {
+              label: "Lihat di Peta",
+              onClick: () => {
+                setFlyToLocation({ lat: newEq.lat, lon: newEq.lon, zoom: 11 });
+                setSelectedEarthquake(newEq);
+              },
+            },
+          },
+        );
       }
 
       setEarthquakes((prev) => [newEq, ...prev.slice(0, 99)]);
