@@ -12,6 +12,7 @@ import { earthquakeApi, hazardZoneApi, roadApi } from "@/api";
 import { useUserLocation } from "@/hooks/use-user-location";
 import { evacuationService } from "@/services/evacuation.service";
 import { socketService } from "@/lib/socket";
+import { isWithinBantul } from "@/lib/bantul-boundary";
 import { toast } from "sonner";
 import type { Shelter, HazardZone, Earthquake, PublicFacility } from "@/types";
 import {
@@ -81,15 +82,6 @@ function getStatusWilayah(earthquakes: Earthquake[]): {
     return { status: "Waspada", color: "text-orange-600" };
   }
   return { status: "Siaga", color: "text-yellow-600" };
-}
-
-function isWithinBantul(lat: number, lng: number): boolean {
-  // Bounding box yang lebih akurat untuk Kabupaten Bantul
-  // Utara: berbatasan dengan Kota Yogyakarta (sekitar -7.80)
-  // Selatan: Samudra Hindia (sekitar -8.15)
-  // Barat: Kulon Progo (sekitar 110.15)
-  // Timur: Gunung Kidul (sekitar 110.50)
-  return lat >= -8.15 && lat <= -7.8 && lng >= 110.15 && lng <= 110.5;
 }
 
 // Calculate impact radius based on magnitude
@@ -172,6 +164,16 @@ export default function MapPage() {
       return;
     }
 
+    if (
+      !isWithinBantul(routeStart.lat, routeStart.lng) ||
+      !isWithinBantul(routeEnd.lat, routeEnd.lng)
+    ) {
+      toast.error(
+        "Rute hanya dapat dihitung untuk titik di dalam wilayah Kabupaten Bantul.",
+      );
+      return;
+    }
+
     setCalculatingRoute(true);
     try {
       const route = await roadApi.calculateRoute(
@@ -205,6 +207,13 @@ export default function MapPage() {
   };
 
   const handleMapClick = (lat: number, lng: number) => {
+    if (!isWithinBantul(lat, lng)) {
+      toast.error(
+        "Maaf, wilayah yang Anda pilih di luar batas wilayah Kabupaten Bantul.",
+      );
+      return;
+    }
+
     if (!routingMode) {
       handleLocationSelect(lat, lng);
       // Also set as route start for manual route calculation

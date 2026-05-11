@@ -16,6 +16,7 @@ import {
 } from "@/api";
 import { socketService } from "@/lib/socket";
 import { toast } from "sonner";
+import { isWithinBantul } from "@/lib/bantul-boundary";
 import type {
   Shelter,
   HazardZone,
@@ -87,15 +88,6 @@ function calculateDistance(
       Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
-}
-
-function isWithinBantul(lat: number, lng: number): boolean {
-  // Bounding box yang lebih akurat untuk Kabupaten Bantul
-  // Utara: berbatasan dengan Kota Yogyakarta (sekitar -7.80)
-  // Selatan: Samudra Hindia (sekitar -8.15)
-  // Barat: Kulon Progo (sekitar 110.15)
-  // Timur: Gunung Kidul (sekitar 110.50)
-  return lat >= -8.15 && lat <= -7.8 && lng >= 110.15 && lng <= 110.5;
 }
 
 // Calculate impact radius based on magnitude
@@ -286,6 +278,12 @@ export default function DashboardPage() {
   }, [isDarkMode]);
 
   const handleLocationSelect = (lat: number, lng: number) => {
+    if (!isWithinBantul(lat, lng)) {
+      toast.error(
+        "Maaf, wilayah yang Anda pilih di luar batas wilayah Kabupaten Bantul.",
+      );
+      return;
+    }
     setSelectedLocation({ lat, lng });
     setRouteStart({ lat, lng });
   };
@@ -310,6 +308,13 @@ export default function DashboardPage() {
       async (position) => {
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
+
+        if (!isWithinBantul(userLat, userLng)) {
+          toast.error(
+            "Pencarian rute evakuasi hanya tersedia saat lokasi Anda berada di wilayah Kabupaten Bantul.",
+          );
+          return;
+        }
 
         try {
           setCalculatingRoute(true);

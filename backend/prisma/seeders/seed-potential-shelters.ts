@@ -29,6 +29,7 @@ type ShelterImportRow = {
   name: string;
   category: ShelterCategory;
   geometry: GeoJsonGeometry;
+  capacity: number;
   address?: string;
 };
 
@@ -36,7 +37,7 @@ const DEFAULT_GEOJSON_PATH = resolve(
   process.cwd(),
   'Data',
   'GeoJSon',
-  'lokasi_potensial_evakuasi.geojson',
+  'lokasi_evakuasi_enriched.geojson',
 );
 
 function normalizeText(value: unknown): string {
@@ -71,6 +72,40 @@ function mapCategory(value: unknown): ShelterCategory | null {
   }
 
   return null;
+}
+
+function mapCapacity(
+  category: ShelterCategory,
+  properties: Record<string, unknown> | null | undefined,
+): number {
+  if (category === ShelterCategory.SCHOOL) {
+    const name = String(
+      getProperty(properties, ['namobj', 'name', 'nama']) ?? '',
+    ).toLowerCase();
+    if (name.startsWith('smp') || name.startsWith('mts')) return 150;
+    return 250;
+  }
+
+  if (category === ShelterCategory.GOVERNMENT) {
+    const name = String(
+      getProperty(properties, ['namobj', 'name', 'nama']) ?? '',
+    ).toLowerCase();
+    if (name.includes('kantor_lurah') || name.includes('kantor lurah')) return 80;
+    return 150;
+  }
+
+  const unsur = String(
+    getProperty(properties, ['nama_unsur']) ?? '',
+  ).toLowerCase();
+  if (
+    unsur.includes('stadion') ||
+    unsur.includes('tribun') ||
+    unsur.includes('bangunan_olah_raga')
+  ) {
+    return 1000;
+  }
+
+  return 300;
 }
 
 function getProperty(
@@ -188,10 +223,13 @@ function featureToShelterRow(
     'ALAMAT',
   ]);
 
+  const capacity = mapCapacity(category, properties);
+
   return {
     name: String(name).trim(),
     category,
     geometry: feature.geometry,
+    capacity,
     address: address ? String(address).trim() : undefined,
   };
 }
@@ -258,7 +296,7 @@ export async function seedPotentialShelters(inputPath = DEFAULT_GEOJSON_PATH) {
         VALUES (
           ${row.name},
           ${row.category}::"ShelterCategory",
-          0,
+          ${row.capacity},
           0,
           ST_AsGeoJSON(
             ST_PointOnSurface(

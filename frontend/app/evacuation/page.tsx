@@ -22,6 +22,7 @@ import {
   Car,
 } from "lucide-react";
 import { EmergencyBanner } from "@/components/ui/emergency-banner";
+import { isWithinBantul } from "@/lib/bantul-boundary";
 
 const MapClient = dynamic(
   () => import("@/components/map/map-client").then((mod) => mod.default),
@@ -52,6 +53,18 @@ export default function EvacuationPage() {
   const findNearestShelters = async (lat: string, lon: string) => {
     if (!lat || !lon) {
       setError("Harap isi koordinat lokasi Anda");
+      return;
+    }
+    const latN = parseFloat(lat);
+    const lonN = parseFloat(lon);
+    if (Number.isNaN(latN) || Number.isNaN(lonN)) {
+      setError("Koordinat tidak valid");
+      return;
+    }
+    if (!isWithinBantul(latN, lonN)) {
+      setError(
+        "Pencarian shelter dan rute evakuasi hanya tersedia untuk wilayah Kabupaten Bantul.",
+      );
       return;
     }
     if (zone === "RED") {
@@ -104,11 +117,24 @@ export default function EvacuationPage() {
     setSelectedRouteGeometry(null); // Clear previous map while loading
     setCalculating(true);
     setError(null);
+    const originLat = parseFloat(startLat);
+    const originLon = parseFloat(startLon);
+    if (
+      Number.isNaN(originLat) ||
+      Number.isNaN(originLon) ||
+      !isWithinBantul(originLat, originLon)
+    ) {
+      setError(
+        "Titik awal rute harus berada di dalam wilayah Kabupaten Bantul.",
+      );
+      setCalculating(false);
+      return;
+    }
     try {
       const coords = shelter.geometry as { coordinates: [number, number] };
       const routeData = await roadApi.calculateRoute(
-        parseFloat(startLat),
-        parseFloat(startLon),
+        originLat,
+        originLon,
         coords.coordinates[1],
         coords.coordinates[0],
       );
@@ -134,8 +160,17 @@ export default function EvacuationPage() {
       setError(null); // clear error
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const lat = position.coords.latitude.toString();
-          const lon = position.coords.longitude.toString();
+          const latNum = position.coords.latitude;
+          const lonNum = position.coords.longitude;
+          if (!isWithinBantul(latNum, lonNum)) {
+            setError(
+              "Lokasi Anda di luar wilayah Kabupaten Bantul. Pencarian shelter dan rute tidak tersedia.",
+            );
+            setCalculating(false);
+            return;
+          }
+          const lat = latNum.toString();
+          const lon = lonNum.toString();
           setStartLat(lat);
           setStartLon(lon);
           // findNearestShelters will be called when user triggers manual calc or zone handles it,

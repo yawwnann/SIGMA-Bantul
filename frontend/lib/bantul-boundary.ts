@@ -3,12 +3,12 @@
  * Menggunakan bounding box sederhana untuk performa
  */
 
-// Bounding box Kabupaten Bantul (approximate)
+// Bounding box Kabupaten Bantul (approximate, selaras dengan peta utama aplikasi)
 const BANTUL_BOUNDS = {
-  north: -7.88, // Batas dengan Kota Yogyakarta
+  north: -7.8, // Berbatasan dengan Kota Yogyakarta
   south: -8.15, // Pantai Selatan
-  west: 110.2, // Batas dengan Kulon Progo
-  east: 110.5, // Batas dengan Gunung Kidul
+  west: 110.15, // Kulon Progo
+  east: 110.5, // Gunung Kidul
 };
 
 /**

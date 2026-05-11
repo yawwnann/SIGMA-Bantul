@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  getConditionFactorFromRoadCondition,
+  segmentTravelMinutes,
+} from './road-travel-time.util';
 
 interface Node {
   id: string;
@@ -13,6 +17,8 @@ interface Edge {
   roadId: number;
   distance: number;
   cost: number;
+  /** conditionFactor 0 / 0.3 / 0.7 / 2.0 — sama dengan bobot kondisi di cost, untuk waktu adaptif */
+  conditionFactor: number;
   coords: number[][];
 }
 
@@ -87,6 +93,9 @@ export class SimpleDijkstraService {
       // Calculate edge cost using combined hazard if available
       const distance = road.length_m || 0;
       const cost = this.calculateEdgeCost(road, distance);
+      const conditionFactor = getConditionFactorFromRoadCondition(
+        road.condition as string | null | undefined,
+      );
 
       // Add edges (bidirectional)
       const edge1: Edge = {
@@ -95,6 +104,7 @@ export class SimpleDijkstraService {
         roadId: road.id,
         distance,
         cost,
+        conditionFactor,
         coords: coords,
       };
       const edge2: Edge = {
@@ -103,6 +113,7 @@ export class SimpleDijkstraService {
         roadId: road.id,
         distance,
         cost,
+        conditionFactor,
         coords: [...coords].reverse(),
       };
 
@@ -158,14 +169,10 @@ export class SimpleDijkstraService {
   /**
    * Get condition multiplier for cost calculation
    */
-  private getConditionMultiplier(condition: string): number {
-    const multipliers: Record<string, number> = {
-      GOOD: 0,
-      MODERATE: 0.3,
-      POOR: 0.7,
-      DAMAGED: 2.0,
-    };
-    return multipliers[condition] || 0;
+  private getConditionMultiplier(
+    condition: string | null | undefined,
+  ): number {
+    return getConditionFactorFromRoadCondition(condition);
   }
 
   /**
@@ -377,7 +384,8 @@ export class SimpleDijkstraService {
         // Add start point
         coordinates.push([startLon, startLat]);
 
-        // For each segment in the path, get the actual road geometry
+        // For each segment in the path, get the actual road geometry + adaptive travel time
+        let totalMinutes = 0;
         for (let i = 0; i < result.path.length - 1; i++) {
           const from = result.path[i];
           const to = result.path[i + 1];
@@ -385,6 +393,14 @@ export class SimpleDijkstraService {
           // Find the edge (road) between these nodes
           const edges = originalGraph.edges.get(from) || [];
           const edge = edges.find((e) => e.to === to);
+
+          if (edge) {
+            // Kecepatan adaptif berdasarkan kondisi jalan (40/30/20/10 km/jam)
+            totalMinutes += segmentTravelMinutes(
+              edge.distance,
+              edge.conditionFactor,
+            );
+          }
 
           if (edge && edge.coords) {
             // Coordinate direction is already correct based on the edge direction built in buildGraph
@@ -401,9 +417,6 @@ export class SimpleDijkstraService {
           const prev = coordinates[index - 1];
           return coord[0] !== prev[0] || coord[1] !== prev[1];
         });
-
-        // Time roughly based on km holding average 40km/h regardless of overlay weight
-        const totalMinutes = (result.totalDistance / 1000.0 / 40.0) * 60;
 
         return {
           type: 'Feature',

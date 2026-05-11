@@ -4,6 +4,10 @@ import { CreateRoadDto } from './dto/create-road.dto';
 import { RoadCondition, RoadType } from '@prisma/client';
 import { RedisService } from '../redis/redis.service';
 import { SimpleDijkstraService } from './simple-dijkstra.service';
+import {
+  getConditionFactorFromRoadCondition,
+  segmentTravelMinutes,
+} from './road-travel-time.util';
 
 @Injectable()
 export class RoadService {
@@ -378,6 +382,7 @@ export class RoadService {
           r.type,
           r.condition,
           r.cost,
+          ST_Length(r.geom::geography)::float as length_m,
           ST_AsGeoJSON(r.geom)::json as geometry
         FROM pgr_dijkstra(
           'SELECT id, source, target, cost, reverse_cost FROM "Road" WHERE source IS NOT NULL AND target IS NOT NULL',
@@ -398,10 +403,16 @@ export class RoadService {
         (sum, segment) => sum + (segment.length_m || 0),
         0,
       );
-      const totalTime = route.reduce(
-        (sum, segment) => sum + (segment.cost || 0),
-        0,
-      );
+      // Kecepatan adaptif berdasarkan kondisi jalan (40/30/20/10 km/jam)
+      let totalMinutes = 0;
+      for (const segment of route) {
+        const lengthM = segment.length_m || 0;
+        const factor = getConditionFactorFromRoadCondition(
+          segment.condition as string | null | undefined,
+        );
+        totalMinutes += segmentTravelMinutes(lengthM, factor);
+      }
+      const totalTime = Math.round(totalMinutes);
 
       // Combine all geometries into a single LineString
       const coordinates = route.flatMap((segment) => {
@@ -420,14 +431,20 @@ export class RoadService {
           type: 'LineString',
           coordinates,
         },
-        segments: route.map((seg) => ({
-          id: seg.id,
-          name: seg.name,
-          type: seg.type,
-          condition: seg.condition,
-          distance: Math.round(seg.length_m || 0),
-          time: Math.round(seg.cost || 0),
-        })),
+        segments: route.map((seg) => {
+          const lengthM = seg.length_m || 0;
+          const factor = getConditionFactorFromRoadCondition(
+            seg.condition as string | null | undefined,
+          );
+          return {
+            id: seg.id,
+            name: seg.name,
+            type: seg.type,
+            condition: seg.condition,
+            distance: Math.round(lengthM),
+            time: Math.round(segmentTravelMinutes(lengthM, factor)),
+          };
+        }),
       };
     } catch (error) {
       console.error('Error calculating route:', error);
