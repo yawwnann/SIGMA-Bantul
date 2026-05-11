@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import apiClient from "@/api/client";
 import toast from "@/lib/toast-utils";
 import { socketService } from "@/lib/socket";
@@ -43,41 +43,75 @@ function getEarthquakeNotificationMessage(earthquake: Earthquake): {
 }
 
 export function PushNotificationManager() {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const hasInteractedRef = useRef(false);
+  const hasShownBlockedToastRef = useRef(false);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(false);
+  const [isAudioBlocked, setIsAudioBlocked] = useState(false);
+
+  const playEmergencyAudio = useCallback(async () => {
+    const audio = audioRef.current;
+    if (!audio) return false;
+
+    try {
+      audio.currentTime = 0;
+      audio.volume = 1;
+      await audio.play();
+      setIsAudioEnabled(true);
+      setIsAudioBlocked(false);
+      localStorage.setItem("emergency-audio-enabled", "true");
+      return true;
+    } catch (error) {
+      setIsAudioBlocked(true);
+      if (!hasShownBlockedToastRef.current) {
+        hasShownBlockedToastRef.current = true;
+        toast.warning("Alarm darurat diblok browser", {
+          description:
+            "Tekan tombol Aktifkan Suara Peringatan agar alarm gempa dapat diputar di HP.",
+        });
+      }
+      console.warn("[Audio Alert] Autoplay blocked:", error);
+      return false;
+    }
+  }, []);
+
+  const unlockAudio = useCallback(async () => {
+    const audio = audioRef.current;
+    if (!audio || hasInteractedRef.current) return;
+
+    hasInteractedRef.current = true;
+    try {
+      audio.muted = true;
+      await audio.play();
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = false;
+      setIsAudioEnabled(true);
+      setIsAudioBlocked(false);
+      localStorage.setItem("emergency-audio-enabled", "true");
+    } catch (error) {
+      audio.muted = false;
+      setIsAudioBlocked(true);
+      console.warn("[Audio Alert] Initial unlock failed:", error);
+    }
+  }, []);
+
+  const handleEnableAudioClick = useCallback(async () => {
+    await unlockAudio();
+    await playEmergencyAudio();
+  }, [playEmergencyAudio, unlockAudio]);
+
   useEffect(() => {
-    let hasInteracted = false;
     const emergencyAudio = new Audio("/notification.mp3");
     emergencyAudio.preload = "auto";
     emergencyAudio.volume = 1;
+    audioRef.current = emergencyAudio;
 
-    const playEmergencyAudio = async () => {
-      try {
-        emergencyAudio.currentTime = 0;
-        emergencyAudio.volume = 1;
-        await emergencyAudio.play();
-      } catch (error) {
-        // Fallback handling saat autoplay diblok browser
-        console.warn("[Audio Alert] Autoplay blocked:", error);
-        toast.warning("Alarm darurat diblok browser", {
-          description:
-            "Ketuk layar sekali untuk mengaktifkan suara peringatan gempa.",
-        });
-      }
-    };
-
-    const unlockAudio = async () => {
-      if (hasInteracted) return;
-      hasInteracted = true;
-      try {
-        emergencyAudio.muted = true;
-        await emergencyAudio.play();
-        emergencyAudio.pause();
-        emergencyAudio.currentTime = 0;
-      } catch (error) {
-        console.warn("[Audio Alert] Initial unlock failed:", error);
-      } finally {
-        emergencyAudio.muted = false;
-      }
-    };
+    const persistedAudioState =
+      localStorage.getItem("emergency-audio-enabled") === "true";
+    if (persistedAudioState) {
+      setIsAudioEnabled(true);
+    }
 
     const firstInteractionEvents: (keyof WindowEventMap)[] = [
       "pointerdown",
@@ -233,7 +267,7 @@ export function PushNotificationManager() {
     // Realtime alert ketika backend broadcast event gempa baru
     const unsubscribeEarthquake = socketService.onNewEarthquake((earthquake) => {
       const { title, body, url } = getEarthquakeNotificationMessage(earthquake);
-      playEmergencyAudio();
+      void playEmergencyAudio();
       triggerLocalVibration();
       toast.emergency.alert(title, body, () => {
         window.location.href = url;
@@ -248,8 +282,34 @@ export function PushNotificationManager() {
         window.removeEventListener(eventName, unlockAudio);
       });
       emergencyAudio.pause();
+      audioRef.current = null;
     };
-  }, []);
+  }, [playEmergencyAudio, unlockAudio]);
 
-  return null;
+  return (
+    <div className="fixed bottom-4 right-4 z-[1200] flex items-center gap-2 rounded-lg border border-slate-300 bg-white/95 p-2 shadow-lg backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95">
+      <button
+        type="button"
+        onClick={handleEnableAudioClick}
+        className="rounded-md bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700"
+      >
+        Aktifkan Suara Peringatan
+      </button>
+      <span
+        className={`text-xs font-medium ${
+          isAudioEnabled
+            ? "text-emerald-600 dark:text-emerald-400"
+            : isAudioBlocked
+              ? "text-amber-600 dark:text-amber-400"
+              : "text-slate-600 dark:text-zinc-300"
+        }`}
+      >
+        {isAudioEnabled
+          ? "Audio aktif"
+          : isAudioBlocked
+            ? "Perlu interaksi"
+            : "Audio belum aktif"}
+      </span>
+    </div>
+  );
 }

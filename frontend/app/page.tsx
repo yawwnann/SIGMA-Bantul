@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import {
   earthquakeApi,
@@ -240,6 +240,137 @@ export default function Dashboard() {
       window.removeEventListener("clearEarthquakeSelection", handleClear);
   }, []);
 
+  // Refs untuk menghindari stale closure di socket callback
+  const sheltersRef = useRef(shelters);
+  useEffect(() => { sheltersRef.current = shelters; }, [shelters]);
+
+  const emergencyHandlerRef = useRef<() => void>(() => {});
+
+  const handleEmergencyEvacuation = useCallback(() => {
+    const currentShelters = sheltersRef.current;
+
+    if (currentShelters.length === 0) {
+      toast.info("Mencari rute evakuasi darurat...", {
+        description: "Data shelter belum tersedia, mohon tunggu sebentar",
+        duration: 5000,
+      });
+      return;
+    }
+
+    setGettingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+
+        if (!isWithinBantul(userLat, userLng)) {
+          setIsOutsideBantulModalOpen(true);
+          setGettingLocation(false);
+          return;
+        }
+
+        let availableShelters = currentShelters.filter(
+          (s) => s.capacity - (s.currentOccupancy ?? 0) > 0,
+        );
+        if (availableShelters.length === 0) {
+          availableShelters = [...currentShelters];
+        }
+
+        let nearestShelter = availableShelters[0];
+        let minDistance = Infinity;
+        availableShelters.forEach((s) => {
+          const coords = s.geometry as { coordinates: [number, number] };
+          const dist = calculateDistance(
+            userLat,
+            userLng,
+            coords.coordinates[1],
+            coords.coordinates[0],
+          );
+          if (dist < minDistance) {
+            minDistance = dist;
+            nearestShelter = s;
+          }
+        });
+
+        const targetCoords = nearestShelter.geometry as {
+          coordinates: [number, number];
+        };
+
+        setSelectedLocation({ lat: userLat, lng: userLng });
+        setRoutingMode(true);
+
+        try {
+          toast.info(`Menghitung rute ke ${nearestShelter.name}...`);
+          const route = await roadApi.calculateRoute(
+            userLat,
+            userLng,
+            targetCoords.coordinates[1],
+            targetCoords.coordinates[0],
+          );
+
+          setCalculatedRoute(route);
+          setRouteStart({ lat: userLat, lng: userLng });
+          setRouteEnd({
+            lat: targetCoords.coordinates[1],
+            lng: targetCoords.coordinates[0],
+          });
+          setDestinationName(nearestShelter.name);
+          setIsMapExpanded(true);
+          toast.success(
+            `Rute darurat ke ${nearestShelter.name} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
+          );
+        } catch (error) {
+          console.error("[Emergency] Error calculating emergency route:", error);
+          toast.error("Gagal menghitung rute darurat dari lokasi saat ini.", {
+            description: "Silakan coba lagi atau pilih shelter secara manual",
+            duration: 5000,
+          });
+        } finally {
+          setGettingLocation(false);
+        }
+      },
+      (error) => {
+        console.error("[Emergency] Geolocation error:", error);
+        let errorMessage = "Gagal mendapatkan lokasi GPS Anda untuk evakuasi.";
+        let errorDescription = "";
+
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "Izin lokasi ditolak";
+            errorDescription =
+              "Silakan aktifkan izin lokasi di pengaturan browser untuk menggunakan fitur rute darurat";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Lokasi tidak tersedia";
+            errorDescription =
+              "GPS tidak dapat menentukan lokasi Anda saat ini";
+            break;
+          case error.TIMEOUT:
+            errorMessage = "Waktu habis";
+            errorDescription =
+              "Permintaan lokasi memakan waktu terlalu lama. Silakan coba lagi";
+            break;
+        }
+
+        toast.error(errorMessage, {
+          description: errorDescription,
+          duration: 7000,
+        });
+        setGettingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      },
+    );
+  }, []);
+
+  useEffect(() => {
+    emergencyHandlerRef.current = handleEmergencyEvacuation;
+  }, [handleEmergencyEvacuation]);
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);
@@ -383,7 +514,7 @@ export default function Dashboard() {
           duration: 10000,
           action: {
             label: "Lihat Rute",
-            onClick: () => (window.location.href = "/?emergency=true"),
+            onClick: () => emergencyHandlerRef.current(),
           },
         });
       } else {
