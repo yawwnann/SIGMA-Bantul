@@ -14,9 +14,10 @@ import {
   publicFacilityApi,
   roadApi,
 } from "@/api";
+import { analysisApi } from "@/api/analysis";
 import { socketService } from "@/lib/socket";
 import { toast } from "sonner";
-import { isWithinBantul } from "@/lib/bantul-boundary";
+import { isWithinBantul, setBantulPolygon } from "@/lib/bantul-boundary";
 import type {
   Shelter,
   HazardZone,
@@ -173,6 +174,17 @@ export default function DashboardPage() {
           })
           .catch(() => null),
       ]);
+
+      // Fetch boundary untuk validasi isWithinBantul
+      try {
+        const boundary = await analysisApi.getBantulBoundary();
+        const polygon =
+          boundary.features?.[0]?.geometry?.coordinates?.[0] ?? null;
+        setBantulPolygon(polygon);
+      } catch (_e) {
+        // gagal, fallback bounding box
+      }
+
       setShelters(sheltersData as Shelter[]);
       setHazardZones(hazardData as HazardZone[]);
       setEarthquakes(earthquakesResponse.data as Earthquake[]);

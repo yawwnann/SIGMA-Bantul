@@ -9,20 +9,14 @@ import {
   publicFacilityApi,
   roadApi,
 } from "@/api";
+import { analysisApi } from "@/api/analysis";
+import { setBantulPolygon, isWithinBantul } from "@/lib/bantul-boundary";
 import { socketService } from "@/lib/socket";
 import type { Earthquake, Shelter, HazardZone, PublicFacility } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
@@ -39,7 +33,6 @@ import {
   Bike,
   Car,
   Clock,
-  MapPinOff,
   Activity,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -130,15 +123,7 @@ function getStatusWilayah(earthquakes: Earthquake[]): {
   return { status: "Siaga", color: "text-yellow-600" };
 }
 
-function isWithinBantul(lat: number, lng: number): boolean {
-  // Bounding box yang lebih akurat untuk Kabupaten Bantul
-  // Berdasarkan batas administratif resmi Bantul
-  // Utara: berbatasan dengan Kota Yogyakarta (sekitar -7.80)
-  // Selatan: Samudra Hindia (sekitar -8.15)
-  // Barat: Kulon Progo (sekitar 110.15)
-  // Timur: Gunung Kidul (sekitar 110.50)
-  return lat >= -8.15 && lat <= -7.8 && lng >= 110.15 && lng <= 110.5;
-}
+
 
 // Calculate impact radius based on magnitude
 function calculateImpactRadius(magnitude: number): number {
@@ -216,8 +201,6 @@ export default function Dashboard() {
     lon: number;
     zoom?: number;
   } | null>(null);
-  const [isOutsideBantulModalOpen, setIsOutsideBantulModalOpen] =
-    useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [isShelterDetailOpen, setIsShelterDetailOpen] = useState(false);
 
@@ -267,7 +250,7 @@ export default function Dashboard() {
         const userLng = position.coords.longitude;
 
         if (!isWithinBantul(userLat, userLng)) {
-          setIsOutsideBantulModalOpen(true);
+          toast.error("Lokasi Anda di luar wilayah Kabupaten Bantul. Sistem hanya mendukung evakuasi di wilayah Bantul.");
           setGettingLocation(false);
           return;
         }
@@ -401,6 +384,16 @@ export default function Dashboard() {
             })
             .catch(() => null),
         ]);
+
+      // Fetch boundary untuk validasi isWithinBantul
+      try {
+        const boundary = await analysisApi.getBantulBoundary();
+        const polygon =
+          boundary.features?.[0]?.geometry?.coordinates?.[0] ?? null;
+        setBantulPolygon(polygon);
+      } catch (_e) {
+        // gagal fetch boundary, fallback bounding box tetap jalan
+      }
       // Don't fetch all shelters here - will fetch nearby shelters based on user location
       setHazardZones(hazardData as HazardZone[]);
       setEarthquakes((earthquakesResponse as any).data as Earthquake[]);
@@ -579,6 +572,9 @@ export default function Dashboard() {
 
   const handleLocationSelect = useCallback(
     (lat: number, lng: number) => {
+      if (!isWithinBantul(lat, lng)) {
+        return;
+      }
       setSelectedLocation({ lat, lng });
       if (shelters.length > 0) {
         const withDistance = shelters.map((shelter) => {
@@ -632,7 +628,7 @@ export default function Dashboard() {
 
           if (!isWithinBantul(userLat, userLng)) {
             console.warn("[Emergency] User location outside Bantul");
-            setIsOutsideBantulModalOpen(true);
+            toast.error("Lokasi Anda di luar wilayah Kabupaten Bantul. Sistem hanya mendukung evakuasi di wilayah Bantul.");
             setGettingLocation(false);
             return;
           }
@@ -698,6 +694,14 @@ export default function Dashboard() {
             });
             setDestinationName(nearestShelter.name);
             setIsMapExpanded(true);
+
+            const threateningEq = earthquakes.find((eq) =>
+              isThreatened(userLat, userLng, eq.lat, eq.lon, eq.magnitude),
+            );
+            if (threateningEq) setSelectedEarthquake(threateningEq);
+
+            setRoutingMode(false);
+
             toast.success(
               `Rute darurat ke ${nearestShelter.name} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
             );
@@ -764,7 +768,7 @@ export default function Dashboard() {
       (position) => {
         const { latitude, longitude } = position.coords;
         if (!isWithinBantul(latitude, longitude)) {
-          setIsOutsideBantulModalOpen(true);
+          toast.error("Lokasi Anda di luar wilayah Kabupaten Bantul. Sistem hanya mendukung evakuasi di wilayah Bantul.");
           setGettingLocation(false);
           return;
         }
@@ -880,69 +884,59 @@ export default function Dashboard() {
     shelterLng: number,
     shelterName: string,
   ) => {
-    if (routingMode) {
-      if (routeStart) {
-        setCalculatingRoute(true);
-        toast.info("Menghitung rute dari titik awal terpilih...");
-        try {
-          const route = await roadApi.calculateRoute(
-            routeStart.lat,
-            routeStart.lng,
-            shelterLat,
-            shelterLng,
-          );
-          setCalculatedRoute(route);
-          setRouteEnd({ lat: shelterLat, lng: shelterLng });
-          setDestinationName(shelterName);
-          setIsMapExpanded(true);
-          toast.success(
-            `Rute ke ${shelterName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
-          );
-        } catch (error) {
-          console.error("Error calculating route:", error);
-          toast.error(
-            "Gagal menghitung rute. Pastikan titik awal terhubung dengan jalan.",
-          );
-        } finally {
-          setCalculatingRoute(false);
-        }
-      } else {
-        setRouteEnd({ lat: shelterLat, lng: shelterLng });
-        toast.info(
-          `Tujuan di set ke ${shelterName}. Klik pada peta untuk memilih titik awal evakuasi Anda.`,
-        );
-      }
+    // Jika routing mode ON tanpa routeStart, set tujuan dulu
+    if (routingMode && !routeStart) {
+      setRouteEnd({ lat: shelterLat, lng: shelterLng });
+      toast.info(
+        `Tujuan di set ke ${shelterName}. Klik pada peta untuk memilih titik awal evakuasi Anda.`,
+      );
       return;
     }
 
+    // Dapatkan GPS posisi user (fresh setiap kali)
     if (!navigator.geolocation) {
       toast.error("Geolocation tidak didukung oleh browser ini");
       return;
     }
-    toast.info("Mendapatkan lokasi Anda...");
+
     setCalculatingRoute(true);
+    toast.info("Mendapatkan lokasi Anda...");
+
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
+
         if (!isWithinBantul(userLat, userLng)) {
-          setIsOutsideBantulModalOpen(true);
+          toast.error("Lokasi Anda di luar wilayah Kabupaten Bantul. Sistem hanya mendukung evakuasi di wilayah Bantul.");
           setCalculatingRoute(false);
           return;
         }
+
+        // Tentukan start point
+        const startLat = routingMode && routeStart ? routeStart.lat : userLat;
+        const startLng = routingMode && routeStart ? routeStart.lng : userLng;
+
         try {
           toast.info("Menghitung rute terpendek...");
           const route = await roadApi.calculateRoute(
-            userLat,
-            userLng,
+            startLat,
+            startLng,
             shelterLat,
             shelterLng,
           );
+
           setCalculatedRoute(route);
-          setRouteStart({ lat: userLat, lng: userLng });
+          setRouteStart({ lat: startLat, lng: startLng });
           setRouteEnd({ lat: shelterLat, lng: shelterLng });
           setDestinationName(shelterName);
           setIsMapExpanded(true);
+
+          const threateningEq = earthquakes.find((eq) =>
+            isThreatened(startLat, startLng, eq.lat, eq.lon, eq.magnitude),
+          );
+          if (threateningEq) setSelectedEarthquake(threateningEq);
+
           toast.success(
             `Rute ke ${shelterName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
           );
@@ -993,48 +987,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-      {/* Outside Boundary Modal */}
-      <Dialog
-        open={isOutsideBantulModalOpen}
-        onOpenChange={setIsOutsideBantulModalOpen}
-      >
-        <DialogContent className="sm:max-w-[425px] bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800 shadow-2xl">
-          <DialogHeader className="flex flex-col items-center justify-center text-center pt-4">
-            <div className="w-16 h-16 bg-amber-50 dark:bg-amber-950/30 rounded-full flex items-center justify-center mb-4 border border-amber-200 dark:border-amber-900/50">
-              <MapPinOff className="w-8 h-8 text-amber-600 dark:text-amber-500" />
-            </div>
-            <DialogTitle className="text-xl font-bold text-slate-900 dark:text-zinc-50">
-              Lokasi Di Luar Jangkauan
-            </DialogTitle>
-            <DialogDescription className="text-slate-500 dark:text-zinc-400 mt-2">
-              Maaf, sistem saat ini hanya mendukung pencarian rute evakuasi di
-              dalam wilayah administrasi{" "}
-              <span className="font-semibold text-slate-900 dark:text-zinc-200">
-                Kabupaten Bantul
-              </span>
-              .
-            </DialogDescription>
-          </DialogHeader>
-          <div className="bg-slate-50 dark:bg-zinc-900/50 p-4 rounded-xl border border-slate-100 dark:border-zinc-800/50 mt-4">
-            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
-              Saran Keamanan
-            </h4>
-            <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
-              Jika terjadi gempa, harap segera mencari tanah lapang atau shelter
-              terdekat di lokasi Anda saat ini. Selalu ikuti instruksi dari
-              petugas keamanan setempat.
-            </p>
-          </div>
-          <DialogFooter className="mt-6">
-            <Button
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-11"
-              onClick={() => setIsOutsideBantulModalOpen(false)}
-            >
-              Saya Mengerti
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
 
       <div className="p-4 md:p-6 lg:p-8 min-h-screen space-y-6 max-w-[1600px] mx-auto">
         {/* Top Header Section */}

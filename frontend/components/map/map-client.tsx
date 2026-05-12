@@ -5,6 +5,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Shelter, HazardZone, Earthquake, PublicFacility } from "@/types";
 import { analysisApi } from "@/api/analysis";
+
 import { Filter, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import "leaflet-providers";
@@ -347,7 +348,6 @@ export default function MapClient({
     if (maskLayerRef.current && mapRef.current.hasLayer(maskLayerRef.current)) {
       mapRef.current.removeLayer(maskLayerRef.current);
     }
-
     if (!visibleLayers.boundary) return;
 
     const bantulData = bantulBoundary as {
@@ -410,7 +410,6 @@ export default function MapClient({
         dashArray: "8, 4",
       },
     }).addTo(mapRef.current);
-
     if (boundaryLayerRef.current && !calculatedRoute && !selectedLocation) {
       mapRef.current.fitBounds(boundaryLayerRef.current.getBounds(), {
         padding: [30, 30],
@@ -489,13 +488,8 @@ export default function MapClient({
       earthquakes: earthquakes.slice(0, 3), // Log first 3 for debugging
     });
 
-    if (!visibleLayers.earthquakes || earthquakes.length === 0) {
-      console.log("[Map] Earthquakes not rendered:", {
-        visible: visibleLayers.earthquakes,
-        hasData: earthquakes.length > 0,
-      });
-      return;
-    }
+    if (earthquakes.length === 0) return;
+    if (!visibleLayers.earthquakes && !selectedEarthquake) return;
 
     const activeEqId = selectedEarthquake?.id;
     const earthquakesToRender =
@@ -1252,6 +1246,39 @@ export default function MapClient({
                 </div>
               </div>
             )}
+
+            {/* Debug: status batas wilayah */}
+            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-zinc-800/60">
+              <h4 className="text-[10px] uppercase font-bold text-slate-700 dark:text-zinc-400 mb-2 tracking-wider">
+                Batas Bantul
+              </h4>
+              <div className="space-y-1.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full flex-shrink-0 bg-blue-500"></span>
+                  <span className="text-slate-600 dark:text-zinc-400">
+                    Polygon (GeoJSON)
+                  </span>
+                  {bantulBoundary ? (
+                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      ✅
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                      ⏳
+                    </span>
+                  )}
+                </div>
+                {bantulBoundary ? (
+                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1 font-medium">
+                    Validasi pakai Polygon GeoJSON
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-medium">
+                    Validasi pakai Bounding Box
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>

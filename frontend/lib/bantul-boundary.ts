@@ -1,6 +1,6 @@
 /**
  * Utility untuk validasi apakah koordinat berada dalam wilayah Kabupaten Bantul
- * Menggunakan bounding box sederhana untuk performa
+ * Menggunakan polygon GeoJSON dari backend jika tersedia, fallback ke bounding box
  */
 
 // Bounding box Kabupaten Bantul (approximate, selaras dengan peta utama aplikasi)
@@ -11,13 +11,19 @@ const BANTUL_BOUNDS = {
   east: 110.5, // Gunung Kidul
 };
 
-/**
- * Check if coordinates are within Bantul regency using bounding box
- * @param lat Latitude
- * @param lng Longitude
- * @returns true if within Bantul bounds
- */
+// Module-level variable — diisi dari response API backend
+let bantulPolygon: number[][] | null = null;
+
+/** Set polygon dari response API backend */
+export function setBantulPolygon(polygon: number[][] | null) {
+  bantulPolygon = polygon;
+}
+
 export function isWithinBantul(lat: number, lng: number): boolean {
+  if (bantulPolygon) {
+    return pointInPolygon(lng, lat, bantulPolygon);
+  }
+
   return (
     lat >= BANTUL_BOUNDS.south &&
     lat <= BANTUL_BOUNDS.north &&
@@ -53,6 +59,25 @@ export function getDistanceFromBantulCenter(lat: number, lng: number): number {
 
 function deg2rad(deg: number): number {
   return deg * (Math.PI / 180);
+}
+
+function pointInPolygon(
+  lng: number,
+  lat: number,
+  polygon: number[][],
+): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [xi, yi] = polygon[i];
+    const [xj, yj] = polygon[j];
+    if (
+      yi > lat !== yj > lat &&
+      lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi
+    ) {
+      inside = !inside;
+    }
+  }
+  return inside;
 }
 
 /**
