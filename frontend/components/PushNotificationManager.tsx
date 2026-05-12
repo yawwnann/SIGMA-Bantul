@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import apiClient from "@/api/client";
 import toast from "@/lib/toast-utils";
 import { socketService } from "@/lib/socket";
@@ -45,10 +45,6 @@ function getEarthquakeNotificationMessage(earthquake: Earthquake): {
 export function PushNotificationManager() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasInteractedRef = useRef(false);
-  const hasShownBlockedToastRef = useRef(false);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(false);
-  const [isAudioBlocked, setIsAudioBlocked] = useState(false);
-  const [showAudioEnableModal, setShowAudioEnableModal] = useState(false);
 
   const playEmergencyAudio = useCallback(async () => {
     const audio = audioRef.current;
@@ -58,19 +54,9 @@ export function PushNotificationManager() {
       audio.currentTime = 0;
       audio.volume = 1;
       await audio.play();
-      setIsAudioEnabled(true);
-      setIsAudioBlocked(false);
       localStorage.setItem("emergency-audio-enabled", "true");
       return true;
     } catch (error) {
-      setIsAudioBlocked(true);
-      if (!hasShownBlockedToastRef.current) {
-        hasShownBlockedToastRef.current = true;
-        toast.warning("Alarm darurat diblok browser", {
-          description:
-            "Tekan tombol Aktifkan Suara Peringatan agar alarm gempa dapat diputar di HP.",
-        });
-      }
       console.warn("[Audio Alert] Autoplay blocked:", error);
       return false;
     }
@@ -87,38 +73,18 @@ export function PushNotificationManager() {
       audio.pause();
       audio.currentTime = 0;
       audio.muted = false;
-      setIsAudioEnabled(true);
-      setIsAudioBlocked(false);
       localStorage.setItem("emergency-audio-enabled", "true");
     } catch (error) {
       audio.muted = false;
-      setIsAudioBlocked(true);
       console.warn("[Audio Alert] Initial unlock failed:", error);
     }
   }, []);
-
-  const handleEnableAudioClick = useCallback(async () => {
-    await unlockAudio();
-    const played = await playEmergencyAudio();
-    if (played) {
-      setShowAudioEnableModal(false);
-    }
-  }, [playEmergencyAudio, unlockAudio]);
 
   useEffect(() => {
     const emergencyAudio = new Audio("/notification.mp3");
     emergencyAudio.preload = "auto";
     emergencyAudio.volume = 1;
     audioRef.current = emergencyAudio;
-
-    const persistedAudioState =
-      localStorage.getItem("emergency-audio-enabled") === "true";
-    if (persistedAudioState) {
-      setIsAudioEnabled(true);
-      setShowAudioEnableModal(false);
-    } else {
-      setShowAudioEnableModal(true);
-    }
 
     const firstInteractionEvents: (keyof WindowEventMap)[] = [
       "pointerdown",
@@ -293,41 +259,5 @@ export function PushNotificationManager() {
     };
   }, [playEmergencyAudio, unlockAudio]);
 
-  return showAudioEnableModal ? (
-    <div className="fixed inset-0 z-[1400] flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">
-          Aktifkan Suara Peringatan Gempa
-        </h3>
-        <p className="mt-2 text-sm text-slate-600 dark:text-zinc-300">
-          Untuk memastikan alarm gempa berbunyi di perangkat mobile, aktifkan
-          suara sekali melalui tombol di bawah.
-        </p>
-        <div className="mt-4 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleEnableAudioClick}
-            className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
-          >
-            Aktifkan Suara Peringatan
-          </button>
-          <span
-            className={`text-xs font-medium ${
-              isAudioEnabled
-                ? "text-emerald-600 dark:text-emerald-400"
-                : isAudioBlocked
-                  ? "text-amber-600 dark:text-amber-400"
-                  : "text-slate-600 dark:text-zinc-300"
-            }`}
-          >
-            {isAudioEnabled
-              ? "Audio aktif"
-              : isAudioBlocked
-                ? "Perlu interaksi"
-                : "Menunggu aktivasi"}
-          </span>
-        </div>
-      </div>
-    </div>
-  ) : null;
+  return null;
 }

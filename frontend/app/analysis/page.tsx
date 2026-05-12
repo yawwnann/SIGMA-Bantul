@@ -131,12 +131,15 @@ export default function AnalysisPage() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-slate-900 dark:text-zinc-50">
-              Analisis Frekuensi Gempa
+              Sebaran Gempa
             </h1>
           </div>
           <p className="text-slate-600 dark:text-zinc-400">
             Analisis spasial frekuensi kejadian gempa bumi berdasarkan data
             historis
+          </p>
+          <p className="text-[11px] text-slate-400 dark:text-zinc-500 italic mt-2">
+            Sumber data gempa berasal dari BMKG (Badan Meteorologi, Klimatologi, dan Geofisika) melalui layanan Data Gempabumi Terbuka BMKG.
           </p>
         </div>
 

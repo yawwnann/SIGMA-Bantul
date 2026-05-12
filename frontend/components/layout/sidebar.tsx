@@ -34,7 +34,7 @@ const navItems = [
     icon: Activity,
   },
   {
-    title: "Analisis Frekuensi",
+    title: "Sebaran Gempa",
     href: "/analysis",
     icon: BarChart3,
   },
