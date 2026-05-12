@@ -1,4 +1,4 @@
-export default function AdminLoginLayout({
+export default function LoginLayout({
   children,
 }: {
   children: React.ReactNode;

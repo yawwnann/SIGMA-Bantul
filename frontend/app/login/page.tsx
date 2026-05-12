@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
-export default function AdminLoginPage() {
+export default function LoginPage() {
   const [email, setEmail] = useState("admin@bantul.go.id");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);

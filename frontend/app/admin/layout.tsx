@@ -45,7 +45,7 @@ export default function AdminLayout({
 
   useEffect(() => {
     // Login page needs no auth check
-    if (pathname === "/admin/login") {
+    if (pathname === "/login") {
       setChecked(true);
       return;
     }
@@ -57,7 +57,7 @@ export default function AdminLayout({
     );
 
     if (!token) {
-      window.location.replace("/admin/login");
+      window.location.replace("/login");
       return;
     }
 
@@ -69,7 +69,7 @@ export default function AdminLayout({
   const handleLogout = () => {
     authApi.logout();
     toast.info("Anda telah logout");
-    window.location.replace("/admin/login");
+    window.location.replace("/login");
   };
 
   // Close sidebar when route changes (mobile)
@@ -78,7 +78,7 @@ export default function AdminLayout({
   }, [pathname]);
 
   // Always render login page as-is
-  if (pathname === "/admin/login") {
+  if (pathname === "/login") {
     return <>{children}</>;
   }
 

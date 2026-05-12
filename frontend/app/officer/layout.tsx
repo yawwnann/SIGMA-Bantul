@@ -40,13 +40,13 @@ export default function OfficerLayout({
     const currentUser = authApi.getCurrentUser();
 
     if (!token || !currentUser) {
-      window.location.replace("/admin/login");
+      window.location.replace("/login");
       return;
     }
 
     if (currentUser.role !== "SHELTER_OFFICER") {
       toast.error("Akses ditolak. Anda bukan petugas shelter.");
-      window.location.replace("/admin/login");
+      window.location.replace("/login");
       return;
     }
 
@@ -64,7 +64,7 @@ export default function OfficerLayout({
   const handleLogout = () => {
     authApi.logout();
     toast.info("Anda telah logout");
-    window.location.replace("/admin/login");
+    window.location.replace("/login");
   };
 
   if (!checked) {

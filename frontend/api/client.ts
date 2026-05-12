@@ -25,10 +25,10 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
         // Only redirect if NOT on an admin protected page (leave admin pages to handle their own auth)
-        const isAdminPage = window.location.pathname.startsWith('/admin') && window.location.pathname !== '/admin/login';
+        const isAdminPage = window.location.pathname.startsWith('/admin') && window.location.pathname !== '/login';
         if (!isAdminPage) {
           localStorage.removeItem('token');
-          window.location.href = '/admin/login';
+          window.location.href = '/login';
         } else {
           // On admin pages, just log - let the page handle it
           console.warn('[Auth] 401 on admin page, not auto-redirecting:', error.config?.url);
