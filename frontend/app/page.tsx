@@ -1494,8 +1494,8 @@ export default function Dashboard() {
           {/* Routing Info Form/Floating Detail - Mobile View */}
           {calculatedRoute && (
             <>
-              {/* Mobile Top Bar */}
-              <div className="absolute top-4 left-4 right-4 z-[1000] md:hidden bg-white dark:bg-zinc-950 rounded-2xl shadow-xl border border-slate-200 dark:border-zinc-800 overflow-hidden animate-in slide-in-from-top-5 duration-300">
+              {/* Route Info Top Bar */}
+              <div className="absolute top-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:max-w-xl z-[1000] bg-white dark:bg-zinc-950 rounded-2xl shadow-xl border border-slate-200 dark:border-zinc-800 overflow-hidden animate-in slide-in-from-top-5 duration-300">
                 <div className="p-3 border-b border-slate-100 dark:border-zinc-800 flex flex-col gap-2">
                   <div className="flex items-start gap-3">
                     <div className="flex flex-col items-center gap-1 mt-2">
@@ -1569,117 +1569,7 @@ export default function Dashboard() {
               </div>
             </>
           )}
-
-          {/* Desktop/Tablet Routing Info Card (Original Layout) */}
-          {calculatedRoute && (
-            <Card className="hidden md:block absolute top-20 md:left-4 z-[1000] w-[300px] shadow-xl bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800 max-h-[50vh] overflow-y-auto">
-              <CardHeader className="pb-3 border-b border-slate-100 dark:border-zinc-800">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm text-slate-800 dark:text-zinc-200">
-                    Informasi Rute
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => {
-                      setCalculatedRoute(null);
-                      setRouteStart(null);
-                      setRouteEnd(null);
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-4 space-y-3">
-                {(() => {
-                  const distKm =
-                    calculatedRoute.properties.totalDistance / 1000;
-                  const walkTime = (distKm / 5) * 60;
-                  const bikeTime = (distKm / 40) * 60;
-                  const carTime = (distKm / 30) * 60;
-                  return (
-                    <>
-                      <div className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-900/30">
-                        <span className="text-xs font-semibold text-blue-800 dark:text-blue-300 uppercase tracking-wide">
-                          Jarak Jangkauan
-                        </span>
-                        <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                          {distKm.toFixed(2)} km
-                        </span>
-                      </div>
-
-                      <div className="pt-1">
-                        <span className="font-bold text-[10px] uppercase text-slate-400 tracking-wider mb-2 block">
-                          Estimasi Waktu Tempuh
-                        </span>
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="flex flex-col items-center justify-center bg-green-50 dark:bg-green-900/10 rounded-lg p-2 border border-green-100 dark:border-green-900/30">
-                            <Footprints className="w-5 h-5 mb-1.5 text-green-600 dark:text-green-500" />
-                            <span className="font-bold text-sm text-green-700 dark:text-green-500">
-                              {Math.ceil(walkTime)}
-                              <span className="text-[10px] font-normal">'</span>
-                            </span>
-                            <span className="text-[9px] text-green-600 dark:text-green-600/80 font-medium tracking-wide">
-                              Jalan
-                            </span>
-                          </div>
-                          <div className="flex flex-col items-center justify-center bg-orange-50 dark:bg-orange-900/10 rounded-lg p-2 border border-orange-100 dark:border-orange-900/30">
-                            <Bike className="w-5 h-5 mb-1.5 text-orange-600 dark:text-orange-500" />
-                            <span className="font-bold text-sm text-orange-700 dark:text-orange-500">
-                              {Math.ceil(bikeTime)}
-                              <span className="text-[10px] font-normal">'</span>
-                            </span>
-                            <span className="text-[9px] text-orange-600 dark:text-orange-600/80 font-medium tracking-wide">
-                              Motor
-                            </span>
-                          </div>
-                          <div className="flex flex-col items-center justify-center bg-indigo-50 dark:bg-indigo-900/10 rounded-lg p-2 border border-indigo-100 dark:border-indigo-900/30">
-                            <Car className="w-5 h-5 mb-1.5 text-indigo-600 dark:text-indigo-500" />
-                            <span className="font-bold text-sm text-indigo-700 dark:text-indigo-500">
-                              {Math.ceil(carTime)}
-                              <span className="text-[10px] font-normal">'</span>
-                            </span>
-                            <span className="text-[9px] text-indigo-600 dark:text-indigo-600/80 font-medium tracking-wide">
-                              Mobil
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Route Legend */}
-                      <div className="mt-3 pt-3 border-t border-slate-200 dark:border-zinc-800">
-                        <span className="font-bold text-[10px] uppercase text-slate-400 tracking-wider mb-2 block">
-                          Legenda Rute
-                        </span>
-                        <div className="flex flex-wrap gap-x-4 gap-y-2">
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <div className="w-6 h-1 bg-blue-500 rounded-full"></div>
-                            <span className="text-slate-600 dark:text-zinc-400">
-                              Rute Evakuasi
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <div className="w-2.5 h-2.5 bg-yellow-400 rounded-full border-2 border-white dark:border-zinc-900 shadow-sm"></div>
-                            <span className="text-slate-600 dark:text-zinc-400">
-                              Lokasi Anda
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <div className="w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-zinc-900 shadow-sm"></div>
-                            <span className="text-slate-600 dark:text-zinc-400">
-                              Shelter Tujuan
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  );
-                })()}
-              </CardContent>
-            </Card>
-          )}
+          {/* End Routing Info Form/Floating Detail */}
 
           {/* Selected Location Floating Detail - REMOVED */}
 
