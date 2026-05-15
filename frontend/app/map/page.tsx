@@ -134,6 +134,7 @@ export default function MapPage() {
     null,
   );
   const [calculatingRoute, setCalculatingRoute] = useState(false);
+  const [nearbyRadius, setNearbyRadius] = useState(3);
 
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -340,7 +341,7 @@ export default function MapPage() {
         const response = await evacuationService.getNearbyShelters({
           lat,
           lng,
-          radius: 3,
+          radius: nearbyRadius,
           limit: 10,
         });
 
@@ -356,7 +357,7 @@ export default function MapPage() {
         setNearbyLoading(false);
       }
     },
-    [],
+    [nearbyRadius],
   );
 
   const fetchData = async () => {

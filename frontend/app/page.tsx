@@ -195,6 +195,7 @@ export default function Dashboard() {
   const [activeRouteMode, setActiveRouteMode] = useState<
     "walk" | "bike" | "car"
   >("car");
+  const [nearbyRadius, setNearbyRadius] = useState(3);
   const [calculatingRoute, setCalculatingRoute] = useState(false);
   const [flyToLocation, setFlyToLocation] = useState<{
     lat: number;
@@ -420,7 +421,7 @@ export default function Dashboard() {
         const nearbyShelters = await evacuationService.getNearbyShelters({
           lat: userLocation.lat,
           lng: userLocation.lng,
-          radius: 3, // 3 km radius
+          radius: nearbyRadius,
           limit: 10, // max 10 shelters
         });
 
@@ -443,7 +444,7 @@ export default function Dashboard() {
     };
 
     fetchNearbyShelters();
-  }, [userLocation]);
+  }, [userLocation, nearbyRadius]);
 
   // NEW: Auto set selected location and fly to user location when available
   useEffect(() => {
@@ -1755,9 +1756,16 @@ export default function Dashboard() {
                     <span className="text-slate-600 dark:text-zinc-400">
                       Radius Terdekat
                     </span>
-                    <span className="font-bold text-green-600 dark:text-green-400">
-                      3 km
-                    </span>
+                    <select
+                      value={nearbyRadius}
+                      onChange={(e) => setNearbyRadius(Number(e.target.value))}
+                      className="font-bold text-green-600 dark:text-green-400 bg-transparent border border-green-300 dark:border-green-700 rounded px-1 py-0.5 text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-green-500"
+                    >
+                      <option value={1}>1 km</option>
+                      <option value={3}>3 km</option>
+                      <option value={5}>5 km</option>
+                      <option value={10}>10 km</option>
+                    </select>
                   </div>
                 </div>
               </div>
