@@ -338,10 +338,15 @@ export default function AdminSheltersPage() {
                     <TableCell className="font-medium text-zinc-200">
                       {shelter.name}
                     </TableCell>
-                    <TableCell className="text-zinc-400">
+                    <TableCell className="text-zinc-400 max-w-[200px]">
                       <div className="flex items-center gap-1.5">
                         <MapPin className="h-3 w-3 shrink-0" />
-                        {shelter.address || "Area Tidak Diketahui"}
+                        <span
+                          className="truncate block"
+                          title={shelter.address || "Area Tidak Diketahui"}
+                        >
+                          {shelter.address || "Area Tidak Diketahui"}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell>

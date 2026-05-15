@@ -161,7 +161,10 @@ export default function DashboardPage() {
         shelterApi.getAll().catch(() => []),
         hazardZoneApi.getAll().catch(() => []),
         earthquakeApi
-          .getAll({ limit: 100 })
+          .getAll({
+            limit: 100,
+            startDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          })
           .catch(() => ({ data: [], total: 0, page: 1, limit: 100 })),
         evacuationApi.getRecommendedRoutes({ limit: 20 }).catch(() => []),
         publicFacilityApi.getAll().catch(() => []),
@@ -181,7 +184,7 @@ export default function DashboardPage() {
         const coords =
           boundary.features?.[0]?.geometry?.coordinates ?? null;
         setBantulPolygon(coords);
-      } catch (_e) {
+      } catch {
         // gagal, fallback bounding box
       }
 

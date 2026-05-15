@@ -322,10 +322,10 @@ export default function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      // Calculate 1 day ago for earthquake filter
-      const oneDayAgo = new Date();
-      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-      const startDate = oneDayAgo.toISOString().split("T")[0];
+      // Calculate 24 hours ago for earthquake filter
+      const twentyFourHoursAgo = new Date(
+        Date.now() - 24 * 60 * 60 * 1000,
+      ).toISOString();
 
       const [hazardData, earthquakesResponse, facilitiesData, roadNetworkData] =
         await Promise.all([
@@ -333,7 +333,7 @@ export default function Dashboard() {
           earthquakeApi
             .getAll({
               limit: 100,
-              startDate: startDate, // Only get earthquakes from last 24 hours
+              startDate: twentyFourHoursAgo,
             })
             .catch(() => ({ data: [], total: 0, page: 1, limit: 100 })),
           publicFacilityApi.getAll().catch(() => []),
@@ -436,6 +436,9 @@ export default function Dashboard() {
   useEffect(() => {
     fetchData();
 
+    // Periodic refresh every 5 minutes agar data gempa tetap up-to-date
+    const refreshInterval = setInterval(fetchData, 5 * 60 * 1000);
+
     socketService.connect();
 
     const unsubscribeEarthquake = socketService.onNewEarthquake((newEq) => {
@@ -521,6 +524,7 @@ export default function Dashboard() {
     });
 
     return () => {
+      clearInterval(refreshInterval);
       unsubscribeEarthquake();
       socketService.disconnect();
     };

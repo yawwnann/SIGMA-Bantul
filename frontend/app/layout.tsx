@@ -68,6 +68,11 @@ export default function RootLayout({
           " font-sans min-h-screen antialiased bg-slate-100 dark:bg-zinc-950 text-slate-900 dark:text-zinc-50 overflow-x-hidden"
         }
       >
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{let e=document.querySelectorAll('[fdprocessedid]');for(let i=0;i<e.length;i++)e[i].removeAttribute('fdprocessedid')}catch(e){}`,
+          }}
+        />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
