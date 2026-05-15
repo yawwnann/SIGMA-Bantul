@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import {
   earthquakeApi,
-  shelterApi,
   hazardZoneApi,
   publicFacilityApi,
   roadApi,
@@ -17,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -25,7 +23,6 @@ import {
   Maximize2,
   Minimize2,
   Navigation,
-  AlertTriangle,
   X,
   Layers,
   Info,
@@ -36,15 +33,6 @@ import {
   Activity,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 // Import hook dan service baru untuk nearby shelters
 import { useUserLocation } from "@/hooks/use-user-location";
 import { evacuationService } from "@/services/evacuation.service";
@@ -66,28 +54,8 @@ const MapClient = dynamic(
 const BANTUL_LAT = -7.8878;
 const BANTUL_LON = 110.3289;
 
+
 // --- Helpers ---
-const generateChartData = (earthquakes: Earthquake[]) => {
-  if (earthquakes.length < 5)
-    return [
-      { name: "Jan", magnitudes: 4.2 },
-      { name: "Feb", magnitudes: 5.1 },
-      { name: "Mar", magnitudes: 4.8 },
-      { name: "Apr", magnitudes: 6.2 },
-      { name: "Mei", magnitudes: 3.5 },
-      { name: "Jun", magnitudes: 5.4 },
-    ];
-  return earthquakes
-    .slice(0, 10)
-    .reverse()
-    .map((eq) => ({
-      name: new Date(eq.time).toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "short",
-      }),
-      magnitudes: eq.magnitude,
-    }));
-};
 
 function calculateDistance(
   lat1: number,
@@ -108,26 +76,8 @@ function calculateDistance(
   return R * c;
 }
 
-function getStatusWilayah(earthquakes: Earthquake[]): {
-  status: string;
-  color: string;
-} {
-  if (earthquakes.length === 0)
-    return { status: "Aman", color: "text-green-600" };
-  const latest = earthquakes[0];
-  if (!latest || !latest.magnitude)
-    return { status: "Aman", color: "text-green-600" };
-  if (latest.magnitude >= 6) return { status: "Bahaya", color: "text-red-600" };
-  if (latest.magnitude >= 5)
-    return { status: "Waspada", color: "text-orange-600" };
-  return { status: "Siaga", color: "text-yellow-600" };
-}
-
-
-
 // Calculate impact radius based on magnitude
 function calculateImpactRadius(magnitude: number): number {
-  // Formula: R = Magnitude^2.5 * 1.5 km
   return Math.pow(magnitude, 2.5) * 1.5;
 }
 
@@ -152,7 +102,7 @@ export default function Dashboard() {
   const { theme } = useTheme();
 
   // Auto-request user location (NEW) - iOS-optimized with delay and shorter timeout
-  const { location: userLocation, loading: locationLoading } =
+  const { location: userLocation } =
     useUserLocation(true);
 
   // Data State
@@ -160,6 +110,7 @@ export default function Dashboard() {
   const [shelters, setShelters] = useState<Shelter[]>([]);
   const [hazardZones, setHazardZones] = useState<HazardZone[]>([]);
   const [facilities, setFacilities] = useState<PublicFacility[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [roadNetwork, setRoadNetwork] = useState<any>(null);
   const [expandedShelterId, setExpandedShelterId] = useState<number | null>(
     null,
@@ -175,8 +126,9 @@ export default function Dashboard() {
     lat: number;
     lng: number;
   } | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [calculatedRoute, setCalculatedRoute] = useState<any>(null);
-  const [nearestShelters, setNearestShelters] = useState<
+  const [, setNearestShelters] = useState<
     (Shelter & { distance: number })[]
   >([]);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -203,7 +155,7 @@ export default function Dashboard() {
     zoom?: number;
   } | null>(null);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  const [isShelterDetailOpen, setIsShelterDetailOpen] = useState(false);
+  const [, setIsShelterDetailOpen] = useState(false);
 
   useEffect(() => {
     setCurrentTime(new Date());
@@ -226,9 +178,13 @@ export default function Dashboard() {
 
   // Refs untuk menghindari stale closure di socket callback
   const sheltersRef = useRef(shelters);
-  useEffect(() => { sheltersRef.current = shelters; }, [shelters]);
+  useEffect(() => {
+    sheltersRef.current = shelters;
+  }, [shelters]);
   const userLocationRef = useRef(userLocation);
-  useEffect(() => { userLocationRef.current = userLocation; }, [userLocation]);
+  useEffect(() => {
+    userLocationRef.current = userLocation;
+  }, [userLocation]);
 
   const emergencyHandlerRef = useRef<() => void>(() => {});
 
@@ -251,7 +207,9 @@ export default function Dashboard() {
         const userLng = position.coords.longitude;
 
         if (!isWithinBantul(userLat, userLng)) {
-          toast.error("Lokasi Anda di luar wilayah Kabupaten Bantul. Sistem hanya mendukung evakuasi di wilayah Bantul.");
+          toast.error(
+            "Lokasi Anda di luar wilayah Kabupaten Bantul. Sistem hanya mendukung evakuasi di wilayah Bantul.",
+          );
           setGettingLocation(false);
           return;
         }
@@ -307,7 +265,10 @@ export default function Dashboard() {
             `Rute darurat ke ${nearestShelter.name} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
           );
         } catch (error) {
-          console.error("[Emergency] Error calculating emergency route:", error);
+          console.error(
+            "[Emergency] Error calculating emergency route:",
+            error,
+          );
           toast.error("Gagal menghitung rute darurat dari lokasi saat ini.", {
             description: "Silakan coba lagi atau pilih shelter secara manual",
             duration: 5000,
@@ -389,15 +350,14 @@ export default function Dashboard() {
       // Fetch boundary untuk validasi isWithinBantul
       try {
         const boundary = await analysisApi.getBantulBoundary();
-        const coords =
-          boundary.features?.[0]?.geometry?.coordinates ?? null;
+        const coords = boundary.features?.[0]?.geometry?.coordinates ?? null;
         setBantulPolygon(coords);
-      } catch (_e) {
+      } catch {
         // gagal fetch boundary, fallback bounding box tetap jalan
       }
       // Don't fetch all shelters here - will fetch nearby shelters based on user location
       setHazardZones(hazardData as HazardZone[]);
-      setEarthquakes((earthquakesResponse as any).data as Earthquake[]);
+      setEarthquakes(earthquakesResponse.data);
       setFacilities(facilitiesData as PublicFacility[]);
       setRoadNetwork(roadNetworkData);
     } catch (err) {
@@ -488,12 +448,7 @@ export default function Dashboard() {
       let distToUser = Infinity;
 
       if (loc) {
-        distToUser = calculateDistance(
-          loc.lat,
-          loc.lng,
-          newEq.lat,
-          newEq.lon,
-        );
+        distToUser = calculateDistance(loc.lat, loc.lng, newEq.lat, newEq.lon);
 
         if (eqInBantul || distToUser <= impactRadius) {
           zone = "RED";
@@ -549,8 +504,8 @@ export default function Dashboard() {
             {newEq.magnitude} di {newEq.location}
           </div>
           <div className="text-xs text-muted-foreground mt-0.5">
-            Kedalaman: {newEq.depth} km &middot;{" "}
-            {eqFromBantul.toFixed(1)} km dari Bantul
+            Kedalaman: {newEq.depth} km &middot; {eqFromBantul.toFixed(1)} km
+            dari Bantul
           </div>
           <div className="text-xs mt-1 font-medium">
             Kamu berada di {zoneLabel}. {zoneAction}
@@ -629,7 +584,9 @@ export default function Dashboard() {
 
           if (!isWithinBantul(userLat, userLng)) {
             console.warn("[Emergency] User location outside Bantul");
-            toast.error("Lokasi Anda di luar wilayah Kabupaten Bantul. Sistem hanya mendukung evakuasi di wilayah Bantul.");
+            toast.error(
+              "Lokasi Anda di luar wilayah Kabupaten Bantul. Sistem hanya mendukung evakuasi di wilayah Bantul.",
+            );
             setGettingLocation(false);
             return;
           }
@@ -759,44 +716,6 @@ export default function Dashboard() {
     }
   }, [shelters.length]);
 
-  const handleGetCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error("Geolocation tidak didukung oleh browser Anda");
-      return;
-    }
-    setGettingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        if (!isWithinBantul(latitude, longitude)) {
-          toast.error("Lokasi Anda di luar wilayah Kabupaten Bantul. Sistem hanya mendukung evakuasi di wilayah Bantul.");
-          setGettingLocation(false);
-          return;
-        }
-        handleLocationSelect(latitude, longitude);
-        toast.success("Lokasi Anda berhasil didapatkan");
-        setGettingLocation(false);
-      },
-      (error) => {
-        console.error("Error getting location:", error);
-        toast.error(
-          "Gagal mendapatkan lokasi. Pastikan GPS aktif dan izin lokasi diberikan.",
-        );
-        setGettingLocation(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-    );
-  };
-
-  const handleToggleRoutingMode = () => {
-    setRoutingMode(!routingMode);
-    setRouteStart(null);
-    setRouteEnd(null);
-    setCalculatedRoute(null);
-    if (!routingMode)
-      toast.info("Mode Routing: Klik peta untuk pilih titik awal dan tujuan");
-  };
-
   const handleMapClick = (lat: number, lng: number) => {
     if (!isWithinBantul(lat, lng)) {
       toast.error(
@@ -909,7 +828,9 @@ export default function Dashboard() {
         const userLng = position.coords.longitude;
 
         if (!isWithinBantul(userLat, userLng)) {
-          toast.error("Lokasi Anda di luar wilayah Kabupaten Bantul. Sistem hanya mendukung evakuasi di wilayah Bantul.");
+          toast.error(
+            "Lokasi Anda di luar wilayah Kabupaten Bantul. Sistem hanya mendukung evakuasi di wilayah Bantul.",
+          );
           setCalculatingRoute(false);
           return;
         }
@@ -967,9 +888,7 @@ export default function Dashboard() {
     window.dispatchEvent(new CustomEvent("hideEarthquakeRadius"));
   };
 
-  const chartData = generateChartData(earthquakes);
   const isDark = mounted && theme === "dark";
-  const wilayahStatus = getStatusWilayah(earthquakes);
 
   return (
     <>
@@ -988,7 +907,6 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-
 
       <div className="p-4 md:p-6 lg:p-8 min-h-screen space-y-6 max-w-[1600px] mx-auto">
         {/* Top Header Section */}

@@ -143,6 +143,7 @@ export default function NearbyEvacuationMap({
           <UserLocationMarker
             lat={(userLocation ?? selectedLocation)!.lat}
             lng={(userLocation ?? selectedLocation)!.lng}
+            heading={userLocation?.heading}
           />
         )}
         <NearbyEvacuationMarkers

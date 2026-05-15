@@ -20,7 +20,7 @@ interface MapClientProps {
   hazardZones: HazardZone[];
   earthquakes: Earthquake[];
   facilities: PublicFacility[];
-  userLocation?: { lat: number; lng: number } | null;
+  userLocation?: { lat: number; lng: number; heading?: number } | null;
   selectedLocation: { lat: number; lng: number } | null;
   onLocationSelect: (lat: number, lng: number) => void;
   onEarthquakeClick?: (earthquake: Earthquake) => void;
@@ -788,14 +788,23 @@ export default function MapClient({
 
     if (displayPosition) {
       const isGpsLocation = userLocation !== null;
+      const deg = userLocation?.heading;
+      const html = deg !== undefined
+        ? `<div style="position:relative;width:34px;height:44px;">
+            <div style="position:absolute;top:0;left:50%;transform:translateX(-50%) rotate(${deg}deg);width:14px;height:14px;">
+              <svg viewBox="0 0 24 24" fill="#3b82f6" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L4 20h16L12 2z"/></svg>
+            </div>
+            <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:28px;height:28px;background:#3b82f6;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>
+          </div>`
+        : '<div style="background-color: #3b82f6; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4);"></div>';
       locationMarkerRef.current = L.marker(
         [displayPosition.lat, displayPosition.lng],
         {
           icon: L.divIcon({
             className: "selected-location",
-            html: '<div style="background-color: #3b82f6; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4);"></div>',
-            iconSize: [30, 30],
-            iconAnchor: [15, 15],
+            html,
+            iconSize: deg !== undefined ? [34, 44] : [30, 30],
+            iconAnchor: deg !== undefined ? [17, 27] : [15, 15],
           }),
         },
       )

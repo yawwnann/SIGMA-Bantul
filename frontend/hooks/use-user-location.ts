@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 export interface UserLocation {
   lat: number;
   lng: number;
+  heading?: number;
 }
 
 export interface UseUserLocationReturn {
@@ -11,6 +12,7 @@ export interface UseUserLocationReturn {
   loading: boolean;
   error: string | null;
   requestLocation: () => void;
+  stopWatching: () => void;
 }
 
 export function useUserLocation(
@@ -19,6 +21,14 @@ export function useUserLocation(
   const [location, setLocation] = useState<UserLocation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const watchIdRef = useRef<number | null>(null);
+
+  const stopWatching = () => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+  };
 
   const requestLocation = () => {
     if (!navigator.geolocation) {
@@ -28,24 +38,26 @@ export function useUserLocation(
       return;
     }
 
+    // Stop existing watcher
+    stopWatching();
+
     setLoading(true);
     setError(null);
 
-    // iOS-friendly: Use shorter timeout and less aggressive options
-    navigator.geolocation.getCurrentPosition(
+    // iOS-friendly: watchPosition for continuous heading updates
+    watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
-        const { latitude, longitude } = position.coords;
-        setLocation({ lat: latitude, lng: longitude });
-        setLoading(false);
-        console.log("[useUserLocation] Location obtained:", {
+        const { latitude, longitude, heading } = position.coords;
+        setLocation({
           lat: latitude,
           lng: longitude,
+          heading: heading !== null && !isNaN(heading) ? heading : undefined,
         });
+        setLoading(false);
       },
       (err) => {
         let errorMessage = "Gagal mendapatkan lokasi Anda";
 
-        // iOS sometimes returns empty error object, check if err.code exists
         if (err && typeof err.code !== "undefined") {
           switch (err.code) {
             case err.PERMISSION_DENIED:
@@ -67,28 +79,31 @@ export function useUserLocation(
           "[useUserLocation] Error:",
           err || "Unknown geolocation error",
         );
-
-        // Don't show toast on error to avoid blocking UI on iOS
-        // toast.error(errorMessage);
       },
       {
-        enableHighAccuracy: false, // Changed to false for iOS compatibility
-        timeout: 5000, // Reduced from 10000 to 5000ms
-        maximumAge: 60000, // Allow cached location up to 1 minute
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 30000,
       },
     );
   };
 
   useEffect(() => {
     if (autoRequest) {
-      // Delay auto-request slightly to let page render first (iOS fix)
       const timer = setTimeout(() => {
         requestLocation();
       }, 500);
 
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        stopWatching();
+      };
     }
+
+    return () => {
+      stopWatching();
+    };
   }, [autoRequest]);
 
-  return { location, loading, error, requestLocation };
+  return { location, loading, error, requestLocation, stopWatching };
 }
