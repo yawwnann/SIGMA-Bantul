@@ -388,9 +388,9 @@ export default function Dashboard() {
       // Fetch boundary untuk validasi isWithinBantul
       try {
         const boundary = await analysisApi.getBantulBoundary();
-        const polygon =
-          boundary.features?.[0]?.geometry?.coordinates?.[0] ?? null;
-        setBantulPolygon(polygon);
+        const coords =
+          boundary.features?.[0]?.geometry?.coordinates ?? null;
+        setBantulPolygon(coords);
       } catch (_e) {
         // gagal fetch boundary, fallback bounding box tetap jalan
       }

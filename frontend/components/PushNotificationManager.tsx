@@ -123,23 +123,34 @@ export function PushNotificationManager() {
         return;
       }
 
+      // Step 1: Register Service Worker
+      let register: ServiceWorkerRegistration;
       try {
-        // Step 1: Register Service Worker
         console.log("Registering service worker...");
-        const register = await navigator.serviceWorker.register("/sw.js", {
+        register = await navigator.serviceWorker.register("/sw.js", {
           scope: "/",
         });
+      } catch (swErr) {
+        console.warn("Service worker registration failed:", swErr);
+        return;
+      }
 
-        // Check registration status
-        if (!register.active) {
-          console.warn("Service worker not active yet, waiting...");
-        }
+      // Check registration status
+      if (!register.active) {
+        console.warn("Service worker not active yet, waiting...");
+      }
 
-        // Wait for the service worker to be ready
+      // Wait for the service worker to be ready
+      try {
         await navigator.serviceWorker.ready;
         console.log("Service worker ready");
+      } catch (readyErr) {
+        console.warn("Service worker never became ready:", readyErr);
+        return;
+      }
 
-        // Step 2: Check existing subscription
+      // Step 2: Check existing subscription
+      try {
         const existingSub = await register.pushManager.getSubscription();
         if (existingSub) {
           console.log("Existing subscription found, re-registering...");
@@ -152,22 +163,27 @@ export function PushNotificationManager() {
           }
           return;
         }
+      } catch (subErr) {
+        console.warn("Failed to check existing subscription:", subErr);
+        return;
+      }
 
-        // Step 3: Request permission
-        const permission = await Notification.requestPermission();
-        console.log("Notification permission:", permission);
+      // Step 3: Request permission
+      const permission = await Notification.requestPermission();
+      console.log("Notification permission:", permission);
 
-        if (permission === "denied") {
-          toast.notification.denied();
-          return;
-        }
+      if (permission === "denied") {
+        toast.notification.denied();
+        return;
+      }
 
-        if (permission === "default") {
-          console.log("User dismissed the permission prompt");
-          return;
-        }
+      if (permission === "default") {
+        console.log("User dismissed the permission prompt");
+        return;
+      }
 
-        // Step 4: Subscribe to push
+      // Step 4: Subscribe to push
+      try {
         console.log("Subscribing to push notifications...");
         const subscription = await register.pushManager.subscribe({
           userVisibleOnly: true,
@@ -186,30 +202,30 @@ export function PushNotificationManager() {
         if (response) {
           toast.notification.enabled();
         }
-      } catch (err) {
-        console.error("Error setting up push notifications:", err);
-
-        if (err instanceof DOMException && err.name === "AbortError") {
-          console.warn("Push subscription request timed out or was aborted");
+      } catch (pushErr) {
+        if (pushErr instanceof DOMException && pushErr.name === "AbortError") {
+          console.warn(
+            "Push service unavailable (registration aborted) — notifications will not work in this browser session",
+          );
           return;
         }
 
-        // Check for specific error types
-        if (err instanceof Error) {
-          if (err.message.includes("Permission denied")) {
+        if (pushErr instanceof Error) {
+          if (pushErr.message.includes("Permission denied")) {
             toast.notification.denied();
           } else if (
-            err.name === "NetworkError" ||
-            err.message.includes("Network Error")
+            pushErr.name === "NetworkError" ||
+            pushErr.message.includes("Network Error")
           ) {
             console.warn(
               "Network error - push notifications unavailable while offline or backend not running",
             );
           } else {
+            console.error("Push subscription error:", pushErr);
             toast.notification.error();
           }
         } else {
-          console.warn("Unknown error setting up push:", err);
+          console.warn("Unknown push setup error:", pushErr);
           toast.notification.error();
         }
       }

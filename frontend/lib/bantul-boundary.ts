@@ -12,16 +12,23 @@ const BANTUL_BOUNDS = {
 };
 
 // Module-level variable — diisi dari response API backend
-let bantulPolygon: number[][] | null = null;
+// Menyimpan coordinates dari MultiPolygon: number[][][][]
+let bantulPolygon: number[][][][] | null = null;
 
 /** Set polygon dari response API backend */
-export function setBantulPolygon(polygon: number[][] | null) {
+export function setBantulPolygon(polygon: number[][][][] | null) {
   bantulPolygon = polygon;
 }
 
 export function isWithinBantul(lat: number, lng: number): boolean {
   if (bantulPolygon) {
-    return pointInPolygon(lng, lat, bantulPolygon);
+    for (const polygon of bantulPolygon) {
+      const outerRing = polygon[0];
+      if (outerRing && pointInPolygon(lng, lat, outerRing)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   return (

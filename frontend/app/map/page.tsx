@@ -12,7 +12,8 @@ import { earthquakeApi, hazardZoneApi, roadApi } from "@/api";
 import { useUserLocation } from "@/hooks/use-user-location";
 import { evacuationService } from "@/services/evacuation.service";
 import { socketService } from "@/lib/socket";
-import { isWithinBantul } from "@/lib/bantul-boundary";
+import { isWithinBantul, setBantulPolygon } from "@/lib/bantul-boundary";
+import { analysisApi } from "@/api/analysis";
 import { toast } from "sonner";
 import type { Shelter, HazardZone, Earthquake, PublicFacility } from "@/types";
 import {
@@ -372,6 +373,16 @@ export default function MapPage() {
       setEarthquakes(earthquakesResponse.data as Earthquake[]);
       setFacilities([]);
       setRoadNetwork(null);
+
+      // Fetch boundary untuk validasi isWithinBantul
+      try {
+        const boundary = await analysisApi.getBantulBoundary();
+        const coords =
+          boundary.features?.[0]?.geometry?.coordinates ?? null;
+        setBantulPolygon(coords);
+      } catch (_e) {
+        // gagal fetch boundary, fallback bounding box tetap jalan
+      }
     } catch (err) {
       setError("Gagal memuat data");
       console.error(err);
