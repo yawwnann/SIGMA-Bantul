@@ -18,7 +18,7 @@ model User {
   updatedAt          DateTime           @updatedAt
   registeredEvacuees Evacuee[]
   pushSubscriptions  PushSubscription[]
-  managedShelters    Shelter[]
+  managedEvacuationLocations EvacuationLocation[]
 }
 
 model Earthquake {
@@ -51,17 +51,17 @@ model HazardZone {
   updatedAt   DateTime                 @updatedAt
 }
 
-model Shelter {
+model EvacuationLocation {
   id               Int                      @id @default(autoincrement())
   name             String
-  category         ShelterCategory
+  category         EvacuationLocationCategory
   capacity         Int                      @default(0)
   currentOccupancy Int                      @default(0)
   geometry         Json
   geom             Unsupported("geometry")?
   address          String?
-  condition        ShelterCondition
-  status           ShelterStatus            @default(ACTIVE)
+  condition        EvacuationLocationCondition
+  status           EvacuationLocationStatus            @default(ACTIVE)
   facilities       String?
   officerId        Int?
   createdAt        DateTime                 @default(now())
@@ -154,18 +154,18 @@ model PushSubscription {
   user      User?    @relation(fields: [userId], references: [id])
 }
 
-model ShelterLog {
-  id        Int      @id @default(autoincrement())
-  shelterId Int
-  officerId Int
-  action    String
-  changes   Json
-  createdAt DateTime @default(now())
+model EvacuationLocationLog {
+  id                   Int      @id @default(autoincrement())
+  evacuationLocationId Int
+  officerId            Int
+  action               String
+  changes              Json
+  createdAt            DateTime @default(now())
 }
 
 model Evacuee {
-  id               Int           @id @default(autoincrement())
-  shelterId        Int
+  id                   Int           @id @default(autoincrement())
+  evacuationLocationId Int
   name             String
   nik              String?
   gender           EvacueeGender
@@ -182,10 +182,10 @@ model Evacuee {
   registeredBy     Int?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
-  registeredByUser User?         @relation(fields: [registeredBy], references: [id])
-  shelter          Shelter       @relation(fields: [shelterId], references: [id], onDelete: Cascade)
+  registeredByUser   User?         @relation(fields: [registeredBy], references: [id])
+  evacuationLocation EvacuationLocation       @relation(fields: [evacuationLocationId], references: [id], onDelete: Cascade)
 
-  @@index([shelterId])
+  @@index([evacuationLocationId])
   @@index([status])
   @@index([nik])
 }
@@ -202,7 +202,7 @@ model spatial_ref_sys {
 enum UserRole {
   ADMIN
   USER
-  SHELTER_OFFICER
+  EVACUATION_LOCATION_OFFICER
 }
 
 enum HazardLevel {
@@ -233,20 +233,20 @@ enum RoadVulnerability {
   CRITICAL
 }
 
-enum ShelterCondition {
+enum EvacuationLocationCondition {
   GOOD
   MODERATE
   NEEDS_REPAIR
   DAMAGED
 }
 
-enum ShelterCategory {
+enum EvacuationLocationCategory {
   SCHOOL
   FIELD
   GOVERNMENT
 }
 
-enum ShelterStatus {
+enum EvacuationLocationStatus {
   ACTIVE
   STANDBY
   UNAVAILABLE

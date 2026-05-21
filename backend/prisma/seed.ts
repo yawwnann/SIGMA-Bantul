@@ -47,7 +47,7 @@ async function main() {
     },
   });
 
-  // Create Shelter Officers with Indonesian names
+  // Create EvacuationLocation Officers with Indonesian names
   const officers = [
     {
       email: 'ahmad.fauzi@bantul.go.id',
@@ -118,7 +118,7 @@ async function main() {
         email: officer.email,
         password: hashedPassword,
         name: officer.name,
-        role: 'SHELTER_OFFICER',
+        role: 'EVACUATION_LOCATION_OFFICER',
       },
     });
     createdOfficers.push(created);
@@ -563,12 +563,12 @@ async function main() {
 
   console.log(`✅ Created ${hazardZones.length} hazard zones`);
 
-  // 4. Shelters — managed separately
-  // Shelter data will be imported from lokasi_potensial_evakuasi.geojson
+  // 4. EvacuationLocations — managed separately
+  // EvacuationLocation data will be imported from lokasi_potensial_evakuasi.geojson
   // via a separate seeder script
-  const existingShelters = await prisma.shelter.count();
+  const existingEvacuationLocations = await prisma.evacuationLocation.count();
   console.log(
-    `🏠 Shelter table: ${existingShelters} existing shelters (managed by separate import script, not touched by seed).`,
+    `🏠 EvacuationLocation table: ${existingEvacuationLocations} existing evacuationLocations (managed by separate import script, not touched by seed).`,
   );
 
   // 5. Roads — managed separately
@@ -645,7 +645,7 @@ async function main() {
   console.log(`✅ Created ${facilities.length} public facilities`);
 
   const finalRoadCount = await prisma.road.count();
-  const finalShelterCount = await prisma.shelter.count();
+  const finalEvacuationLocationCount = await prisma.evacuationLocation.count();
   console.log('✨ Seeding completed successfully!');
   console.log('\n📊 Summary:');
   console.log(
@@ -654,7 +654,7 @@ async function main() {
   console.log(`   - Earthquakes: ${earthquakes.length}`);
   console.log(`   - Hazard Zones: ${hazardZones.length}`);
   console.log(
-    `   - Shelters: ${finalShelterCount} (not cleared — managed by separate import script)`,
+    `   - EvacuationLocations: ${finalEvacuationLocationCount} (not cleared — managed by separate import script)`,
   );
   console.log(
     `   - Roads: ${finalRoadCount} (not cleared — managed by import-roads script)`,
@@ -669,7 +669,7 @@ async function main() {
     '     npm run db:enrich-roads  (adds names from NAMA_RUAS_JALAN.geojson)',
   );
   console.log('');
-  console.log('💡 If Shelters table is empty, run the shelter import script');
+  console.log('💡 If EvacuationLocations table is empty, run the evacuationLocation import script');
 }
 
 main()

@@ -1,7 +1,7 @@
 import {
   PrismaClient,
-  ShelterCategory,
-  ShelterCondition,
+  EvacuationLocationCategory,
+  EvacuationLocationCondition,
 } from '@prisma/client';
 import { existsSync, readdirSync, readFileSync } from 'fs';
 import { basename, extname, join, resolve } from 'path';
@@ -25,9 +25,9 @@ type GeoJsonFeatureCollection = {
   features: GeoJsonFeature[];
 };
 
-type ShelterImportRow = {
+type EvacuationLocationImportRow = {
   name: string;
-  category: ShelterCategory;
+  category: EvacuationLocationCategory;
   geometry: GeoJsonGeometry;
   capacity: number;
   address?: string;
@@ -48,15 +48,15 @@ function normalizeText(value: unknown): string {
     .replace(/-/g, '_');
 }
 
-function mapCategory(value: unknown): ShelterCategory | null {
+function mapCategory(value: unknown): EvacuationLocationCategory | null {
   const normalized = normalizeText(value);
 
   if (['sekolah', 'school'].includes(normalized)) {
-    return ShelterCategory.SCHOOL;
+    return EvacuationLocationCategory.SCHOOL;
   }
 
   if (['lapangan', 'field'].includes(normalized)) {
-    return ShelterCategory.FIELD;
+    return EvacuationLocationCategory.FIELD;
   }
 
   if (
@@ -68,17 +68,17 @@ function mapCategory(value: unknown): ShelterCategory | null {
       'pemerintah',
     ].includes(normalized)
   ) {
-    return ShelterCategory.GOVERNMENT;
+    return EvacuationLocationCategory.GOVERNMENT;
   }
 
   return null;
 }
 
 function mapCapacity(
-  category: ShelterCategory,
+  category: EvacuationLocationCategory,
   properties: Record<string, unknown> | null | undefined,
 ): number {
-  if (category === ShelterCategory.SCHOOL) {
+  if (category === EvacuationLocationCategory.SCHOOL) {
     const name = String(
       getProperty(properties, ['namobj', 'name', 'nama']) ?? '',
     ).toLowerCase();
@@ -86,7 +86,7 @@ function mapCapacity(
     return 250;
   }
 
-  if (category === ShelterCategory.GOVERNMENT) {
+  if (category === EvacuationLocationCategory.GOVERNMENT) {
     const name = String(
       getProperty(properties, ['namobj', 'name', 'nama']) ?? '',
     ).toLowerCase();
@@ -175,11 +175,11 @@ function parseFeatureCollection(filePath: string): GeoJsonFeatureCollection {
   return parsed;
 }
 
-function featureToShelterRow(
+function featureToEvacuationLocationRow(
   feature: GeoJsonFeature,
   filePath: string,
   index: number,
-): ShelterImportRow {
+): EvacuationLocationImportRow {
   const properties = feature.properties ?? {};
   const name = getProperty(properties, [
     'name',
@@ -234,7 +234,7 @@ function featureToShelterRow(
   };
 }
 
-function loadShelterRows(inputPath: string): ShelterImportRow[] {
+function loadEvacuationLocationRows(inputPath: string): EvacuationLocationImportRow[] {
   const files = getGeoJsonFiles(inputPath);
   const inputIsSingleFile = ['.geojson', '.json'].includes(
     extname(resolve(inputPath)).toLowerCase(),
@@ -250,36 +250,36 @@ function loadShelterRows(inputPath: string): ShelterImportRow[] {
 
     if (!fileCategory && !hasSupportedCategory(collection)) {
       if (!inputIsSingleFile) {
-        console.warn(`Skipping non-shelter GeoJSON: ${filePath}`);
+        console.warn(`Skipping non-EvacuationLocation GeoJSON: ${filePath}`);
         return [];
       }
     }
 
     return collection.features.map((feature, index) =>
-      featureToShelterRow(feature, filePath, index),
+      featureToEvacuationLocationRow(feature, filePath, index),
     );
   });
 
   if (rows.length === 0) {
-    throw new Error(`No shelter features found in ${resolve(inputPath)}`);
+    throw new Error(`No EvacuationLocation features found in ${resolve(inputPath)}`);
   }
 
   return rows;
 }
 
-export async function seedPotentialShelters(inputPath = DEFAULT_GEOJSON_PATH) {
-  const rows = loadShelterRows(inputPath);
+export async function seedPotentialEvacuationLocations(inputPath = DEFAULT_GEOJSON_PATH) {
+  const rows = loadEvacuationLocationRows(inputPath);
 
-  // Clear existing shelters
-  const deleted = await prisma.shelter.deleteMany();
-  console.log(`Cleared ${deleted.count} existing Shelter rows`);
+  // Clear existing EvacuationLocations
+  const deleted = await prisma.evacuationLocation.deleteMany();
+  console.log(`Cleared ${deleted.count} existing EvacuationLocation rows`);
 
-  // Insert shelters one by one (more reliable than transaction with raw SQL)
+  // Insert EvacuationLocations one by one (more reliable than transaction with raw SQL)
   let successCount = 0;
   for (const row of rows) {
     try {
       await prisma.$executeRaw`
-        INSERT INTO "Shelter" (
+        INSERT INTO "EvacuationLocation" (
           name,
           category,
           capacity,
@@ -295,7 +295,7 @@ export async function seedPotentialShelters(inputPath = DEFAULT_GEOJSON_PATH) {
         )
         VALUES (
           ${row.name},
-          ${row.category}::"ShelterCategory",
+          ${row.category}::"EvacuationLocationCategory",
           ${row.capacity},
           0,
           ST_AsGeoJSON(
@@ -307,8 +307,8 @@ export async function seedPotentialShelters(inputPath = DEFAULT_GEOJSON_PATH) {
             ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(row.geometry)}), 4326)
           ),
           ${row.address ?? null},
-          ${ShelterCondition.GOOD}::"ShelterCondition",
-          'ACTIVE'::"ShelterStatus",
+          ${EvacuationLocationCondition.GOOD}::"EvacuationLocationCondition",
+          'ACTIVE'::"EvacuationLocationStatus",
           NULL,
           NOW(),
           NOW()
@@ -316,7 +316,7 @@ export async function seedPotentialShelters(inputPath = DEFAULT_GEOJSON_PATH) {
       `;
       successCount++;
     } catch (error) {
-      console.error(`Failed to insert shelter: ${row.name}`, error.message);
+      console.error(`Failed to insert EvacuationLocation: ${row.name}`, error.message);
     }
   }
 
@@ -326,13 +326,13 @@ export async function seedPotentialShelters(inputPath = DEFAULT_GEOJSON_PATH) {
 }
 
 async function main() {
-  const inputPath = process.env.SHELTER_GEOJSON_PATH || process.argv[2];
-  await seedPotentialShelters(inputPath || DEFAULT_GEOJSON_PATH);
+  const inputPath = process.env.EvacuationLocation_GEOJSON_PATH || process.argv[2];
+  await seedPotentialEvacuationLocations(inputPath || DEFAULT_GEOJSON_PATH);
 }
 
 main()
   .catch((error) => {
-    console.error('Failed to seed potential shelters');
+    console.error('Failed to seed potential EvacuationLocations');
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
   })

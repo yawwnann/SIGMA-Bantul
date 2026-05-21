@@ -6,15 +6,18 @@ import {
   IsOptional,
   IsObject,
 } from 'class-validator';
-import { ShelterCategory, ShelterCondition } from '@prisma/client';
+import {
+  EvacuationLocationCategory,
+  EvacuationLocationCondition,
+} from '@prisma/client';
 
-export class CreateShelterDto {
+export class CreateEvacuationLocationDto {
   @IsString()
   @IsNotEmpty()
   name: string;
 
-  @IsEnum(ShelterCategory)
-  category: ShelterCategory;
+  @IsEnum(EvacuationLocationCategory)
+  category: EvacuationLocationCategory;
 
   @IsNumber()
   @IsOptional()
@@ -28,8 +31,8 @@ export class CreateShelterDto {
   @IsOptional()
   address?: string;
 
-  @IsEnum(ShelterCondition)
-  condition: ShelterCondition;
+  @IsEnum(EvacuationLocationCondition)
+  condition: EvacuationLocationCondition;
 
   @IsString()
   @IsOptional()

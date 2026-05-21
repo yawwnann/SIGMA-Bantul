@@ -31,13 +31,13 @@ export class EvacuationController {
     });
   }
 
-  @Get('nearest-shelter')
-  async getNearestShelter(
+  @Get('nearest-evacuationLocation')
+  async getNearestEvacuationLocation(
     @Query('lat') lat: string,
     @Query('lon') lon: string,
     @Query('limit') limit?: string,
   ) {
-    return this.evacuationService.getNearestShelter(
+    return this.evacuationService.getNearestEvacuationLocation(
       parseFloat(lat),
       parseFloat(lon),
       limit ? parseInt(limit) : 5,

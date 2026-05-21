@@ -16,7 +16,7 @@ import { UpdateOfficerDto } from './dto/update-officer.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { UserRole, ShelterStatus } from '@prisma/client';
+import { UserRole, EvacuationLocationStatus } from '@prisma/client';
 
 // Admin-only officer management
 @Controller('officers')
@@ -56,10 +56,10 @@ export class OfficerController {
   }
 }
 
-// Officer dashboard endpoints (SHELTER_OFFICER role)
+// Officer dashboard endpoints (EVACUATION_LOCATION_OFFICER role)
 @Controller('officer')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.SHELTER_OFFICER)
+@Roles(UserRole.EVACUATION_LOCATION_OFFICER)
 export class OfficerDashboardController {
   constructor(private officerService: OfficerService) {}
 
@@ -75,47 +75,47 @@ export class OfficerDashboardController {
     }
   }
 
-  @Get('shelters')
-  getMyShelters(@Request() req: { user: { userId: number } }) {
+  @Get('evacuationLocations')
+  getMyEvacuationLocations(@Request() req: { user: { userId: number } }) {
     return this.officerService
       .getOfficerDashboard(req.user.userId)
-      .then((d) => d.shelters);
+      .then((d) => d.evacuationLocations);
   }
 
-  @Patch('shelters/:id/occupancy')
+  @Patch('evacuationLocations/:id/occupancy')
   updateOccupancy(
-    @Param('id', ParseIntPipe) shelterId: number,
+    @Param('id', ParseIntPipe) evacuationLocationId: number,
     @Body('occupancy', ParseIntPipe) occupancy: number,
     @Request() req: { user: { userId: number } },
   ) {
     return this.officerService.updateOccupancyByOfficer(
-      shelterId,
+      evacuationLocationId,
       occupancy,
       req.user.userId,
     );
   }
 
-  @Patch('shelters/:id/condition')
+  @Patch('evacuationLocations/:id/condition')
   updateCondition(
-    @Param('id', ParseIntPipe) shelterId: number,
+    @Param('id', ParseIntPipe) evacuationLocationId: number,
     @Body('condition') condition: string,
     @Request() req: { user: { userId: number } },
   ) {
     return this.officerService.updateConditionByOfficer(
-      shelterId,
+      evacuationLocationId,
       condition,
       req.user.userId,
     );
   }
 
-  @Patch('shelters/:id/status')
+  @Patch('evacuationLocations/:id/status')
   updateStatus(
-    @Param('id', ParseIntPipe) shelterId: number,
-    @Body('status') status: ShelterStatus,
+    @Param('id', ParseIntPipe) evacuationLocationId: number,
+    @Body('status') status: EvacuationLocationStatus,
     @Request() req: { user: { userId: number } },
   ) {
     return this.officerService.updateStatusByOfficer(
-      shelterId,
+      evacuationLocationId,
       status,
       req.user.userId,
     );

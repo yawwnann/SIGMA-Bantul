@@ -23,7 +23,7 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "ts-node prisma/seed.ts",
-    "db:seed-shelters": "ts-node prisma/seeders/seed-potential-shelters.ts",
+    "db:seed-evacuation-locations": "ts-node prisma/seeders/seed-evacuation-locations.ts",
     "db:studio": "prisma studio",
     "db:import-roads": "ts-node scripts/import-roads.ts",
     "db:enrich-roads": "ts-node scripts/enrich-roads.ts",
@@ -39,7 +39,7 @@
     "db:clean-earthquakes-advanced": "ts-node scripts/clean-earthquakes-advanced.ts"
   },
   "prisma": {
-    "seed": "ts-node prisma/seeders/seed-potential-shelters.ts"
+    "seed": "ts-node prisma/seeders/seed-evacuation-locations.ts"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",

@@ -15,7 +15,7 @@ import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
 import { EarthquakeModule } from './earthquake/earthquake.module';
 import { HazardZoneModule } from './hazard-zone/hazard-zone.module';
-import { ShelterModule } from './shelter/shelter.module';
+import { EvacuationLocationModule } from './evacuation-location/evacuation-location.module';
 import { RoadModule } from './road/road.module';
 import { EvacuationModule } from './evacuation/evacuation.module';
 import { PublicFacilityModule } from './public-facility/public-facility.module';
@@ -27,7 +27,6 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { OfficerModule } from './officer/officer.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { EvacueeModule } from './evacuee/evacuee.module';
-import { EvacuationLocationModule } from './evacuation-location/evacuation-location.module';
 
 @Module({
   imports: [
@@ -48,7 +47,7 @@ import { EvacuationLocationModule } from './evacuation-location/evacuation-locat
     AuthModule,
     EarthquakeModule,
     HazardZoneModule,
-    ShelterModule,
+    EvacuationLocationModule,
     RoadModule,
     EvacuationModule,
     PublicFacilityModule,
@@ -60,7 +59,6 @@ import { EvacuationLocationModule } from './evacuation-location/evacuation-locat
     OfficerModule,
     MonitoringModule,
     EvacueeModule,
-    EvacuationLocationModule,
   ],
   controllers: [AppController],
   providers: [

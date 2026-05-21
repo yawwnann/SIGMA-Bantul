@@ -25,37 +25,41 @@ export class EvacueeController {
   constructor(private evacueeService: EvacueeService) {}
 
   @Post()
-  @Roles('ADMIN', 'SHELTER_OFFICER')
+  @Roles('ADMIN', 'EVACUATION_LOCATION_OFFICER')
   async create(@Body() dto: CreateEvacueeDto, @Request() req) {
     return this.evacueeService.create(dto, req.user.userId);
   }
 
   @Get()
-  @Roles('ADMIN', 'SHELTER_OFFICER')
+  @Roles('ADMIN', 'EVACUATION_LOCATION_OFFICER')
   async findAll(
-    @Query('shelterId') shelterId?: string,
+    @Query('evacuationLocationId') evacuationLocationId?: string,
     @Query('status') status?: EvacueeStatus,
   ) {
     return this.evacueeService.findAll(
-      shelterId ? parseInt(shelterId) : undefined,
+      evacuationLocationId ? parseInt(evacuationLocationId) : undefined,
       status,
     );
   }
 
-  @Get('stats/:shelterId')
-  @Roles('ADMIN', 'SHELTER_OFFICER')
-  async getStats(@Param('shelterId', ParseIntPipe) shelterId: number) {
-    return this.evacueeService.getStatsByShelterId(shelterId);
+  @Get('stats/:evacuationLocationId')
+  @Roles('ADMIN', 'EVACUATION_LOCATION_OFFICER')
+  async getStats(
+    @Param('evacuationLocationId', ParseIntPipe) evacuationLocationId: number,
+  ) {
+    return this.evacueeService.getStatsByEvacuationLocationId(
+      evacuationLocationId,
+    );
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'SHELTER_OFFICER')
+  @Roles('ADMIN', 'EVACUATION_LOCATION_OFFICER')
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.evacueeService.findOne(id);
   }
 
   @Put(':id')
-  @Roles('ADMIN', 'SHELTER_OFFICER')
+  @Roles('ADMIN', 'EVACUATION_LOCATION_OFFICER')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateEvacueeDto,
@@ -64,7 +68,7 @@ export class EvacueeController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN', 'SHELTER_OFFICER')
+  @Roles('ADMIN', 'EVACUATION_LOCATION_OFFICER')
   async delete(@Param('id', ParseIntPipe) id: number) {
     return this.evacueeService.delete(id);
   }

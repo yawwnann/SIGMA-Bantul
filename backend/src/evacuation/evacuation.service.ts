@@ -15,7 +15,7 @@ export interface RouteScore {
   };
 }
 
-interface ShelterWithDistance {
+interface EvacuationLocationWithDistance {
   id: number;
   name: string;
   geometry: unknown;
@@ -61,12 +61,15 @@ export class EvacuationService {
     if (cached) return cached;
 
     const roads = await this.prisma.road.findMany();
-    // Load all shelters and filter out full ones
-    const allShelters = await this.prisma.shelter.findMany();
-    const shelters = allShelters.filter((s) => s.currentOccupancy < s.capacity);
+    // Load all evacuationLocations and filter out full ones
+    const allEvacuationLocations =
+      await this.prisma.evacuationLocation.findMany();
+    const evacuationLocations = allEvacuationLocations.filter(
+      (s) => s.currentOccupancy < s.capacity,
+    );
 
-    if (shelters.length === 0) {
-      this.logger.warn('No available shelters found!');
+    if (evacuationLocations.length === 0) {
+      this.logger.warn('No available evacuationLocations found!');
       // fallback just in case to show paths
     }
 
@@ -95,7 +98,7 @@ export class EvacuationService {
         startLon,
         endLat,
         endLon,
-        shelters,
+        evacuationLocations,
       );
 
       const totalScore =
@@ -292,7 +295,7 @@ export class EvacuationService {
     startLon: number,
     endLat: number,
     endLon: number,
-    shelters: { id: number; name: string; geometry: unknown }[],
+    evacuationLocations: { id: number; name: string; geometry: unknown }[],
   ): number {
     if (roadCoords.length < 2) return 3;
 
@@ -309,25 +312,28 @@ export class EvacuationService {
       endLon,
     );
 
-    const nearestShelter = this.findNearestShelter(roadCoords, shelters);
-    const shelterDistance = nearestShelter?.distance || 5;
+    const nearestEvacuationLocation = this.findNearestEvacuationLocation(
+      roadCoords,
+      evacuationLocations,
+    );
+    const evacuationLocationDistance = nearestEvacuationLocation?.distance || 5;
 
     const normalizedScore = Math.min(
       5,
-      (startDist + endDist + shelterDistance) / 3,
+      (startDist + endDist + evacuationLocationDistance) / 3,
     );
     return Math.max(1, normalizedScore);
   }
 
-  private findNearestShelter(
+  private findNearestEvacuationLocation(
     roadCoords: [number, number][],
-    shelters: { id: number; name: string; geometry: unknown }[],
-  ): ShelterWithDistance | null {
-    let nearest: ShelterWithDistance | null = null;
+    evacuationLocations: { id: number; name: string; geometry: unknown }[],
+  ): EvacuationLocationWithDistance | null {
+    let nearest: EvacuationLocationWithDistance | null = null;
     let minDistance = Infinity;
 
-    for (const shelter of shelters) {
-      const geom = shelter.geometry as RoadGeometry | null;
+    for (const evacuationLocation of evacuationLocations) {
+      const geom = evacuationLocation.geometry as RoadGeometry | null;
       const coords = geom?.coordinates;
       if (!Array.isArray(coords)) continue;
 
@@ -340,9 +346,9 @@ export class EvacuationService {
         if (dist < minDistance) {
           minDistance = dist;
           nearest = {
-            id: shelter.id,
-            name: shelter.name,
-            geometry: shelter.geometry,
+            id: evacuationLocation.id,
+            name: evacuationLocation.name,
+            geometry: evacuationLocation.geometry,
             distance: dist,
           };
         }
@@ -388,29 +394,41 @@ export class EvacuationService {
     return routes;
   }
 
-  async getNearestShelter(lat: number, lon: number, limit: number = 5) {
-    const shelters = await this.prisma.shelter.findMany();
+  async getNearestEvacuationLocation(
+    lat: number,
+    lon: number,
+    limit: number = 5,
+  ) {
+    const evacuationLocations = await this.prisma.evacuationLocation.findMany();
 
-    const sheltersWithDistance = shelters.map((shelter) => {
-      const geom = shelter.geometry as unknown as RoadGeometry | null;
-      const coords = geom?.coordinates;
-      const shelterLat =
-        coords && Array.isArray(coords) && typeof coords[1] === 'number'
-          ? coords[1]
-          : 0;
-      const shelterLon =
-        coords && Array.isArray(coords) && typeof coords[0] === 'number'
-          ? coords[0]
-          : 0;
-      const distance = this.haversineDistance(lat, lon, shelterLat, shelterLon);
+    const evacuationLocationsWithDistance = evacuationLocations.map(
+      (evacuationLocation) => {
+        const geom =
+          evacuationLocation.geometry as unknown as RoadGeometry | null;
+        const coords = geom?.coordinates;
+        const evacuationLocationLat =
+          coords && Array.isArray(coords) && typeof coords[1] === 'number'
+            ? coords[1]
+            : 0;
+        const evacuationLocationLon =
+          coords && Array.isArray(coords) && typeof coords[0] === 'number'
+            ? coords[0]
+            : 0;
+        const distance = this.haversineDistance(
+          lat,
+          lon,
+          evacuationLocationLat,
+          evacuationLocationLon,
+        );
 
-      return {
-        ...shelter,
-        distanceKm: Math.round(distance * 100) / 100,
-      };
-    });
+        return {
+          ...evacuationLocation,
+          distanceKm: Math.round(distance * 100) / 100,
+        };
+      },
+    );
 
-    return sheltersWithDistance
+    return evacuationLocationsWithDistance
       .sort((a, b) => a.distanceKm - b.distanceKm)
       .slice(0, limit);
   }
@@ -438,7 +456,7 @@ export class EvacuationService {
     startLon: number,
     endLat: number,
     endLon: number,
-    shelters: { id: number; name: string; geometry: unknown }[],
+    evacuationLocations: { id: number; name: string; geometry: unknown }[],
   ): number {
     if (roadCoords.length < 2) return 3;
 
@@ -455,12 +473,15 @@ export class EvacuationService {
       endLon,
     );
 
-    const nearestShelter = this.findNearestShelter(roadCoords, shelters);
-    const shelterDistance = nearestShelter?.distance || 5;
+    const nearestEvacuationLocation = this.findNearestEvacuationLocation(
+      roadCoords,
+      evacuationLocations,
+    );
+    const evacuationLocationDistance = nearestEvacuationLocation?.distance || 5;
 
     const normalizedScore = Math.min(
       5,
-      (startDist + endDist + shelterDistance) / 3,
+      (startDist + endDist + evacuationLocationDistance) / 3,
     );
     return Math.max(1, normalizedScore);
   }

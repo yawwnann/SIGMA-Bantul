@@ -64,7 +64,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.emit('evacuationRoute', data);
   }
 
-  broadcastShelterUpdate(data: any) {
-    this.server.emit('shelterUpdate', data);
+  broadcastEvacuationLocationUpdate(data: any) {
+    this.server.emit('evacuationLocationUpdate', data);
   }
 }

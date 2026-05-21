@@ -40,7 +40,8 @@ export class BpbdRiskController {
         data: zones,
         count: zones.length,
       };
-    } catch (error) {
+    } catch (e) {
+      const error = e as Error;
       this.logger.error('Failed to fetch BPBD zones', error.stack);
       throw new HttpException(
         'Failed to fetch BPBD zones',
@@ -65,7 +66,8 @@ export class BpbdRiskController {
         success: true,
         data: zone,
       };
-    } catch (error) {
+    } catch (e) {
+      const error = e as Error;
       if (error instanceof HttpException) {
         throw error;
       }
@@ -94,7 +96,8 @@ export class BpbdRiskController {
         message: 'BPBD zones import completed',
         data: result,
       };
-    } catch (error) {
+    } catch (e) {
+      const error = e as Error;
       this.logger.error('Failed to import BPBD zones', error.stack);
       throw new HttpException(
         `Import failed: ${error.message}`,
@@ -125,7 +128,8 @@ export class BpbdRiskController {
         message: 'BPBD risk assignment completed',
         data: result,
       };
-    } catch (error) {
+    } catch (e) {
+      const error = e as Error;
       this.logger.error('Failed to assign BPBD risk to roads', error.stack);
       throw new HttpException(
         `Assignment failed: ${error.message}`,
@@ -145,7 +149,8 @@ export class BpbdRiskController {
         success: true,
         data: stats,
       };
-    } catch (error) {
+    } catch (e) {
+      const error = e as Error;
       this.logger.error('Failed to fetch statistics', error.stack);
       throw new HttpException(
         'Failed to fetch statistics',
@@ -165,7 +170,8 @@ export class BpbdRiskController {
         success: true,
         data: validation,
       };
-    } catch (error) {
+    } catch (e) {
+      const error = e as Error;
       this.logger.error('Failed to generate validation report', error.stack);
       throw new HttpException(
         'Failed to generate validation report',
@@ -180,12 +186,14 @@ export class BpbdRiskController {
   async getRiskData() {
     this.logger.log('Fetching BPBD Risk GeoJSON data');
     try {
-      const data = await this.bpbdRiskService.getRiskGeoJson();
+      const data: Record<string, any> =
+        (await this.bpbdRiskService.getRiskGeoJson()) as Record<string, any>;
       return {
         success: true,
         data,
       };
-    } catch (error) {
+    } catch (e) {
+      const error = e as Error;
       this.logger.error('Failed to fetch GeoJSON data', error.stack);
       throw new HttpException(
         'Failed to fetch GeoJSON data',

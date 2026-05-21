@@ -9,7 +9,10 @@ import { CreateOfficerDto } from './dto/create-officer.dto';
 import { UpdateOfficerDto } from './dto/update-officer.dto';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { ShelterStatus } from '@prisma/client';
+import {
+  EvacuationLocationStatus,
+  EvacuationLocationCondition,
+} from '@prisma/client';
 
 @Injectable()
 export class OfficerService {
@@ -30,7 +33,7 @@ export class OfficerService {
         email: dto.email,
         password: hashedPassword,
         name: dto.name,
-        role: UserRole.SHELTER_OFFICER,
+        role: UserRole.EVACUATION_LOCATION_OFFICER,
       },
       select: {
         id: true,
@@ -46,14 +49,14 @@ export class OfficerService {
 
   async findAllOfficers() {
     return this.prisma.user.findMany({
-      where: { role: UserRole.SHELTER_OFFICER },
+      where: { role: UserRole.EVACUATION_LOCATION_OFFICER },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
         createdAt: true,
-        managedShelters: {
+        managedEvacuationLocations: {
           select: {
             id: true,
             name: true,
@@ -69,14 +72,14 @@ export class OfficerService {
 
   async findOfficerById(id: number) {
     const officer = await this.prisma.user.findFirst({
-      where: { id, role: UserRole.SHELTER_OFFICER },
+      where: { id, role: UserRole.EVACUATION_LOCATION_OFFICER },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
         createdAt: true,
-        managedShelters: {
+        managedEvacuationLocations: {
           select: {
             id: true,
             name: true,
@@ -120,8 +123,8 @@ export class OfficerService {
   async deleteOfficer(id: number) {
     await this.findOfficerById(id);
 
-    // Unassign all shelters first
-    await this.prisma.shelter.updateMany({
+    // Unassign all evacuationLocations first
+    await this.prisma.evacuationLocation.updateMany({
       where: { officerId: id },
       data: { officerId: null },
     });
@@ -132,18 +135,21 @@ export class OfficerService {
   async getOfficerStatistics(id: number) {
     await this.findOfficerById(id);
 
-    const shelters = await this.prisma.shelter.findMany({
+    const evacuationLocations = await this.prisma.evacuationLocation.findMany({
       where: { officerId: id },
     });
 
-    const totalCapacity = shelters.reduce((sum, s) => sum + s.capacity, 0);
-    const totalOccupancy = shelters.reduce(
+    const totalCapacity = evacuationLocations.reduce(
+      (sum, s) => sum + s.capacity,
+      0,
+    );
+    const totalOccupancy = evacuationLocations.reduce(
       (sum, s) => sum + s.currentOccupancy,
       0,
     );
 
     return {
-      totalShelters: shelters.length,
+      totalEvacuationLocations: evacuationLocations.length,
       totalCapacity,
       totalOccupancy,
       occupancyRate: totalCapacity > 0 ? totalOccupancy / totalCapacity : 0,
@@ -151,51 +157,57 @@ export class OfficerService {
   }
 
   async validateOfficerOwnership(
-    shelterId: number,
+    evacuationLocationId: number,
     officerId: number,
   ): Promise<boolean> {
-    const shelter = await this.prisma.shelter.findFirst({
-      where: { id: shelterId, officerId },
+    const evacuationLocation = await this.prisma.evacuationLocation.findFirst({
+      where: { id: evacuationLocationId, officerId },
     });
-    return !!shelter;
+    return !!evacuationLocation;
   }
 
   async updateOccupancyByOfficer(
-    shelterId: number,
+    evacuationLocationId: number,
     occupancy: number,
     officerId: number,
   ) {
-    const isOwner = await this.validateOfficerOwnership(shelterId, officerId);
+    const isOwner = await this.validateOfficerOwnership(
+      evacuationLocationId,
+      officerId,
+    );
     if (!isOwner) {
-      throw new BadRequestException('Anda tidak memiliki akses ke shelter ini');
+      throw new BadRequestException(
+        'Anda tidak memiliki akses ke evacuationLocation ini',
+      );
     }
 
-    const shelter = await this.prisma.shelter.findUnique({
-      where: { id: shelterId },
+    const evacuationLocation = await this.prisma.evacuationLocation.findUnique({
+      where: { id: evacuationLocationId },
     });
-    if (!shelter) throw new NotFoundException('Shelter tidak ditemukan');
+    if (!evacuationLocation)
+      throw new NotFoundException('EvacuationLocation tidak ditemukan');
 
     if (occupancy < 0) {
       throw new BadRequestException('Jumlah penghuni tidak boleh negatif');
     }
-    if (occupancy > shelter.capacity) {
+    if (occupancy > evacuationLocation.capacity) {
       throw new BadRequestException(
-        'Jumlah penghuni melebihi kapasitas shelter',
+        'Jumlah penghuni melebihi kapasitas evacuationLocation',
       );
     }
 
     return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.shelter.update({
-        where: { id: shelterId },
+      const updated = await tx.evacuationLocation.update({
+        where: { id: evacuationLocationId },
         data: { currentOccupancy: occupancy },
       });
 
-      await tx.shelterLog.create({
+      await tx.evacuationLocationLog.create({
         data: {
-          shelterId,
+          evacuationLocationId,
           officerId,
           action: 'UPDATE_OCCUPANCY',
-          changes: { old: shelter.currentOccupancy, new: occupancy },
+          changes: { old: evacuationLocation.currentOccupancy, new: occupancy },
         },
       });
 
@@ -204,37 +216,43 @@ export class OfficerService {
   }
 
   async updateConditionByOfficer(
-    shelterId: number,
+    evacuationLocationId: number,
     condition: string,
     officerId: number,
   ) {
-    const isOwner = await this.validateOfficerOwnership(shelterId, officerId);
+    const isOwner = await this.validateOfficerOwnership(
+      evacuationLocationId,
+      officerId,
+    );
     if (!isOwner) {
-      throw new BadRequestException('Anda tidak memiliki akses ke shelter ini');
+      throw new BadRequestException(
+        'Anda tidak memiliki akses ke evacuationLocation ini',
+      );
     }
 
     const validConditions = ['GOOD', 'MODERATE', 'NEEDS_REPAIR', 'DAMAGED'];
     if (!validConditions.includes(condition)) {
-      throw new BadRequestException('Kondisi shelter tidak valid');
+      throw new BadRequestException('Kondisi evacuationLocation tidak valid');
     }
 
-    const shelter = await this.prisma.shelter.findUnique({
-      where: { id: shelterId },
+    const evacuationLocation = await this.prisma.evacuationLocation.findUnique({
+      where: { id: evacuationLocationId },
     });
-    if (!shelter) throw new NotFoundException('Shelter tidak ditemukan');
+    if (!evacuationLocation)
+      throw new NotFoundException('EvacuationLocation tidak ditemukan');
 
     return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.shelter.update({
-        where: { id: shelterId },
-        data: { condition: condition as any },
+      const updated = await tx.evacuationLocation.update({
+        where: { id: evacuationLocationId },
+        data: { condition: condition as EvacuationLocationCondition },
       });
 
-      await tx.shelterLog.create({
+      await tx.evacuationLocationLog.create({
         data: {
-          shelterId,
+          evacuationLocationId,
           officerId,
           action: 'UPDATE_CONDITION',
-          changes: { old: shelter.condition, new: condition },
+          changes: { old: evacuationLocation.condition, new: condition },
         },
       });
 
@@ -243,32 +261,38 @@ export class OfficerService {
   }
 
   async updateStatusByOfficer(
-    shelterId: number,
-    status: ShelterStatus,
+    evacuationLocationId: number,
+    status: EvacuationLocationStatus,
     officerId: number,
   ) {
-    const isOwner = await this.validateOfficerOwnership(shelterId, officerId);
+    const isOwner = await this.validateOfficerOwnership(
+      evacuationLocationId,
+      officerId,
+    );
     if (!isOwner) {
-      throw new BadRequestException('Anda tidak memiliki akses ke shelter ini');
+      throw new BadRequestException(
+        'Anda tidak memiliki akses ke evacuationLocation ini',
+      );
     }
 
-    const shelter = await this.prisma.shelter.findUnique({
-      where: { id: shelterId },
+    const evacuationLocation = await this.prisma.evacuationLocation.findUnique({
+      where: { id: evacuationLocationId },
     });
-    if (!shelter) throw new NotFoundException('Shelter tidak ditemukan');
+    if (!evacuationLocation)
+      throw new NotFoundException('EvacuationLocation tidak ditemukan');
 
     return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.shelter.update({
-        where: { id: shelterId },
+      const updated = await tx.evacuationLocation.update({
+        where: { id: evacuationLocationId },
         data: { status },
       });
 
-      await tx.shelterLog.create({
+      await tx.evacuationLocationLog.create({
         data: {
-          shelterId,
+          evacuationLocationId,
           officerId,
           action: 'UPDATE_STATUS',
-          changes: { old: shelter.status, new: status },
+          changes: { old: evacuationLocation.status, new: status },
         },
       });
 
@@ -280,18 +304,18 @@ export class OfficerService {
     const officer = await this.prisma.user.findFirst({
       where: {
         id: officerId,
-        role: UserRole.SHELTER_OFFICER,
+        role: UserRole.EVACUATION_LOCATION_OFFICER,
       },
       select: { id: true, name: true, email: true, role: true },
     });
 
     if (!officer) {
       throw new NotFoundException(
-        'Petugas tidak ditemukan atau bukan SHELTER_OFFICER',
+        'Petugas tidak ditemukan atau bukan EVACUATION_LOCATION_OFFICER',
       );
     }
 
-    const shelters = await this.prisma.shelter.findMany({
+    const evacuationLocations = await this.prisma.evacuationLocation.findMany({
       where: { officerId },
       select: {
         id: true,
@@ -307,17 +331,20 @@ export class OfficerService {
       },
     });
 
-    const totalCapacity = shelters.reduce((sum, s) => sum + s.capacity, 0);
-    const totalOccupancy = shelters.reduce(
+    const totalCapacity = evacuationLocations.reduce(
+      (sum, s) => sum + s.capacity,
+      0,
+    );
+    const totalOccupancy = evacuationLocations.reduce(
       (sum, s) => sum + s.currentOccupancy,
       0,
     );
 
     return {
       officer,
-      shelters,
+      evacuationLocations,
       statistics: {
-        totalShelters: shelters.length,
+        totalEvacuationLocations: evacuationLocations.length,
         totalCapacity,
         totalOccupancy,
         occupancyRate: totalCapacity > 0 ? totalOccupancy / totalCapacity : 0,

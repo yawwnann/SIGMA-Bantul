@@ -197,7 +197,7 @@ export class BpbdRiskService {
             NOW(),
             NOW()
           )
-        `
+        `,
       );
     }
 
@@ -209,7 +209,10 @@ export class BpbdRiskService {
         this.logger.log(`Successfully batch inserted ${queries.length} zones.`);
       } catch (error) {
         errors += queries.length;
-        this.logger.error('Error during bulk import transaction:', error.message);
+        this.logger.error(
+          'Error during bulk import transaction:',
+          error.message,
+        );
       }
     }
 

@@ -1,17 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, ShelterCategory, ShelterCondition, ShelterStatus } from '@prisma/client';
+import {
+  Prisma,
+  EvacuationLocationCategory,
+  EvacuationLocationCondition,
+  EvacuationLocationStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export type NearbyEvacuationLocation = {
   id: number;
   name: string;
-  category: ShelterCategory;
+  category: EvacuationLocationCategory;
   capacity: number;
   currentOccupancy: number;
   geometry: Prisma.JsonValue;
   address: string | null;
-  condition: ShelterCondition;
-  status: ShelterStatus;
+  condition: EvacuationLocationCondition;
+  status: EvacuationLocationStatus;
   facilities: string | null;
   officerId: number | null;
   createdAt: Date;
@@ -50,11 +55,11 @@ export class EvacuationLocationRepository {
         s."createdAt",
         s."updatedAt",
         ST_Distance(s.geom::geography, user_point.geom::geography) AS "distanceMeters"
-      FROM "Shelter" s
+      FROM "EvacuationLocation" s
       CROSS JOIN user_point
       WHERE
         s.geom IS NOT NULL
-        AND s.status = 'ACTIVE'::"ShelterStatus"
+        AND s.status = 'ACTIVE'::"EvacuationLocationStatus"
         AND ST_DWithin(s.geom::geography, user_point.geom::geography, ${radiusMeters})
       ORDER BY s.geom <-> user_point.geom
       LIMIT ${limit}

@@ -13,18 +13,21 @@ export class EvacueeService {
   constructor(private prisma: PrismaService) {}
 
   async create(dto: CreateEvacueeDto, userId: number) {
-    // Check if shelter exists and has capacity
-    const shelter = await this.prisma.shelter.findUnique({
-      where: { id: dto.shelterId },
+    // Check if evacuationLocation exists and has capacity
+    const evacuationLocation = await this.prisma.evacuationLocation.findUnique({
+      where: { id: dto.evacuationLocationId },
     });
 
-    if (!shelter) {
-      throw new NotFoundException('Shelter tidak ditemukan');
+    if (!evacuationLocation) {
+      throw new NotFoundException('EvacuationLocation tidak ditemukan');
     }
 
-    if (shelter.currentOccupancy + dto.familySize > shelter.capacity) {
+    if (
+      evacuationLocation.currentOccupancy + dto.familySize >
+      evacuationLocation.capacity
+    ) {
       throw new BadRequestException(
-        `Kapasitas shelter tidak mencukupi. Tersisa: ${shelter.capacity - shelter.currentOccupancy} orang`,
+        `Kapasitas evacuationLocation tidak mencukupi. Tersisa: ${evacuationLocation.capacity - evacuationLocation.currentOccupancy} orang`,
       );
     }
 
@@ -35,7 +38,7 @@ export class EvacueeService {
         registeredBy: userId,
       },
       include: {
-        shelter: true,
+        evacuationLocation: true,
         registeredByUser: {
           select: {
             id: true,
@@ -46,9 +49,9 @@ export class EvacueeService {
       },
     });
 
-    // Update shelter occupancy
-    await this.prisma.shelter.update({
-      where: { id: dto.shelterId },
+    // Update evacuationLocation occupancy
+    await this.prisma.evacuationLocation.update({
+      where: { id: dto.evacuationLocationId },
       data: {
         currentOccupancy: {
           increment: dto.familySize,
@@ -59,11 +62,11 @@ export class EvacueeService {
     return evacuee;
   }
 
-  async findAll(shelterId?: number, status?: EvacueeStatus) {
+  async findAll(evacuationLocationId?: number, status?: EvacueeStatus) {
     const where: any = {};
 
-    if (shelterId) {
-      where.shelterId = shelterId;
+    if (evacuationLocationId) {
+      where.evacuationLocationId = evacuationLocationId;
     }
 
     if (status) {
@@ -73,7 +76,7 @@ export class EvacueeService {
     return this.prisma.evacuee.findMany({
       where,
       include: {
-        shelter: {
+        evacuationLocation: {
           select: {
             id: true,
             name: true,
@@ -98,7 +101,7 @@ export class EvacueeService {
     const evacuee = await this.prisma.evacuee.findUnique({
       where: { id },
       include: {
-        shelter: true,
+        evacuationLocation: true,
         registeredByUser: {
           select: {
             id: true,
@@ -119,25 +122,27 @@ export class EvacueeService {
   async update(id: number, dto: UpdateEvacueeDto) {
     const evacuee = await this.findOne(id);
 
-    // If family size changed, update shelter occupancy
+    // If family size changed, update evacuationLocation occupancy
     if (dto.familySize && dto.familySize !== evacuee.familySize) {
       const difference = dto.familySize - evacuee.familySize;
 
-      const shelter = await this.prisma.shelter.findUnique({
-        where: { id: evacuee.shelterId },
-      });
+      const evacuationLocation =
+        await this.prisma.evacuationLocation.findUnique({
+          where: { id: evacuee.evacuationLocationId },
+        });
 
       if (
         difference > 0 &&
-        shelter.currentOccupancy + difference > shelter.capacity
+        evacuationLocation.currentOccupancy + difference >
+          evacuationLocation.capacity
       ) {
         throw new BadRequestException(
-          `Kapasitas shelter tidak mencukupi untuk menambah ${difference} orang`,
+          `Kapasitas evacuationLocation tidak mencukupi untuk menambah ${difference} orang`,
         );
       }
 
-      await this.prisma.shelter.update({
-        where: { id: evacuee.shelterId },
+      await this.prisma.evacuationLocation.update({
+        where: { id: evacuee.evacuationLocationId },
         data: {
           currentOccupancy: {
             increment: difference,
@@ -150,9 +155,9 @@ export class EvacueeService {
     if (dto.status && dto.status !== 'ACTIVE' && evacuee.status === 'ACTIVE') {
       dto.checkOutDate = dto.checkOutDate || new Date().toISOString();
 
-      // Decrease shelter occupancy
-      await this.prisma.shelter.update({
-        where: { id: evacuee.shelterId },
+      // Decrease evacuationLocation occupancy
+      await this.prisma.evacuationLocation.update({
+        where: { id: evacuee.evacuationLocationId },
         data: {
           currentOccupancy: {
             decrement: evacuee.familySize,
@@ -165,7 +170,7 @@ export class EvacueeService {
       where: { id },
       data: dto,
       include: {
-        shelter: true,
+        evacuationLocation: true,
         registeredByUser: {
           select: {
             id: true,
@@ -180,10 +185,10 @@ export class EvacueeService {
   async delete(id: number) {
     const evacuee = await this.findOne(id);
 
-    // If evacuee is still active, decrease shelter occupancy
+    // If evacuee is still active, decrease evacuationLocation occupancy
     if (evacuee.status === 'ACTIVE') {
-      await this.prisma.shelter.update({
-        where: { id: evacuee.shelterId },
+      await this.prisma.evacuationLocation.update({
+        where: { id: evacuee.evacuationLocationId },
         data: {
           currentOccupancy: {
             decrement: evacuee.familySize,
@@ -197,24 +202,24 @@ export class EvacueeService {
     });
   }
 
-  async getStatsByShelterId(shelterId: number) {
+  async getStatsByEvacuationLocationId(evacuationLocationId: number) {
     const [total, active, relocated, returnedHome, byGender, byAgeGroup] =
       await Promise.all([
         this.prisma.evacuee.count({
-          where: { shelterId },
+          where: { evacuationLocationId },
         }),
         this.prisma.evacuee.count({
-          where: { shelterId, status: 'ACTIVE' },
+          where: { evacuationLocationId, status: 'ACTIVE' },
         }),
         this.prisma.evacuee.count({
-          where: { shelterId, status: 'RELOCATED' },
+          where: { evacuationLocationId, status: 'RELOCATED' },
         }),
         this.prisma.evacuee.count({
-          where: { shelterId, status: 'RETURNED_HOME' },
+          where: { evacuationLocationId, status: 'RETURNED_HOME' },
         }),
         this.prisma.evacuee.groupBy({
           by: ['gender'],
-          where: { shelterId, status: 'ACTIVE' },
+          where: { evacuationLocationId, status: 'ACTIVE' },
           _count: true,
         }),
         this.prisma.$queryRaw`
@@ -227,7 +232,7 @@ export class EvacueeService {
             END as age_group,
             COUNT(*) as count
           FROM "Evacuee"
-          WHERE "shelterId" = ${shelterId} AND status = 'ACTIVE'
+          WHERE "evacuationLocationId" = ${evacuationLocationId} AND status = 'ACTIVE'
           GROUP BY age_group
           ORDER BY age_group
         `,

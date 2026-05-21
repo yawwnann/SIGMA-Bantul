@@ -3,7 +3,7 @@ import { EvacueeGender } from '@prisma/client';
 
 export class CreateEvacueeDto {
   @IsInt()
-  shelterId: number;
+  evacuationLocationId: number;
 
   @IsString()
   name: string;

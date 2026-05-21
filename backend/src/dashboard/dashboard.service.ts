@@ -12,14 +12,14 @@ export class DashboardService {
   async getDashboardSummary() {
     const [
       earthquakeStats,
-      shelterStats,
+      evacuationLocationStats,
       roadStats,
       hazardStats,
       evacuationStats,
       latestEarthquake,
     ] = await Promise.all([
       this.getEarthquakeSummary(),
-      this.getShelterSummary(),
+      this.getEvacuationLocationSummary(),
       this.getRoadSummary(),
       this.getHazardSummary(),
       this.getEvacuationSummary(),
@@ -30,7 +30,7 @@ export class DashboardService {
 
     return {
       earthquake: earthquakeStats,
-      shelter: shelterStats,
+      evacuationLocation: evacuationLocationStats,
       road: roadStats,
       hazardZone: hazardStats,
       evacuation: evacuationStats,
@@ -61,11 +61,11 @@ export class DashboardService {
     };
   }
 
-  private async getShelterSummary() {
+  private async getEvacuationLocationSummary() {
     const [total, totalCapacity, goodCondition] = await Promise.all([
-      this.prisma.shelter.count(),
-      this.prisma.shelter.aggregate({ _sum: { capacity: true } }),
-      this.prisma.shelter.count({
+      this.prisma.evacuationLocation.count(),
+      this.prisma.evacuationLocation.aggregate({ _sum: { capacity: true } }),
+      this.prisma.evacuationLocation.count({
         where: { condition: 'GOOD' },
       }),
     ]);

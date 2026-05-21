@@ -119,7 +119,7 @@ export class EarthquakeService {
     }
 
     const eq: BMKGAutoGempa = data.Infogempa.gempa;
-    
+
     // Check if we already have this specific earthquake
     const existing = await this.prisma.earthquake.findFirst({
       where: { bmkgId: `auto_${eq.DateTime}` },

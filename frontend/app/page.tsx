@@ -54,7 +54,6 @@ const MapClient = dynamic(
 const BANTUL_LAT = -7.8878;
 const BANTUL_LON = 110.3289;
 
-
 // --- Helpers ---
 
 function calculateDistance(
@@ -102,8 +101,7 @@ export default function Dashboard() {
   const { theme } = useTheme();
 
   // Auto-request user location (NEW) - iOS-optimized with delay and shorter timeout
-  const { location: userLocation } =
-    useUserLocation(true);
+  const { location: userLocation } = useUserLocation(true);
 
   // Data State
   const [earthquakes, setEarthquakes] = useState<Earthquake[]>([]);
@@ -128,9 +126,9 @@ export default function Dashboard() {
   } | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [calculatedRoute, setCalculatedRoute] = useState<any>(null);
-  const [, setNearestShelters] = useState<
-    (Shelter & { distance: number })[]
-  >([]);
+  const [, setNearestShelters] = useState<(Shelter & { distance: number })[]>(
+    [],
+  );
   const [sheetOpen, setSheetOpen] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [selectedEarthquake, setSelectedEarthquake] =
@@ -898,7 +896,7 @@ export default function Dashboard() {
     <>
       {/* Global Loading Overlay for Routing */}
       {gettingLocation && (
-        <div className="fixed inset-0 z-[9999] bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-9999 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300">
           <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-8 rounded-2xl flex flex-col items-center shadow-2xl max-w-sm text-center">
             <Loader2 className="w-16 h-16 text-blue-500 animate-spin mb-6" />
             <h2 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">
@@ -912,7 +910,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="p-4 md:p-6 lg:p-8 min-h-screen space-y-6 max-w-[1600px] mx-auto">
+      <div className="p-4 md:p-6 lg:p-8 min-h-screen space-y-6 max-w-400 mx-auto">
         {/* Top Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
@@ -952,7 +950,7 @@ export default function Dashboard() {
         {/* Overlay Backdrop when Map is Expanded */}
         {isMapExpanded && (
           <div
-            className="fixed inset-0 z-[90] bg-slate-900/40 dark:bg-zinc-950/60 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 z-90 bg-slate-900/40 dark:bg-zinc-950/60 backdrop-blur-sm transition-opacity"
             onClick={() => setIsMapExpanded(false)}
           />
         )}
@@ -961,13 +959,13 @@ export default function Dashboard() {
         <div
           className={
             isMapExpanded
-              ? "fixed inset-4 md:inset-6 lg:inset-8 z-[100] rounded-2xl overflow-hidden border-2 border-slate-200 dark:border-zinc-700 shadow-2xl bg-slate-100 dark:bg-zinc-900 transition-all duration-300"
-              : "relative w-full h-[55vh] min-h-[450px] rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-800 shadow-sm bg-slate-100 dark:bg-zinc-900 transition-all duration-300 flex flex-col"
+              ? "fixed inset-4 md:inset-6 lg:inset-8 z-100rounded-2xl overflow-hidden border-2 border-slate-200 dark:border-zinc-700 shadow-2xl bg-slate-100 dark:bg-zinc-900 transition-all duration-300"
+              : "relative w-full h-[55vh] min-h-112.5 rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-800 shadow-sm bg-slate-100 dark:bg-zinc-900 transition-all duration-300 flex flex-col"
           }
         >
           {/* Loading Indicator Overlay */}
           {calculatingRoute && (
-            <div className="absolute inset-0 z-[2000] bg-white/40 backdrop-blur-[2px] flex flex-col items-center justify-center rounded-xl transition-all duration-300">
+            <div className="absolute inset-0 z-2000 bg-white/40 backdrop-blur-[2px] flex flex-col items-center justify-center rounded-xl transition-all duration-300">
               <div className="bg-white/95 dark:bg-slate-900/95 px-8 py-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
                 <Loader2 className="h-12 w-12 animate-spin text-blue-600 dark:text-blue-500" />
                 <div className="text-center">
@@ -981,7 +979,7 @@ export default function Dashboard() {
               </div>
             </div>
           )}
-          <div className="absolute top-4 right-4 z-[1000] flex flex-row gap-2">
+          <div className="absolute top-4 right-4 z-1000 flex flex-row gap-2">
             {/* Info Panel Toggle */}
             <Sheet open={sheetOpen} onOpenChange={setSheetOpen} modal={false}>
               <SheetTrigger className="inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-800 shadow-lg bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors h-10 w-10">
@@ -989,7 +987,7 @@ export default function Dashboard() {
               </SheetTrigger>
               <SheetContent
                 side="right"
-                className="w-[380px] p-0 bg-slate-50 dark:bg-zinc-950 border-l border-slate-200 dark:border-zinc-800 z-[1001]"
+                className="w-95 p-0 bg-slate-50 dark:bg-zinc-950 border-l border-slate-200 dark:border-zinc-800 z-[1001]"
               >
                 <div className="sticky top-0 z-10 bg-white dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 p-5 flex items-center justify-between">
                   <h1 className="text-lg font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">

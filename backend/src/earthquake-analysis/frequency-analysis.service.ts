@@ -106,7 +106,7 @@ export class FrequencyAnalysisService {
     // 3. Hitung jumlah gempa per grid murni di memori Node.js (Zero DB Query)
     for (const eq of earthquakes) {
       if (typeof eq.lat !== 'number' || typeof eq.lon !== 'number') continue;
-      
+
       for (const grid of grids) {
         if (
           eq.lon >= grid.minLon &&
@@ -114,7 +114,7 @@ export class FrequencyAnalysisService {
           eq.lat >= grid.minLat &&
           eq.lat < grid.maxLat
         ) {
-          gridCounts.set(grid.grid_id, gridCounts.get(grid.grid_id)! + 1);
+          gridCounts.set(grid.grid_id, gridCounts.get(grid.grid_id) + 1);
           break; // Gempa hanya ada di 1 grid
         }
       }
@@ -123,7 +123,7 @@ export class FrequencyAnalysisService {
     // 4. Bangun data hasil (termasuk GeoJSON polygon untuk di render)
     const results = grids.map((grid) => {
       const count = gridCounts.get(grid.grid_id) || 0;
-      
+
       // Calculate center point
       const centerLon = (grid.minLon + grid.maxLon) / 2;
       const centerLat = (grid.minLat + grid.maxLat) / 2;

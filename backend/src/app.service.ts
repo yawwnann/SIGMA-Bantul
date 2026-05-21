@@ -14,7 +14,7 @@ export class AppService {
         auth: '/api/auth',
         earthquakes: '/api/earthquakes',
         'hazard-zones': '/api/hazard-zones',
-        shelters: '/api/shelters',
+        evacuationLocations: '/api/evacuationLocations',
         roads: '/api/roads',
         routes: '/api/routes',
         'public-facilities': '/api/public-facilities',
@@ -26,7 +26,7 @@ export class AppService {
           'earthquakeUpdate',
           'hazardAlert',
           'evacuationRoute',
-          'shelterUpdate',
+          'evacuationLocationUpdate',
         ],
       },
     };

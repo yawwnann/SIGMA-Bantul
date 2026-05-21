@@ -13,7 +13,7 @@ describe('EvacuationService', () => {
     road: {
       findMany: jest.fn(),
     },
-    shelter: {
+    evacuationLocation: {
       findMany: jest.fn(),
     },
     hazardZone: {

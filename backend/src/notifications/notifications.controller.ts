@@ -13,16 +13,20 @@ export class NotificationsController {
   @Get('status')
   async getStatus() {
     const subscriptions = await this.notifService.getAllSubscriptions();
-    
+
     // Categorize subscriptions
-    const webPush = subscriptions.filter(s => !s.endpoint.includes('fcm.googleapis.com'));
-    const fcm = subscriptions.filter(s => s.endpoint.includes('fcm.googleapis.com'));
-    
+    const webPush = subscriptions.filter(
+      (s) => !s.endpoint.includes('fcm.googleapis.com'),
+    );
+    const fcm = subscriptions.filter((s) =>
+      s.endpoint.includes('fcm.googleapis.com'),
+    );
+
     return {
       totalSubscriptions: subscriptions.length,
       webPushCount: webPush.length,
       fcmCount: fcm.length,
-      subscriptions: subscriptions.map(s => ({
+      subscriptions: subscriptions.map((s) => ({
         id: s.id,
         type: s.endpoint.includes('fcm.googleapis.com') ? 'FCM' : 'WebPush',
         endpoint: s.endpoint.substring(0, 50) + '...',
@@ -38,18 +42,18 @@ export class NotificationsController {
       'Notifikasi darurat berhasil diaktifkan! Klik untuk melihat detail.',
       'true',
     );
-    return { 
+    return {
       message: 'Test notification sent',
-      ...result
+      ...result,
     };
   }
 
   @Post('cleanup')
   async cleanup() {
     const result = await this.notifService.cleanupInvalidSubscriptions();
-    return { 
+    return {
       message: 'Cleanup completed',
-      ...result
+      ...result,
     };
   }
 

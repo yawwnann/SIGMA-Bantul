@@ -200,24 +200,24 @@
       ]
     },
     {
-      "name": "Shelters",
+      "name": "Evacuation Locations",
       "item": [
         {
-          "name": "Get All Shelters",
+          "name": "Get All Evacuation Locations",
           "request": {
             "method": "GET",
-            "url": "{{baseUrl}}/shelters",
+            "url": "{{baseUrl}}/evacuation-locations",
             "header": []
           }
         },
         {
-          "name": "Get Nearby Shelters",
+          "name": "Get Nearby Evacuation Locations",
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/shelters/nearby?lat=-7.5&lon=110.5&radius=10",
+              "raw": "{{baseUrl}}/evacuation-locations/nearby?lat=-7.5&lon=110.5&radius=10",
               "host": ["{{baseUrl}}"],
-              "path": ["shelters", "nearby"],
+              "path": ["evacuation-locations", "nearby"],
               "query": [
                 {"key": "lat", "value": "-7.5"},
                 {"key": "lon", "value": "110.5"},
@@ -231,53 +231,53 @@
           "name": "Get Statistics",
           "request": {
             "method": "GET",
-            "url": "{{baseUrl}}/shelters/statistics",
+            "url": "{{baseUrl}}/evacuation-locations/statistics",
             "header": []
           }
         },
         {
-          "name": "Get Shelter by ID",
+          "name": "Get Evacuation Location by ID",
           "request": {
             "method": "GET",
-            "url": "{{baseUrl}}/shelters/1",
+            "url": "{{baseUrl}}/evacuation-locations/1",
             "header": []
           }
         },
         {
-          "name": "Create Shelter",
+          "name": "Create Evacuation Location",
           "request": {
             "method": "POST",
-            "url": "{{baseUrl}}/shelters",
+            "url": "{{baseUrl}}/evacuation-locations",
             "header": [
               {"key": "Content-Type", "value": "application/json"},
               {"key": "Authorization", "value": "Bearer {{token}}"}
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \" Shelter Pengungsian\",\n  \"capacity\": 500,\n  \"geometry\": {\n    \"type\": \"Point\",\n    \"coordinates\": [110.5, -7.5]\n  },\n  \"address\": \"Jl. Raya Bantul No. 1\",\n  \"condition\": \"GOOD\"\n}"
+              "raw": "{\n  \"name\": \" Evacuation Location Pengungsian\",\n  \"capacity\": 500,\n  \"geometry\": {\n    \"type\": \"Point\",\n    \"coordinates\": [110.5, -7.5]\n  },\n  \"address\": \"Jl. Raya Bantul No. 1\",\n  \"condition\": \"GOOD\"\n}"
             }
           }
         },
         {
-          "name": "Update Shelter",
+          "name": "Update Evacuation Location",
           "request": {
             "method": "PUT",
-            "url": "{{baseUrl}}/shelters/1",
+            "url": "{{baseUrl}}/evacuation-locations/1",
             "header": [
               {"key": "Content-Type", "value": "application/json"},
               {"key": "Authorization", "value": "Bearer {{token}}"}
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \" Shelter Pengungsian Updated\",\n  \"capacity\": 600,\n  \"geometry\": {\n    \"type\": \"Point\",\n    \"coordinates\": [110.5, -7.5]\n  },\n  \"address\": \"Jl. Raya Bantul No. 1\",\n  \"condition\": \"GOOD\"\n}"
+              "raw": "{\n  \"name\": \" Evacuation Location Pengungsian Updated\",\n  \"capacity\": 600,\n  \"geometry\": {\n    \"type\": \"Point\",\n    \"coordinates\": [110.5, -7.5]\n  },\n  \"address\": \"Jl. Raya Bantul No. 1\",\n  \"condition\": \"GOOD\"\n}"
             }
           }
         },
         {
-          "name": "Delete Shelter",
+          "name": "Delete Evacuation Location",
           "request": {
             "method": "DELETE",
-            "url": "{{baseUrl}}/shelters/1",
+            "url": "{{baseUrl}}/evacuation-locations/1",
             "header": [
               {"key": "Authorization", "value": "Bearer {{token}}"}
             ]
@@ -518,13 +518,13 @@
           }
         },
         {
-          "name": "Get Nearest Shelter",
+          "name": "Get Nearest Evacuation Location",
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/routes/nearest-shelter?lat=-7.5&lon=110.5&limit=5",
+              "raw": "{{baseUrl}}/routes/nearest-evacuation-location?lat=-7.5&lon=110.5&limit=5",
               "host": ["{{baseUrl}}"],
-              "path": ["routes", "nearest-shelter"],
+              "path": ["routes", "nearest-evacuation-location"],
               "query": [
                 {"key": "lat", "value": "-7.5"},
                 {"key": "lon", "value": "110.5"},

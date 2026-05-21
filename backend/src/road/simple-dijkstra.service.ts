@@ -169,9 +169,7 @@ export class SimpleDijkstraService {
   /**
    * Get condition multiplier for cost calculation
    */
-  private getConditionMultiplier(
-    condition: string | null | undefined,
-  ): number {
+  private getConditionMultiplier(condition: string | null | undefined): number {
     return getConditionFactorFromRoadCondition(condition);
   }
 
@@ -316,7 +314,6 @@ export class SimpleDijkstraService {
     });
     return { nodes, edges };
   }
-
 
   /**
    * Calculate primary and alternative routes
