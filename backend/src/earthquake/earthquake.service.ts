@@ -111,7 +111,8 @@ export class EarthquakeService {
     const response = await this.httpService
       .get<{ Infogempa?: { gempa?: BMKGAutoGempa } }>(url)
       .toPromise();
-    const data = response?.data;
+    const data: { Infogempa?: { gempa?: BMKGAutoGempa } } | undefined =
+      response?.data;
 
     if (!data?.Infogempa?.gempa) {
       this.logger.warn('No latest earthquake data from BMKG');
@@ -212,8 +213,8 @@ export class EarthquakeService {
       isLatest: true,
     };
 
-    let savedEarthquake;
-    let currentId = existing?.id;
+    let savedEarthquake: Earthquake;
+    let currentId: number | undefined = existing?.id;
     let isNewThreat = false;
 
     if (existing) {

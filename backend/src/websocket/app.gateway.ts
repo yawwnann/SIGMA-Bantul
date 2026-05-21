@@ -42,13 +42,13 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('subscribe')
   handleSubscribe(client: Socket, room: string) {
-    client.join(room);
+    void client.join(room);
     return { event: 'subscribed', room };
   }
 
   @SubscribeMessage('unsubscribe')
   handleUnsubscribe(client: Socket, room: string) {
-    client.leave(room);
+    void client.leave(room);
     return { event: 'unsubscribed', room };
   }
 

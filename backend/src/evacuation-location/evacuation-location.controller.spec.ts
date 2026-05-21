@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EvacuationLocationController } from './evacuation-location.controller';
 import { EvacuationLocationService } from './evacuation-location.service';
-import { EvacuationLocationCategory, EvacuationLocationCondition, EvacuationLocationStatus } from '@prisma/client';
+import {
+  EvacuationLocationCategory,
+  EvacuationLocationCondition,
+  EvacuationLocationStatus,
+} from '@prisma/client';
 
 describe('EvacuationLocationController', () => {
   let controller: EvacuationLocationController;
@@ -31,7 +35,9 @@ describe('EvacuationLocationController', () => {
       ],
     }).compile();
 
-    controller = module.get<EvacuationLocationController>(EvacuationLocationController);
+    controller = module.get<EvacuationLocationController>(
+      EvacuationLocationController,
+    );
     service = module.get<EvacuationLocationService>(EvacuationLocationService);
   });
 
@@ -49,7 +55,10 @@ describe('EvacuationLocationController', () => {
       mockService.findAll.mockResolvedValue(result);
 
       expect(await controller.findAll()).toEqual(result);
-      expect(mockService.findAll).toHaveBeenCalledWith({ condition: undefined, category: undefined });
+      expect(mockService.findAll).toHaveBeenCalledWith({
+        condition: undefined,
+        category: undefined,
+      });
     });
   });
 
@@ -58,7 +67,9 @@ describe('EvacuationLocationController', () => {
       const result = [{ id: 1, distanceKm: 2 }];
       mockService.getNearby.mockResolvedValue(result);
 
-      expect(await controller.getNearby('-7.5', '110.5', '5', '10')).toEqual(result);
+      expect(await controller.getNearby('-7.5', '110.5', '5', '10')).toEqual(
+        result,
+      );
       expect(mockService.getNearby).toHaveBeenCalledWith(-7.5, 110.5, 5, 10);
     });
   });
@@ -75,7 +86,13 @@ describe('EvacuationLocationController', () => {
 
   describe('create', () => {
     it('should create an evacuation location', async () => {
-      const dto = { name: 'Test', category: EvacuationLocationCategory.SCHOOL, capacity: 100, geometry: { type: 'Point', coordinates: [0, 0] }, condition: EvacuationLocationCondition.GOOD };
+      const dto = {
+        name: 'Test',
+        category: EvacuationLocationCategory.SCHOOL,
+        capacity: 100,
+        geometry: { type: 'Point', coordinates: [0, 0] },
+        condition: EvacuationLocationCondition.GOOD,
+      };
       const result = { id: 1, ...dto };
       mockService.create.mockResolvedValue(result);
 
@@ -86,7 +103,13 @@ describe('EvacuationLocationController', () => {
 
   describe('update', () => {
     it('should update an evacuation location', async () => {
-      const dto = { name: 'Test', category: EvacuationLocationCategory.SCHOOL, capacity: 100, geometry: { type: 'Point', coordinates: [0, 0] }, condition: EvacuationLocationCondition.GOOD };
+      const dto = {
+        name: 'Test',
+        category: EvacuationLocationCategory.SCHOOL,
+        capacity: 100,
+        geometry: { type: 'Point', coordinates: [0, 0] },
+        condition: EvacuationLocationCondition.GOOD,
+      };
       const result = { id: 1, ...dto };
       mockService.update.mockResolvedValue(result);
 
@@ -105,8 +128,14 @@ describe('EvacuationLocationController', () => {
 
   describe('updateOccupancy', () => {
     it('should update occupancy', async () => {
-      mockService.updateOccupancy.mockResolvedValue({ id: 1, currentOccupancy: 50 });
-      expect(await controller.updateOccupancy(1, 50)).toEqual({ id: 1, currentOccupancy: 50 });
+      mockService.updateOccupancy.mockResolvedValue({
+        id: 1,
+        currentOccupancy: 50,
+      });
+      expect(await controller.updateOccupancy(1, 50)).toEqual({
+        id: 1,
+        currentOccupancy: 50,
+      });
       expect(mockService.updateOccupancy).toHaveBeenCalledWith(1, 50);
     });
   });

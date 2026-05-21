@@ -5,6 +5,23 @@ import {
   segmentTravelMinutes,
 } from './road-travel-time.util';
 
+interface RawRoad {
+  id: number;
+  name: string;
+  type: string;
+  condition: string | null;
+  vulnerability: string | null;
+  bpbdRiskLevel: string | null;
+  bpbdRiskScore: number | null;
+  combinedHazard: number | null;
+  safe_cost: number | null;
+  geometry: {
+    type: string;
+    coordinates: number[][] | any;
+  };
+  length_m: number | null;
+}
+
 interface Node {
   id: string;
   lat: number;
@@ -49,7 +66,7 @@ export class SimpleDijkstraService {
    * Build graph from road network
    */
   private async buildGraph(): Promise<Graph> {
-    const roads = await this.prisma.$queryRaw<any[]>`
+    const roads = await this.prisma.$queryRaw<RawRoad[]>`
       SELECT 
         id,
         name,
@@ -94,7 +111,7 @@ export class SimpleDijkstraService {
       const distance = road.length_m || 0;
       const cost = this.calculateEdgeCost(road, distance);
       const conditionFactor = getConditionFactorFromRoadCondition(
-        road.condition as string | null | undefined,
+        road.condition,
       );
 
       // Add edges (bidirectional)
@@ -137,7 +154,7 @@ export class SimpleDijkstraService {
    * @param distance - Road length in meters
    * @returns Weighted cost for routing
    */
-  private calculateEdgeCost(road: any, distance: number): number {
+  private calculateEdgeCost(road: RawRoad, distance: number): number {
     // Use safe_cost if already calculated (matches pgRouting)
     if (road.safe_cost && road.safe_cost > 0) {
       return road.safe_cost;
