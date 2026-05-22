@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Bell, MapPin, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import apiClient from "@/api/client";
+import { getCurrentPositionRobust } from "@/lib/geolocation-utils";
 
 const publicVapidKey =
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
@@ -105,15 +106,15 @@ export function PwaPermissionModal() {
       }
 
       // 2. Request GPS Permission
-      if (navigator.geolocation) {
+      if (typeof window !== "undefined" && navigator.geolocation) {
         await new Promise((resolve) => {
-          navigator.geolocation.getCurrentPosition(
+          getCurrentPositionRobust(
             (pos) => {
               toast.success("Izin lokasi diberikan");
               resolve(pos);
             },
             (err) => {
-              toast.error("Izin lokasi ditolak atau gagal didapatkan");
+              toast.error(`Izin lokasi ditolak atau gagal didapatkan (debug: pwa-permission-modal.tsx - line 116, error_code: ${err.code})`);
               resolve(err);
             },
             { enableHighAccuracy: true, timeout: 5000 }

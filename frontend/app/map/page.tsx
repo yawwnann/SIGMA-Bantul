@@ -142,6 +142,7 @@ export default function MapPage() {
     location: userLocation,
     loading: gettingLocation,
     error: userLocationError,
+    isManual,
     requestLocation,
   } = useUserLocation();
   const userLocationRef = useRef(userLocation);
@@ -507,12 +508,17 @@ export default function MapPage() {
     if (userLocationError) {
       setEvacuationLocations([]);
       setNearestEvacuationLocations([]);
-      toast.warning(
-        userLocationError ||
-          "Aktifkan akses lokasi untuk melihat lokasi evakuasi terdekat.",
-      );
+      if (isManual) {
+        toast.warning(
+          userLocationError ||
+            "Aktifkan akses lokasi untuk melihat lokasi evakuasi terdekat.",
+          {
+            description: `(debug: app/map/page.tsx - line 512, isManual: ${isManual})`
+          }
+        );
+      }
     }
-  }, [userLocationError]);
+  }, [userLocationError, isManual]);
 
   useEffect(() => {
     const handleClear = () => setSelectedEarthquake(null);

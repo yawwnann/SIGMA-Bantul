@@ -41,6 +41,7 @@ import { useTheme } from "next-themes";
 // Import hook dan service baru untuk nearby evacuationLocations
 import { useUserLocation } from "@/hooks/use-user-location";
 import { evacuationService } from "@/services/evacuation.service";
+import { getCurrentPositionRobust } from "@/lib/geolocation-utils";
 
 const MapClient = dynamic(
   () => import("@/components/map/map-client").then((mod) => mod.default),
@@ -206,7 +207,7 @@ export default function Dashboard() {
 
     setGettingLocation(true);
 
-    navigator.geolocation.getCurrentPosition(
+    getCurrentPositionRobust(
       async (position) => {
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
@@ -307,7 +308,7 @@ export default function Dashboard() {
         }
 
         toast.error(errorMessage, {
-          description: errorDescription,
+          description: `${errorDescription} (debug: app/page.tsx - line 309, error_code: ${error.code})`,
           duration: 7000,
         });
         setGettingLocation(false);
@@ -612,7 +613,7 @@ export default function Dashboard() {
       setGettingLocation(true);
 
       console.log("[Emergency] Requesting geolocation...");
-      navigator.geolocation.getCurrentPosition(
+      getCurrentPositionRobust(
         async (position) => {
           console.log("[Emergency] Geolocation obtained:", position.coords);
           const userLat = position.coords.latitude;
@@ -741,7 +742,7 @@ export default function Dashboard() {
           }
 
           toast.error(errorMessage, {
-            description: errorDescription,
+            description: `${errorDescription} (debug: app/page.tsx - line 743, error_code: ${error.code})`,
             duration: 7000,
           });
           setGettingLocation(false);
@@ -861,7 +862,7 @@ export default function Dashboard() {
     setCalculatingRoute(true);
     toast.info("Mendapatkan lokasi Anda...");
 
-    navigator.geolocation.getCurrentPosition(
+    getCurrentPositionRobust(
       async (position) => {
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
@@ -914,7 +915,7 @@ export default function Dashboard() {
         }
       },
       (error) => {
-        toast.error("Gagal mendapatkan lokasi Anda.");
+        toast.error(`Gagal mendapatkan lokasi Anda. (debug: app/page.tsx - line 917, error_code: ${error.code})`);
         setCalculatingRoute(false);
       },
       { enableHighAccuracy: true, timeout: 10000 },

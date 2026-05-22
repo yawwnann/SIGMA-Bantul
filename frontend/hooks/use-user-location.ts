@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { watchPositionRobust } from "@/lib/geolocation-utils";
 
 export interface UserLocation {
   lat: number;
@@ -11,7 +12,8 @@ export interface UseUserLocationReturn {
   location: UserLocation | null;
   loading: boolean;
   error: string | null;
-  requestLocation: () => void;
+  isManual: boolean;
+  requestLocation: (manualOption?: boolean | any) => void;
   stopWatching: () => void;
 }
 
@@ -21,20 +23,26 @@ export function useUserLocation(
   const [location, setLocation] = useState<UserLocation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const watchIdRef = useRef<number | null>(null);
+  const [isManual, setIsManual] = useState(false);
+  const watcherRef = useRef<{ clear: () => void } | null>(null);
 
   const stopWatching = () => {
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
+    if (watcherRef.current !== null) {
+      watcherRef.current.clear();
+      watcherRef.current = null;
     }
   };
 
-  const requestLocation = () => {
-    if (!navigator.geolocation) {
+  const requestLocation = (manualOption?: boolean | any) => {
+    const actualManual = manualOption !== false;
+    setIsManual(actualManual);
+
+    if (typeof window === "undefined" || !navigator.geolocation) {
       const errorMsg = "Geolocation tidak didukung oleh browser Anda";
       setError(errorMsg);
-      toast.error(errorMsg);
+      if (actualManual) {
+        toast.error(errorMsg);
+      }
       return;
     }
 
@@ -45,7 +53,7 @@ export function useUserLocation(
     setError(null);
 
     // iOS-friendly: watchPosition for continuous heading updates
-    watchIdRef.current = navigator.geolocation.watchPosition(
+    watcherRef.current = watchPositionRobust(
       (position) => {
         const { latitude, longitude, heading } = position.coords;
         setLocation({
@@ -73,6 +81,9 @@ export function useUserLocation(
           }
         }
 
+        const errorCodeStr = err && typeof err.code !== "undefined" ? err.code : "unknown";
+        errorMessage = `${errorMessage} (debug: hook_watchPosition_error_code_${errorCodeStr})`;
+
         setError(errorMessage);
         setLoading(false);
         console.warn(
@@ -91,7 +102,7 @@ export function useUserLocation(
   useEffect(() => {
     if (autoRequest) {
       const timer = setTimeout(() => {
-        requestLocation();
+        requestLocation(false);
       }, 500);
 
       return () => {
@@ -105,5 +116,6 @@ export function useUserLocation(
     };
   }, [autoRequest]);
 
-  return { location, loading, error, requestLocation, stopWatching };
+  return { location, loading, error, isManual, requestLocation, stopWatching };
 }
+

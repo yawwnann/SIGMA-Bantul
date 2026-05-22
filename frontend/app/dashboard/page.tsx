@@ -18,6 +18,7 @@ import { analysisApi } from "@/api/analysis";
 import { socketService } from "@/lib/socket";
 import { toast } from "sonner";
 import { isWithinBantul, setBantulPolygon } from "@/lib/bantul-boundary";
+import { getCurrentPositionRobust } from "@/lib/geolocation-utils";
 import type {
   EvacuationLocation,
   HazardZone,
@@ -319,7 +320,7 @@ export default function DashboardPage() {
 
     toast.info("Mendapatkan lokasi Anda...");
 
-    navigator.geolocation.getCurrentPosition(
+    getCurrentPositionRobust(
       async (position) => {
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
@@ -365,7 +366,7 @@ export default function DashboardPage() {
       },
       (error) => {
         console.error("Geolocation error:", error);
-        toast.error("Gagal mendapatkan lokasi Anda.");
+        toast.error(`Gagal mendapatkan lokasi Anda. (debug: app/dashboard/page.tsx - line 368, error_code: ${error.code})`);
       },
       {
         enableHighAccuracy: true,
