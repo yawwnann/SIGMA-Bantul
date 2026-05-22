@@ -366,8 +366,11 @@ export class RoadService {
         throw new Error('Could not find nearby roads');
       }
 
-      // Calculate shortest path using pgr_dijkstra
-      const route = await this.prisma.$queryRaw<any[]>`
+      const startNodeId = startNode[0].node_id;
+      const endNodeId = endNode[0].node_id;
+
+      // 1. Calculate primary path using pgr_dijkstra
+      const primaryRoute = await this.prisma.$queryRawUnsafe<any[]>(`
         SELECT 
           r.id,
           r.name,
@@ -382,65 +385,138 @@ export class RoadService {
           END as geometry
         FROM pgr_dijkstra(
           'SELECT id, source, target, cost, reverse_cost FROM "Road" WHERE source IS NOT NULL AND target IS NOT NULL',
-          ${startNode[0].node_id},
-          ${endNode[0].node_id},
+          ${startNodeId},
+          ${endNodeId},
           directed := true
         ) AS route
         JOIN "Road" r ON route.edge = r.id
         ORDER BY route.seq
-      `;
+      `);
 
-      if (!route.length) {
+      if (!primaryRoute.length) {
         throw new Error('No route found');
       }
 
-      // Calculate total distance and time
-      const totalDistance = route.reduce(
-        (sum, segment) => sum + (segment.length_m || 0),
-        0,
-      );
-      // Kecepatan adaptif berdasarkan kondisi jalan (40/30/20/10 km/jam)
-      let totalMinutes = 0;
-      for (const segment of route) {
-        const lengthM = segment.length_m || 0;
-        const factor = getConditionFactorFromRoadCondition(
-          segment.condition as string | null | undefined,
-        );
-        totalMinutes += segmentTravelMinutes(lengthM, factor);
-      }
-      const totalTime = Math.round(totalMinutes);
+      // Extract edge IDs from the primary route to penalize them
+      const primaryEdgeIds = primaryRoute
+        .map((segment) => segment.id)
+        .filter((id) => id !== null && id !== undefined);
 
-      // Combine all geometries into a single LineString
-      const coordinates = route.flatMap((segment) => {
-        const geom = segment.geometry;
-        return geom.type === 'LineString' ? geom.coordinates : [];
-      });
+      // 2. Calculate alternative path using pgr_dijkstra with penalized costs
+      let altRoute: any[] = [];
+      if (primaryEdgeIds.length > 0) {
+        try {
+          const penalizedIdsList = primaryEdgeIds.join(',');
+          const altInnerSql = `SELECT id, source, target, CASE WHEN id IN (${penalizedIdsList}) THEN cost * 10.0 ELSE cost END as cost, CASE WHEN id IN (${penalizedIdsList}) THEN reverse_cost * 10.0 ELSE reverse_cost END as reverse_cost FROM "Road" WHERE source IS NOT NULL AND target IS NOT NULL`;
+
+          const altQuery = `
+            SELECT 
+              r.id,
+              r.name,
+              r.type,
+              r.condition,
+              r.cost,
+              ST_Length(r.geom::geography)::float as length_m,
+              CASE 
+                WHEN route.node = r.source THEN ST_AsGeoJSON(r.geom)::json
+                WHEN route.node = r.target THEN ST_AsGeoJSON(ST_Reverse(r.geom))::json
+                ELSE ST_AsGeoJSON(r.geom)::json
+              END as geometry
+            FROM pgr_dijkstra(
+              '${altInnerSql}',
+              ${startNodeId},
+              ${endNodeId},
+              directed := true
+            ) AS route
+            JOIN "Road" r ON route.edge = r.id
+            ORDER BY route.seq
+          `;
+
+          altRoute = await this.prisma.$queryRawUnsafe<any[]>(altQuery);
+        } catch (altError) {
+          console.warn('Failed to calculate alternative route with pgRouting:', altError.message);
+        }
+      }
+
+      // Helper function to format route results into GeoJSON Feature
+      const formatRouteFeature = (routeSegments: any[], type: 'PRIMARY' | 'ALTERNATIVE') => {
+        const totalDistance = routeSegments.reduce(
+          (sum, segment) => sum + (segment.length_m || 0),
+          0,
+        );
+
+        let totalMinutes = 0;
+        for (const segment of routeSegments) {
+          const lengthM = segment.length_m || 0;
+          const factor = getConditionFactorFromRoadCondition(
+            segment.condition as string | null | undefined,
+          );
+          totalMinutes += segmentTravelMinutes(lengthM, factor);
+        }
+        const totalTime = Math.round(totalMinutes);
+
+        // Combine all geometries into a single LineString coordinates array
+        const coordinates = routeSegments.flatMap((segment) => {
+          const geom = segment.geometry;
+          return geom.type === 'LineString' ? geom.coordinates : [];
+        });
+
+        // Remove duplicate consecutive coordinates
+        const uniqueCoords = coordinates.filter((coord, index) => {
+          if (index === 0) return true;
+          const prev = coordinates[index - 1];
+          return coord[0] !== prev[0] || coord[1] !== prev[1];
+        });
+
+        return {
+          type: 'Feature' as const,
+          properties: {
+            routeId: type,
+            totalDistance: Math.round(totalDistance),
+            totalTime: Math.round(totalTime),
+            segments: routeSegments.length,
+          },
+          geometry: {
+            type: 'LineString' as const,
+            coordinates: uniqueCoords,
+          },
+          segments: routeSegments.map((seg) => {
+            const lengthM = seg.length_m || 0;
+            const factor = getConditionFactorFromRoadCondition(
+              seg.condition as string | null | undefined,
+            );
+            return {
+              id: seg.id,
+              name: seg.name,
+              type: seg.type,
+              condition: seg.condition,
+              distance: Math.round(lengthM),
+              time: Math.round(segmentTravelMinutes(lengthM, factor)),
+            };
+          }),
+        };
+      };
+
+      const primaryFeature = formatRouteFeature(primaryRoute, 'PRIMARY');
+      const routes = [primaryFeature];
+
+      // Add alternative route if it differs from the primary route
+      if (altRoute && altRoute.length > 0) {
+        const altEdgeIds = altRoute.map((s) => s.id).filter((id) => id !== null);
+        const isDifferent = altEdgeIds.some((id) => !primaryEdgeIds.includes(id));
+
+        if (isDifferent) {
+          const altFeature = formatRouteFeature(altRoute, 'ALTERNATIVE');
+          if (altFeature.geometry.coordinates.length > 0) {
+            routes.push(altFeature);
+          }
+        }
+      }
 
       return {
-        type: 'Feature',
-        properties: {
-          totalDistance: Math.round(totalDistance),
-          totalTime: Math.round(totalTime),
-          segments: route.length,
-        },
-        geometry: {
-          type: 'LineString',
-          coordinates,
-        },
-        segments: route.map((seg) => {
-          const lengthM = seg.length_m || 0;
-          const factor = getConditionFactorFromRoadCondition(
-            seg.condition as string | null | undefined,
-          );
-          return {
-            id: seg.id,
-            name: seg.name,
-            type: seg.type,
-            condition: seg.condition,
-            distance: Math.round(lengthM),
-            time: Math.round(segmentTravelMinutes(lengthM, factor)),
-          };
-        }),
+        type: 'FeatureCollection' as const,
+        properties: primaryFeature.properties,
+        features: routes,
       };
     } catch (error) {
       console.error('Error calculating route:', error);
