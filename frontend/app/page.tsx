@@ -374,9 +374,22 @@ export default function Dashboard() {
     }
   };
 
-  // NEW: Fetch nearby evacuationLocations when user location is available
+  // Use ref to track the last location we fetched for, to prevent spamming API on slight GPS jitter
+  const lastFetchedLocRef = useRef<{ lat: number; lng: number } | null>(null);
+
+  // NEW: Fetch nearby evacuationLocations when user location is available and has moved significantly
   useEffect(() => {
     if (!userLocation) return;
+
+    // Check if we already fetched for a nearby location (within ~50 meters)
+    // 0.0005 degrees is roughly 55 meters
+    if (lastFetchedLocRef.current) {
+      const dLat = Math.abs(userLocation.lat - lastFetchedLocRef.current.lat);
+      const dLng = Math.abs(userLocation.lng - lastFetchedLocRef.current.lng);
+      if (dLat < 0.0005 && dLng < 0.0005) {
+        return; // User hasn't moved enough to warrant a new fetch
+      }
+    }
 
     const fetchNearbyEvacuationLocations = async () => {
       try {
@@ -384,6 +397,7 @@ export default function Dashboard() {
           "[Dashboard] Fetching nearby evacuationLocations for location:",
           userLocation,
         );
+        lastFetchedLocRef.current = { lat: userLocation.lat, lng: userLocation.lng };
         const nearbyEvacuationLocations =
           await evacuationService.getNearbyEvacuationLocations({
             lat: userLocation.lat,
@@ -416,11 +430,13 @@ export default function Dashboard() {
     };
 
     fetchNearbyEvacuationLocations();
-  }, [userLocation, nearbyRadius]);
+  }, [userLocation?.lat, userLocation?.lng, nearbyRadius]);
 
-  // NEW: Auto set selected location and fly to user location when available
+  const hasFlownToUserRef = useRef(false);
+
+  // NEW: Auto set selected location and fly to user location when available (ONLY ONCE)
   useEffect(() => {
-    if (!userLocation) return;
+    if (!userLocation || hasFlownToUserRef.current) return;
 
     console.log(
       "[Dashboard] Setting user location and flying to:",
@@ -443,6 +459,8 @@ export default function Dashboard() {
     toast.success("Lokasi Anda ditemukan", {
       description: `${userLocation.lat.toFixed(6)}, ${userLocation.lng.toFixed(6)}`,
     });
+
+    hasFlownToUserRef.current = true;
   }, [userLocation]);
 
   useEffect(() => {

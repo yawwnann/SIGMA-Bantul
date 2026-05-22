@@ -349,24 +349,16 @@ export class RoadService {
     try {
       // Find nearest road nodes to start and end points
       const startNode = await this.prisma.$queryRaw<any[]>`
-        SELECT source as node_id
-        FROM "Road"
-        WHERE source IS NOT NULL
-        ORDER BY ST_Distance(
-          geom::geography,
-          ST_SetSRID(ST_MakePoint(${startLon}, ${startLat}), 4326)::geography
-        )
+        SELECT id as node_id
+        FROM "Road_vertices_pgr"
+        ORDER BY the_geom <-> ST_SetSRID(ST_MakePoint(${startLon}, ${startLat}), 4326)
         LIMIT 1
       `;
 
       const endNode = await this.prisma.$queryRaw<any[]>`
-        SELECT target as node_id
-        FROM "Road"
-        WHERE target IS NOT NULL
-        ORDER BY ST_Distance(
-          geom::geography,
-          ST_SetSRID(ST_MakePoint(${endLon}, ${endLat}), 4326)::geography
-        )
+        SELECT id as node_id
+        FROM "Road_vertices_pgr"
+        ORDER BY the_geom <-> ST_SetSRID(ST_MakePoint(${endLon}, ${endLat}), 4326)
         LIMIT 1
       `;
 
@@ -383,7 +375,11 @@ export class RoadService {
           r.condition,
           r.cost,
           ST_Length(r.geom::geography)::float as length_m,
-          ST_AsGeoJSON(r.geom)::json as geometry
+          CASE 
+            WHEN route.node = r.source THEN ST_AsGeoJSON(r.geom)::json
+            WHEN route.node = r.target THEN ST_AsGeoJSON(ST_Reverse(r.geom))::json
+            ELSE ST_AsGeoJSON(r.geom)::json
+          END as geometry
         FROM pgr_dijkstra(
           'SELECT id, source, target, cost, reverse_cost FROM "Road" WHERE source IS NOT NULL AND target IS NOT NULL',
           ${startNode[0].node_id},

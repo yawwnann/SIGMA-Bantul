@@ -480,15 +480,28 @@ export default function MapPage() {
     };
   }, []);
 
+  const lastFetchedLocRef = useRef<{ lat: number; lng: number } | null>(null);
+
   useEffect(() => {
     if (!userLocation) return;
-
+    
+    // Check if we already fetched for a nearby location (within ~50 meters)
+    // 0.0005 degrees is roughly 55 meters
+    if (lastFetchedLocRef.current) {
+      const dLat = Math.abs(userLocation.lat - lastFetchedLocRef.current.lat);
+      const dLng = Math.abs(userLocation.lng - lastFetchedLocRef.current.lng);
+      if (dLat < 0.0005 && dLng < 0.0005) {
+        return; // User hasn't moved enough to warrant a new fetch
+      }
+    }
+    
+    lastFetchedLocRef.current = { lat: userLocation.lat, lng: userLocation.lng };
     setSelectedLocation(userLocation);
     setRouteStart(null);
     setRouteEnd(null);
     setCalculatedRoute(null);
     fetchNearbyEvacuationLocations(userLocation.lat, userLocation.lng);
-  }, [fetchNearbyEvacuationLocations, userLocation]);
+  }, [fetchNearbyEvacuationLocations, userLocation?.lat, userLocation?.lng]);
 
   useEffect(() => {
     if (userLocationError) {
