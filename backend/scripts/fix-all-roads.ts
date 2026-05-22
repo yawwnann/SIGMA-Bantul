@@ -11,10 +11,14 @@ async function fixAllRoads() {
     console.log('\n📏 STEP 1: Menghitung panjang jalan dari geometri...');
     const lengthResult = await prisma.$executeRaw`
       UPDATE "Road"
-      SET length = ST_Length(geom::geography)
+      SET 
+        length = ST_Length(geom::geography),
+        length_m = ST_Length(geom::geography),
+        cost = (ST_Length(geom::geography) / 1000.0) / 40.0 * 60.0,
+        reverse_cost = (ST_Length(geom::geography) / 1000.0) / 40.0 * 60.0
       WHERE geom IS NOT NULL
     `;
-    console.log(`✅ ${lengthResult} jalan updated dengan length`);
+    console.log(`✅ ${lengthResult} jalan updated dengan length, cost, dan reverse_cost`);
 
     // STEP 2: Fix Topology
     console.log('\n🗺️  STEP 2: Membuat topology untuk routing...');

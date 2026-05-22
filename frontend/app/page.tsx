@@ -972,7 +972,7 @@ export default function Dashboard() {
         {/* Overlay Backdrop when Map is Expanded */}
         {isMapExpanded && (
           <div
-            className="fixed inset-0 z-90 bg-slate-900/40 dark:bg-zinc-950/60 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 z-[90] bg-slate-900/40 dark:bg-zinc-950/60 backdrop-blur-sm transition-opacity"
             onClick={() => setIsMapExpanded(false)}
           />
         )}
@@ -981,8 +981,8 @@ export default function Dashboard() {
         <div
           className={
             isMapExpanded
-              ? "fixed inset-4 md:inset-6 lg:inset-8 z-100rounded-2xl overflow-hidden border-2 border-slate-200 dark:border-zinc-700 shadow-2xl bg-slate-100 dark:bg-zinc-900 transition-all duration-300"
-              : "relative w-full h-[55vh] min-h-112.5 rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-800 shadow-sm bg-slate-100 dark:bg-zinc-900 transition-all duration-300 flex flex-col"
+              ? "fixed inset-4 md:inset-6 lg:inset-8 z-[100] rounded-2xl overflow-hidden border-2 border-slate-200 dark:border-zinc-700 shadow-2xl bg-slate-100 dark:bg-zinc-900 transition-all duration-300"
+              : "relative w-full h-[55vh] min-h-[112.5px] rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-800 shadow-sm bg-slate-100 dark:bg-zinc-900 transition-all duration-300 flex flex-col"
           }
         >
           {/* Loading Indicator Overlay */}
