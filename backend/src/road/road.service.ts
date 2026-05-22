@@ -384,7 +384,7 @@ export class RoadService {
           'SELECT id, source, target, cost, reverse_cost FROM "Road" WHERE source IS NOT NULL AND target IS NOT NULL',
           ${startNode[0].node_id},
           ${endNode[0].node_id},
-          directed := false
+          directed := true
         ) AS route
         JOIN "Road" r ON route.edge = r.id
         ORDER BY route.seq

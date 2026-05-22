@@ -121,13 +121,16 @@ async function main() {
         coordinates: coords2D,
       };
 
+      const oneway = properties.oneway || 'no';
+
       await prisma.$executeRaw`
-        INSERT INTO "Road" (name, type, condition, vulnerability, geometry, geom, "createdAt", "updatedAt")
+        INSERT INTO "Road" (name, type, condition, vulnerability, oneway, geometry, geom, "createdAt", "updatedAt")
         VALUES (
           ${name},
           ${roadType}::"RoadType",
           ${condition}::"RoadCondition",
           ${vulnerability}::"RoadVulnerability",
+          ${oneway},
           ${JSON.stringify(lineStringGeometry)}::jsonb,
           ST_GeomFromGeoJSON(${JSON.stringify(lineStringGeometry)}),
           NOW(),
@@ -153,16 +156,51 @@ async function main() {
   // ==========================================
   // AUTOMATIC TOPOLOGY & COST CALCULATION
   // ==========================================
-  console.log('\n📏 Menghitung panjang jalan dan cost...');
+  console.log('\n📏 Menghitung panjang jalan, cost (Weighted Overlay), dan reverse_cost (Oneway)...');
+  
+  // Bobot default (Jarak 50%, Hazard 25%, Kondisi 25%)
+  const wHazard = 0.25;
+  const wCondition = 0.25;
+
   const lengthResult = await prisma.$executeRaw`
-    UPDATE "Road"
+    WITH RoadScores AS (
+      SELECT 
+        id,
+        ST_Length(geom::geography) as dist,
+        COALESCE("combinedHazard", 2) as hazard_score,
+        CASE condition
+          WHEN 'GOOD' THEN 1
+          WHEN 'MODERATE' THEN 2
+          WHEN 'POOR' THEN 3
+          WHEN 'DAMAGED' THEN 4
+          ELSE 2
+        END as condition_score
+      FROM "Road"
+      WHERE geom IS NOT NULL
+    ),
+    CalculatedCosts AS (
+      SELECT
+        id,
+        dist,
+        -- Weighted Overlay Formula
+        dist * (1 + (hazard_score * ${wHazard}) + (condition_score * ${wCondition})) as base_cost
+      FROM RoadScores
+    )
+    UPDATE "Road" r
     SET 
-      length = ST_Length(geom::geography),
-      length_m = ST_Length(geom::geography),
-      cost = (ST_Length(geom::geography) / 1000.0) / 40.0 * 60.0,
-      reverse_cost = (ST_Length(geom::geography) / 1000.0) / 40.0 * 60.0,
-      safe_cost = ST_Length(geom::geography) * (1 + COALESCE("combinedHazard", 2) * 0.5)
-    WHERE geom IS NOT NULL
+      length = c.dist,
+      length_m = c.dist,
+      safe_cost = c.base_cost,
+      cost = CASE 
+        WHEN r.oneway = '-1' THEN -1 
+        ELSE c.base_cost 
+      END,
+      reverse_cost = CASE 
+        WHEN r.oneway = 'yes' THEN -1 
+        ELSE c.base_cost 
+      END
+    FROM CalculatedCosts c
+    WHERE r.id = c.id;
   `;
   console.log(`✅ ${lengthResult} jalan updated dengan length, cost, safe_cost, dan reverse_cost`);
 
