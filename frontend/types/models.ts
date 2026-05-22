@@ -1,7 +1,7 @@
 ﻿export enum UserRole {
   ADMIN = "ADMIN",
   USER = "USER",
-  SHELTER_OFFICER = "SHELTER_OFFICER",
+  EVACUATION_LOCATION_OFFICER = "EVACUATION_LOCATION_OFFICER",
 }
 
 export enum HazardLevel {
@@ -32,14 +32,14 @@ export enum RoadVulnerability {
   CRITICAL = "CRITICAL",
 }
 
-export enum ShelterCondition {
+export enum EvacuationLocationCondition {
   GOOD = "GOOD",
   MODERATE = "MODERATE",
   NEEDS_REPAIR = "NEEDS_REPAIR",
   DAMAGED = "DAMAGED",
 }
 
-export enum ShelterCategory {
+export enum EvacuationLocationCategory {
   SCHOOL = "SCHOOL",
   FIELD = "FIELD",
   GOVERNMENT = "GOVERNMENT",
@@ -98,15 +98,15 @@ export interface HazardZone {
   updatedAt: string;
 }
 
-export interface Shelter {
+export interface EvacuationLocation {
   id: number;
   name: string;
-  category: ShelterCategory;
+  category: EvacuationLocationCategory;
   capacity: number;
   currentOccupancy?: number;
   geometry: object;
   address?: string;
-  condition: ShelterCondition;
+  condition: EvacuationLocationCondition;
   facilities?: string;
   officerId?: number;
   officer?: {
@@ -173,7 +173,7 @@ export interface AuthResponse {
 }
 
 export interface DashboardStats {
-  shelterCount: number;
+  evacuationLocationCount: number;
   earthquakeCount: number;
   routeCount: number;
   latestEarthquake?: Earthquake;
@@ -185,11 +185,11 @@ export interface Officer {
   name: string;
   role: UserRole;
   createdAt: string;
-  managedShelters?: Shelter[];
+  managedEvacuationLocations?: EvacuationLocation[];
 }
 
 export interface OfficerStats {
-  totalShelters: number;
+  totalEvacuationLocations: number;
   totalCapacity: number;
   totalOccupancy: number;
   occupancyRate: number;
@@ -201,14 +201,14 @@ export interface OfficerDashboardResponse {
     name: string;
     email: string;
   };
-  shelters: Shelter[];
+  evacuationLocations: EvacuationLocation[];
   statistics: OfficerStats;
 }
 
 export interface Evacuee {
   id: number;
-  shelterId: number;
-  shelter?: {
+  evacuationLocationId: number;
+  evacuationLocation?: {
     id: number;
     name: string;
     address?: string;

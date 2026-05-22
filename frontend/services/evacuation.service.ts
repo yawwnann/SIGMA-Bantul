@@ -1,8 +1,8 @@
-import { Shelter } from "@/types";
+import { EvacuationLocation } from "@/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
-export interface NearbyShelter extends Shelter {
+export interface NearbyEvacuationLocation extends EvacuationLocation {
   distanceKm: number;
   availableCapacity: number;
 }
@@ -16,12 +16,12 @@ export interface NearbySheltorsParams {
 
 export const evacuationService = {
   /**
-   * Get nearby shelters using PostGIS spatial query
-   * Only returns shelters within specified radius
+   * Get nearby evacuationLocations using PostGIS spatial query
+   * Only returns evacuationLocations within specified radius
    */
-  async getNearbyShelters(
+  async getNearbyEvacuationLocations(
     params: NearbySheltorsParams,
-  ): Promise<NearbyShelter[]> {
+  ): Promise<NearbyEvacuationLocation[]> {
     const { lat, lng, radius = 3, limit = 10 } = params;
 
     const queryParams = new URLSearchParams({
@@ -32,18 +32,18 @@ export const evacuationService = {
     });
 
     const response = await fetch(
-      `${API_BASE_URL}/shelters/nearby?${queryParams}`,
+      `${API_BASE_URL}/evacuation-locations/nearby?${queryParams}`,
     );
 
     if (!response.ok) {
-      throw new Error("Failed to fetch nearby shelters");
+      throw new Error("Failed to fetch nearby evacuationLocations");
     }
 
     return response.json();
   },
 
   /**
-   * Calculate route from user location to shelter
+   * Calculate route from user location to evacuationLocation
    */
   async calculateRoute(
     startLat: number,

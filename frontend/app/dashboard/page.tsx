@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   earthquakeApi,
-  shelterApi,
+  evacuationLocationApi,
   hazardZoneApi,
   evacuationApi,
   publicFacilityApi,
@@ -19,7 +19,7 @@ import { socketService } from "@/lib/socket";
 import { toast } from "sonner";
 import { isWithinBantul, setBantulPolygon } from "@/lib/bantul-boundary";
 import type {
-  Shelter,
+  EvacuationLocation,
   HazardZone,
   Earthquake,
   EvacuationRoute,
@@ -117,7 +117,7 @@ export default function DashboardPage() {
     lat: number;
     lng: number;
   } | null>(null);
-  const [shelters, setShelters] = useState<Shelter[]>([]);
+  const [evacuationLocations, setEvacuationLocations] = useState<EvacuationLocation[]>([]);
   const [hazardZones, setHazardZones] = useState<HazardZone[]>([]);
   const [earthquakes, setEarthquakes] = useState<Earthquake[]>([]);
   const [routes, setRoutes] = useState<EvacuationRoute[]>([]);
@@ -151,14 +151,14 @@ export default function DashboardPage() {
     setLoading(true);
     try {
       const [
-        sheltersData,
+        evacuationLocationsData,
         hazardData,
         earthquakesResponse,
         routesData,
         facilitiesData,
         roadNetworkData,
       ] = await Promise.all([
-        shelterApi.getAll().catch(() => []),
+        evacuationLocationApi.getAll().catch(() => []),
         hazardZoneApi.getAll().catch(() => []),
         earthquakeApi
           .getAll({
@@ -188,7 +188,7 @@ export default function DashboardPage() {
         // gagal, fallback bounding box
       }
 
-      setShelters(sheltersData as Shelter[]);
+      setEvacuationLocations(evacuationLocationsData as EvacuationLocation[]);
       setHazardZones(hazardData as HazardZone[]);
       setEarthquakes(earthquakesResponse.data as Earthquake[]);
       setRoutes(routesData as EvacuationRoute[]);
@@ -307,10 +307,10 @@ export default function DashboardPage() {
     setSelectedEarthquake(earthquake);
   };
 
-  const calculateRouteToShelter = async (
-    shelterLat: number,
-    shelterLng: number,
-    shelterName: string,
+  const calculateRouteToEvacuationLocation = async (
+    evacuationLocationLat: number,
+    evacuationLocationLng: number,
+    evacuationLocationName: string,
   ) => {
     if (!navigator.geolocation) {
       toast.error("Geolocation tidak didukung oleh browser ini");
@@ -337,13 +337,13 @@ export default function DashboardPage() {
           const route = await roadApi.calculateRoute(
             userLat,
             userLng,
-            shelterLat,
-            shelterLng,
+            evacuationLocationLat,
+            evacuationLocationLng,
           );
 
           setCalculatedRoute(route);
           setRouteStart({ lat: userLat, lng: userLng });
-          setRouteEnd({ lat: shelterLat, lng: shelterLng });
+          setRouteEnd({ lat: evacuationLocationLat, lng: evacuationLocationLng });
 
           // Auto-select threatening earthquake to show impact radius
           const threateningEq = earthquakes.find((eq) =>
@@ -354,7 +354,7 @@ export default function DashboardPage() {
           }
 
           toast.success(
-            `Rute ke ${shelterName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
+            `Rute ke ${evacuationLocationName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
           );
         } catch (error) {
           console.error("Error calculating route:", error);
@@ -520,19 +520,19 @@ export default function DashboardPage() {
                         Memuat data peta...
                       </p>
                       <p className="text-zinc-500 text-sm mt-2">
-                        Mengambil data shelter, gempa, dan zona rawan
+                        Mengambil data evacuationLocation, gempa, dan zona rawan
                       </p>
                     </div>
                   )}
                   <MapClient
-                    shelters={shelters}
+                    evacuationLocations={evacuationLocations}
                     hazardZones={hazardZones}
                     earthquakes={earthquakes}
                     facilities={facilities}
                     selectedLocation={selectedLocation}
                     onLocationSelect={handleLocationSelect}
                     onEarthquakeClick={handleEarthquakeClick}
-                    onCalculateRoute={calculateRouteToShelter}
+                    onCalculateRoute={calculateRouteToEvacuationLocation}
                     roadNetwork={roadNetwork}
                     calculatedRoute={calculatedRoute}
                     routeStart={routeStart}
@@ -573,10 +573,10 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="text-3xl font-bold text-slate-900 dark:text-white">
-                      {shelters.length}
+                      {evacuationLocations.length}
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                      Shelter
+                      Lokasi Evakuasi
                     </p>
                   </CardContent>
                 </Card>

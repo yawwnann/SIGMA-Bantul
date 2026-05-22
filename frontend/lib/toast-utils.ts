@@ -176,21 +176,21 @@ export const toastRoute = {
   calculating: () =>
     toastLoading("Menghitung rute...", "Mencari jalur terbaik untuk evakuasi"),
 
-  success: (shelterName: string, distance: number) =>
-    toastSuccess(`Rute ke ${shelterName} ditemukan!`, {
+  success: (evacuationLocationName: string, distance: number) =>
+    toastSuccess(`Rute ke ${evacuationLocationName} ditemukan!`, {
       description: `Jarak: ${distance.toFixed(2)} km`,
       duration: DURATION.MEDIUM,
     }),
 
   error: () =>
     toastError("Gagal menghitung rute", {
-      description: "Silakan coba lagi atau pilih shelter lain",
+      description: "Silakan coba lagi atau pilih evacuationLocation lain",
       duration: DURATION.LONG,
     }),
 
   noPath: () =>
     toastWarning("Tidak ada jalur tersedia", {
-      description: "Tidak ditemukan rute dari lokasi Anda ke shelter tujuan",
+      description: "Tidak ditemukan rute dari lokasi Anda ke evacuationLocation tujuan",
       duration: DURATION.LONG,
     }),
 };
@@ -217,37 +217,37 @@ export const toastEmergency = {
       duration: DURATION.MEDIUM,
     }),
 
-  found: (shelterName: string, distance: number) =>
-    toastSuccess(`Rute darurat ke ${shelterName} ditemukan!`, {
+  found: (evacuationLocationName: string, distance: number) =>
+    toastSuccess(`Rute darurat ke ${evacuationLocationName} ditemukan!`, {
       description: `Jarak: ${distance.toFixed(2)} km - Segera evakuasi!`,
       duration: DURATION.LONG,
     }),
 };
 
 /**
- * Shelter Toast - Untuk operasi terkait shelter
+ * EvacuationLocation Toast - Untuk operasi terkait evacuationLocation
  */
-export const toastShelter = {
+export const toastEvacuationLocation = {
   noCapacity: () =>
-    toastWarning("Shelter penuh", {
+    toastWarning("EvacuationLocation penuh", {
       description:
-        "Tidak ada shelter dengan kapasitas tersedia. Mencari shelter terdekat...",
+        "Tidak ada evacuationLocation dengan kapasitas tersedia. Mencari evacuationLocation terdekat...",
       duration: DURATION.LONG,
     }),
 
-  registered: (shelterName: string) =>
+  registered: (evacuationLocationName: string) =>
     toastSuccess("Berhasil terdaftar", {
-      description: `Anda telah terdaftar di ${shelterName}`,
+      description: `Anda telah terdaftar di ${evacuationLocationName}`,
     }),
 
-  checkIn: (shelterName: string) =>
+  checkIn: (evacuationLocationName: string) =>
     toastSuccess("Check-in berhasil", {
-      description: `Selamat datang di ${shelterName}`,
+      description: `Selamat datang di ${evacuationLocationName}`,
     }),
 
-  checkOut: (shelterName: string) =>
+  checkOut: (evacuationLocationName: string) =>
     toastSuccess("Check-out berhasil", {
-      description: `Terima kasih telah menggunakan ${shelterName}`,
+      description: `Terima kasih telah menggunakan ${evacuationLocationName}`,
     }),
 };
 
@@ -380,7 +380,7 @@ export const toast = {
   location: toastLocation,
   route: toastRoute,
   emergency: toastEmergency,
-  shelter: toastShelter,
+  evacuationLocation: toastEvacuationLocation,
   data: toastData,
   auth: toastAuth,
   notification: toastNotification,

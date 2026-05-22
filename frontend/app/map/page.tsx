@@ -15,7 +15,7 @@ import { socketService } from "@/lib/socket";
 import { isWithinBantul, setBantulPolygon } from "@/lib/bantul-boundary";
 import { analysisApi } from "@/api/analysis";
 import { toast } from "sonner";
-import type { Shelter, HazardZone, Earthquake, PublicFacility } from "@/types";
+import type { EvacuationLocation, HazardZone, Earthquake, PublicFacility } from "@/types";
 import {
   Loader2,
   Layers,
@@ -111,13 +111,13 @@ export default function MapPage() {
     lat: number;
     lng: number;
   } | null>(null);
-  const [shelters, setShelters] = useState<Shelter[]>([]);
+  const [evacuationLocations, setEvacuationLocations] = useState<EvacuationLocation[]>([]);
   const [hazardZones, setHazardZones] = useState<HazardZone[]>([]);
   const [earthquakes, setEarthquakes] = useState<Earthquake[]>([]);
   const [facilities, setFacilities] = useState<PublicFacility[]>([]);
   const [roadNetwork, setRoadNetwork] = useState<any>(null);
   const [calculatedRoute, setCalculatedRoute] = useState<any>(null);
-  const [nearestShelters, setNearestShelters] = useState<Shelter[]>([]);
+  const [nearestEvacuationLocations, setNearestEvacuationLocations] = useState<EvacuationLocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [nearbyError, setNearbyError] = useState<string | null>(null);
@@ -261,11 +261,11 @@ export default function MapPage() {
     }
   };
 
-  // Function to calculate route to shelter (called from popup)
-  const calculateRouteToShelter = async (
-    shelterLat: number,
-    shelterLng: number,
-    shelterName: string,
+  // Function to calculate route to evacuationLocation (called from popup)
+  const calculateRouteToEvacuationLocation = async (
+    evacuationLocationLat: number,
+    evacuationLocationLng: number,
+    evacuationLocationName: string,
   ) => {
     const origin = selectedLocation || userLocation;
 
@@ -286,16 +286,16 @@ export default function MapPage() {
       const route = await roadApi.calculateRoute(
         origin.lat,
         origin.lng,
-        shelterLat,
-        shelterLng,
+        evacuationLocationLat,
+        evacuationLocationLng,
       );
 
       setCalculatedRoute(route);
       setRouteStart({ lat: origin.lat, lng: origin.lng });
-      setRouteEnd({ lat: shelterLat, lng: shelterLng });
+      setRouteEnd({ lat: evacuationLocationLat, lng: evacuationLocationLng });
 
       toast.success(
-        `Rute ke ${shelterName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km, Waktu: ${route.properties.totalTime.toFixed(1)} menit`,
+        `Rute ke ${evacuationLocationName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km, Waktu: ${route.properties.totalTime.toFixed(1)} menit`,
       );
     } catch (error) {
       console.error("Error calculating route:", error);
@@ -315,22 +315,22 @@ export default function MapPage() {
   const handleLocationSelect = useCallback(
     (lat: number, lng: number) => {
       setSelectedLocation({ lat, lng });
-      if (shelters.length > 0) {
-        const withDistance = shelters.map((shelter) => {
-          const coords = shelter.geometry as { coordinates: [number, number] };
+      if (evacuationLocations.length > 0) {
+        const withDistance = evacuationLocations.map((evacuationLocation) => {
+          const coords = evacuationLocation.geometry as { coordinates: [number, number] };
           const distance = calculateDistance(
             lat,
             lng,
             coords.coordinates[1],
             coords.coordinates[0],
           );
-          return { ...shelter, distance };
+          return { ...evacuationLocation, distance };
         });
         withDistance.sort((a, b) => a.distance - b.distance);
-        setNearestShelters(withDistance.slice(0, 3));
+        setNearestEvacuationLocations(withDistance.slice(0, 3));
       }
     },
-    [shelters],
+    [evacuationLocations],
   );
 
   const fetchNearbyEvacuationLocations = useCallback(
@@ -338,19 +338,19 @@ export default function MapPage() {
       setNearbyLoading(true);
       setNearbyError(null);
       try {
-        const response = await evacuationService.getNearbyShelters({
+        const response = await evacuationService.getNearbyEvacuationLocations({
           lat,
           lng,
           radius: nearbyRadius,
           limit: 10,
         });
 
-        setShelters(response);
-        setNearestShelters(response.slice(0, 3));
+        setEvacuationLocations(response);
+        setNearestEvacuationLocations(response.slice(0, 3));
       } catch (err) {
         console.error("Failed to load nearby evacuation locations:", err);
-        setShelters([]);
-        setNearestShelters([]);
+        setEvacuationLocations([]);
+        setNearestEvacuationLocations([]);
         setNearbyError("Gagal memuat lokasi evakuasi terdekat");
         toast.error("Gagal memuat lokasi evakuasi terdekat");
       } finally {
@@ -492,8 +492,8 @@ export default function MapPage() {
 
   useEffect(() => {
     if (userLocationError) {
-      setShelters([]);
-      setNearestShelters([]);
+      setEvacuationLocations([]);
+      setNearestEvacuationLocations([]);
       toast.warning(
         userLocationError ||
           "Aktifkan akses lokasi untuk melihat lokasi evakuasi terdekat.",
@@ -543,7 +543,7 @@ export default function MapPage() {
               <Loader2 className="h-12 w-12 animate-spin text-blue-500 mb-4" />
               <p className="text-zinc-300 font-medium">Memuat data peta...</p>
               <p className="text-zinc-500 text-sm mt-2">
-                Mengambil data shelter, gempa, dan zona rawan
+                Mengambil data evacuationLocation, gempa, dan zona rawan
               </p>
             </div>
           )}
@@ -567,14 +567,14 @@ export default function MapPage() {
             </div>
           )}
           <MapClient
-            shelters={shelters}
+            evacuationLocations={evacuationLocations}
             hazardZones={hazardZones}
             earthquakes={earthquakes}
             facilities={facilities}
             selectedLocation={selectedLocation}
             onLocationSelect={handleMapClick}
             onEarthquakeClick={handleEarthquakeClick}
-            onCalculateRoute={calculateRouteToShelter}
+            onCalculateRoute={calculateRouteToEvacuationLocation}
             roadNetwork={roadNetwork}
             calculatedRoute={calculatedRoute}
             routeStart={routeStart}
@@ -889,12 +889,12 @@ export default function MapPage() {
                         <CardHeader className="pb-2">
                           <CardTitle className="text-xs text-muted-foreground flex items-center gap-1">
                             <Home className="h-3.5 w-3.5 text-green-600" />
-                            Shelter
+                            EvacuationLocation
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="pt-0">
                           <p className="text-2xl font-bold text-slate-900">
-                            {shelters.length}
+                            {evacuationLocations.length}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             tersedia
@@ -989,18 +989,18 @@ export default function MapPage() {
                 </div>
               )}
 
-              {/* Shelter Terdekat Section */}
-              {nearestShelters.length > 0 && (
+              {/* EvacuationLocation Terdekat Section */}
+              {nearestEvacuationLocations.length > 0 && (
                 <div className="border-t border-slate-200 pt-4">
                   <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
                     <div className="p-1.5 bg-green-50 rounded">
                       <Home className="h-4 w-4 text-green-600" />
                     </div>
-                    Shelter Terdekat
+                    EvacuationLocation Terdekat
                   </h2>
                   <div className="space-y-2">
-                    {nearestShelters.map((shelter, index) => {
-                      const coords = shelter.geometry as {
+                    {nearestEvacuationLocations.map((evacuationLocation, index) => {
+                      const coords = evacuationLocation.geometry as {
                         coordinates: [number, number];
                       };
                       const distance = calculateDistance(
@@ -1011,14 +1011,14 @@ export default function MapPage() {
                       );
                       return (
                         <Card
-                          key={shelter.id}
+                          key={evacuationLocation.id}
                           className="border border-slate-200 shadow-sm bg-white hover:shadow-md transition-shadow"
                         >
                           <CardContent className="pt-4">
                             <div className="flex items-start justify-between gap-3 mb-3">
                               <div className="flex-1 min-w-0">
                                 <p className="font-semibold text-slate-900 truncate">
-                                  {shelter.name}
+                                  {evacuationLocation.name}
                                 </p>
                                 <p className="text-xs text-muted-foreground mt-1">
                                   Jarak:{" "}
@@ -1036,10 +1036,10 @@ export default function MapPage() {
                             </div>
                             <Button
                               onClick={() => {
-                                calculateRouteToShelter(
+                                calculateRouteToEvacuationLocation(
                                   coords.coordinates[1],
                                   coords.coordinates[0],
-                                  shelter.name,
+                                  evacuationLocation.name,
                                 );
                               }}
                               className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm"

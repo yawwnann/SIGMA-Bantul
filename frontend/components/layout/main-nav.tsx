@@ -18,7 +18,7 @@ const menuItems = [
     title: "Peta Interaktif",
     href: "/map",
     description:
-      "Visualisasi GIS dengan layer zona rawan, shelter, dan jalur evakuasi",
+      "Visualisasi GIS dengan layer zona rawan, evacuationLocation, dan jalur evakuasi",
   },
   {
     title: "Data Gempa",

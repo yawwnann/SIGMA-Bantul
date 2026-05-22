@@ -400,3 +400,91 @@
 .dark .leaflet-popup-tip {
   background: #1e293b;
 }
+
+/* Overrides for hardcoded zinc dark classes in Light Mode */
+html:not(.dark) {
+  /* 1. Backgrounds */
+  .bg-zinc-900,
+  .bg-zinc-900\/40,
+  .bg-zinc-900\/50,
+  .bg-zinc-900\/60,
+  .bg-zinc-900\/80,
+  .bg-zinc-900\/85,
+  .bg-zinc-900\/90,
+  .from-zinc-900,
+  .to-zinc-900,
+  .to-zinc-900\/50,
+  .from-zinc-900\/80,
+  .to-zinc-900\/80 {
+    background-color: #ffffff !important;
+    background-image: none !important;
+  }
+
+  .bg-zinc-950,
+  .bg-zinc-950\/30,
+  .bg-zinc-950\/50,
+  .bg-zinc-950\/60,
+  .bg-zinc-950\/80 {
+    background-color: #f8fafc !important; /* bg-slate-50 */
+    background-image: none !important;
+  }
+
+  .bg-zinc-800,
+  .bg-zinc-800\/20,
+  .bg-zinc-800\/50 {
+    background-color: #f1f5f9 !important; /* bg-slate-100 */
+    background-image: none !important;
+  }
+
+  /* Swap bright contrast elements */
+  .bg-zinc-100 {
+    background-color: #0f172a !important; /* slate-900 */
+    color: #ffffff !important;
+  }
+
+  /* 2. Borders */
+  .border-zinc-800,
+  .border-zinc-800\/50,
+  .border-zinc-700,
+  .border-zinc-700\/50,
+  .border-zinc-700\/60 {
+    border-color: #e2e8f0 !important; /* border-slate-200 */
+  }
+
+  /* 3. Text colors */
+  .text-zinc-50,
+  .text-zinc-100,
+  .text-zinc-200,
+  .text-zinc-300 {
+    color: #0f172a !important; /* slate-900 */
+  }
+
+  .text-zinc-400 {
+    color: #475569 !important; /* slate-600 */
+  }
+
+  .text-zinc-500 {
+    color: #64748b !important; /* slate-500 */
+  }
+
+  .text-zinc-600 {
+    color: #94a3b8 !important; /* slate-400 */
+  }
+
+  .placeholder\:text-zinc-500::placeholder,
+  .placeholder\:text-zinc-600::placeholder {
+    color: #94a3b8 !important;
+  }
+
+  /* 4. Hover states */
+  .hover\:bg-zinc-800\/20:hover {
+    background-color: #f1f5f9 !important;
+  }
+
+  .hover\:bg-zinc-800:hover,
+  .hover\:bg-zinc-700:hover,
+  .hover\:bg-zinc-900\/80:hover {
+    background-color: #e2e8f0 !important; /* bg-slate-200 */
+    color: #0f172a !important;
+  }
+}

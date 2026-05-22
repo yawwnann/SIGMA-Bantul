@@ -1,5 +1,5 @@
-﻿export { earthquakeApi } from "./earthquake";
-export { shelterApi } from "./shelter";
+export { earthquakeApi } from "./earthquake";
+export { evacuationLocationApi } from "./evacuation-location";
 export {
   officerApi,
   type Officer,

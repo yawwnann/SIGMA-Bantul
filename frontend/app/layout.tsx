@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     "gempa bumi",
     "Bantul",
     "evakuasi",
-    "shelter",
+    "evacuationLocation",
     "BPBD",
   ],
   manifest: "/manifest.json",
@@ -70,7 +70,14 @@ export default function RootLayout({
       >
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{let e=document.querySelectorAll('[fdprocessedid]');for(let i=0;i<e.length;i++)e[i].removeAttribute('fdprocessedid')}catch(e){}`,
+            __html: `try{
+              const clean = () => {
+                document.querySelectorAll('[fdprocessedid]').forEach(el => el.removeAttribute('fdprocessedid'));
+              };
+              clean();
+              const observer = new MutationObserver(clean);
+              observer.observe(document.documentElement, { attributes: true, subtree: true, attributeFilter: ['fdprocessedid'] });
+            }catch(e){}`,
           }}
         />
         <ThemeProvider

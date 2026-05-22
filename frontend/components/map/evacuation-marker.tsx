@@ -1,14 +1,14 @@
 import L from "leaflet";
-import type { Shelter } from "@/types";
+import type { EvacuationLocation } from "@/types";
 import { createEvacuationIcon } from "./marker-icons";
 
 export type EvacuationMarkerData = {
-  shelter: Shelter;
+  evacuationLocation: EvacuationLocation;
   position: L.LatLngTuple;
 };
 
-export function getShelterPosition(shelter: Shelter): L.LatLngTuple | null {
-  const geometry = shelter.geometry as
+export function getEvacuationLocationPosition(evacuationLocation: EvacuationLocation): L.LatLngTuple | null {
+  const geometry = evacuationLocation.geometry as
     | { type?: string; coordinates?: [number, number] }
     | undefined;
 
@@ -27,28 +27,28 @@ export function getShelterPosition(shelter: Shelter): L.LatLngTuple | null {
 }
 
 export function toEvacuationMarkerData(
-  shelters: Shelter[],
+  evacuationLocations: EvacuationLocation[],
 ): EvacuationMarkerData[] {
-  return shelters.reduce<EvacuationMarkerData[]>((items, shelter) => {
-    const position = getShelterPosition(shelter);
+  return evacuationLocations.reduce<EvacuationMarkerData[]>((items, evacuationLocation) => {
+    const position = getEvacuationLocationPosition(evacuationLocation);
     if (!position) return items;
 
-    items.push({ shelter, position });
+    items.push({ evacuationLocation, position });
     return items;
   }, []);
 }
 
 export function createEvacuationMarker(
   item: EvacuationMarkerData,
-  onClick: (shelter: Shelter) => void,
+  onClick: (evacuationLocation: EvacuationLocation) => void,
 ) {
   const marker = L.marker(item.position, {
-    icon: createEvacuationIcon(item.shelter.category),
+    icon: createEvacuationIcon(item.evacuationLocation.category),
     keyboard: false,
     riseOnHover: true,
   });
 
-  marker.on("click", () => onClick(item.shelter));
+  marker.on("click", () => onClick(item.evacuationLocation));
 
   return marker;
 }

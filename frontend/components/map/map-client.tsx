@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { Shelter, HazardZone, Earthquake, PublicFacility } from "@/types";
+import type { EvacuationLocation, HazardZone, Earthquake, PublicFacility } from "@/types";
 import { analysisApi } from "@/api/analysis";
 
 import { Filter, X } from "lucide-react";
@@ -13,10 +13,10 @@ import { BpbdRiskLayer } from "./bpbd-risk-layer";
 import { debounce } from "@/lib/utils";
 import { createEvacuationClusterLayer } from "./evacuation-cluster";
 import { toEvacuationMarkerData } from "./evacuation-marker";
-import { getShelterCategoryLabel } from "./marker-icons";
+import { getEvacuationLocationCategoryLabel } from "./marker-icons";
 
 interface MapClientProps {
-  shelters: Shelter[];
+  evacuationLocations: EvacuationLocation[];
   hazardZones: HazardZone[];
   earthquakes: Earthquake[];
   facilities: PublicFacility[];
@@ -25,9 +25,9 @@ interface MapClientProps {
   onLocationSelect: (lat: number, lng: number) => void;
   onEarthquakeClick?: (earthquake: Earthquake) => void;
   onCalculateRoute?: (
-    shelterLat: number,
-    shelterLng: number,
-    shelterName: string,
+    evacuationLocationLat: number,
+    evacuationLocationLng: number,
+    evacuationLocationName: string,
   ) => void;
   roadNetwork?: Record<string, unknown>;
   calculatedRoute?: Record<string, unknown>;
@@ -35,7 +35,7 @@ interface MapClientProps {
   routeEnd?: { lat: number; lng: number } | null;
   selectedEarthquake?: Earthquake | null;
   flyToLocation?: { lat: number; lon: number; zoom?: number } | null;
-  onShelterDetailOpen?: (isOpen: boolean) => void;
+  onEvacuationLocationDetailOpen?: (isOpen: boolean) => void;
   center?: [number, number];
   zoom?: number;
   children?: React.ReactNode;
@@ -72,7 +72,7 @@ function createFacilityIcon(type: string) {
 }
 
 export default function MapClient({
-  shelters,
+  evacuationLocations,
   hazardZones,
   earthquakes,
   facilities,
@@ -87,7 +87,7 @@ export default function MapClient({
   routeEnd,
   selectedEarthquake,
   flyToLocation,
-  onShelterDetailOpen,
+  onEvacuationLocationDetailOpen,
   center,
   zoom,
   children,
@@ -101,7 +101,7 @@ export default function MapClient({
   const calculatedRouteLayerRef = useRef<L.GeoJSON | null>(null);
   const activeCircleRef = useRef<L.LayerGroup | null>(null);
   const earthquakeLayerGroupRef = useRef<L.LayerGroup | null>(null);
-  const shelterLayerGroupRef = useRef<L.MarkerClusterGroup | null>(null);
+  const evacuationLocationLayerGroupRef = useRef<L.MarkerClusterGroup | null>(null);
   const facilityLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const earthquakeCirclesRef = useRef<Map<number, L.LayerGroup>>(new Map());
   const locationMarkerRef = useRef<L.Marker | null>(null);
@@ -113,7 +113,7 @@ export default function MapClient({
   const [boundaryError, setBoundaryError] = useState(false);
   const [visibleLayers, setVisibleLayers] = useState({
     boundary: true,
-    shelters: true,
+    evacuationLocations: true,
     hazardZones: false,
     earthquakes: false, // Default: tidak tampil
     facilities: false,
@@ -126,13 +126,13 @@ export default function MapClient({
   const { resolvedTheme } = useTheme();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
-  const [selectedShelter, setSelectedShelter] = useState<Shelter | null>(null);
-  const onShelterClickRef = useRef<((shelter: Shelter) => void) | null>(null);
-  const onShelterDetailOpenRef = useRef(onShelterDetailOpen);
+  const [selectedEvacuationLocation, setSelectedEvacuationLocation] = useState<EvacuationLocation | null>(null);
+  const onEvacuationLocationClickRef = useRef<((evacuationLocation: EvacuationLocation) => void) | null>(null);
+  const onEvacuationLocationDetailOpenRef = useRef(onEvacuationLocationDetailOpen);
   const isMountedRef = useRef(true);
   const evacuationMarkerData = useMemo(
-    () => toEvacuationMarkerData(shelters),
-    [shelters],
+    () => toEvacuationMarkerData(evacuationLocations),
+    [evacuationLocations],
   );
 
   useEffect(() => {
@@ -143,15 +143,15 @@ export default function MapClient({
   }, []);
 
   useEffect(() => {
-    onShelterDetailOpenRef.current = onShelterDetailOpen;
-  }, [onShelterDetailOpen]);
+    onEvacuationLocationDetailOpenRef.current = onEvacuationLocationDetailOpen;
+  }, [onEvacuationLocationDetailOpen]);
 
-  // Notify parent when shelter detail opens/closes
+  // Notify parent when evacuationLocation detail opens/closes
   useEffect(() => {
-    if (onShelterDetailOpenRef.current) {
-      onShelterDetailOpenRef.current(selectedShelter !== null);
+    if (onEvacuationLocationDetailOpenRef.current) {
+      onEvacuationLocationDetailOpenRef.current(selectedEvacuationLocation !== null);
     }
-  }, [selectedShelter]);
+  }, [selectedEvacuationLocation]);
 
   useEffect(() => {
     setIsDarkMode(resolvedTheme === "dark");
@@ -231,8 +231,8 @@ export default function MapClient({
     onLocationSelectRef.current = onLocationSelect;
     onEarthquakeClickRef.current = onEarthquakeClick;
     onCalculateRouteRef.current = onCalculateRoute;
-    onShelterClickRef.current = (shelter: Shelter) => {
-      setSelectedShelter(shelter);
+    onEvacuationLocationClickRef.current = (evacuationLocation: EvacuationLocation) => {
+      setSelectedEvacuationLocation(evacuationLocation);
     };
   }, [onLocationSelect, onEarthquakeClick, onCalculateRoute]);
 
@@ -276,8 +276,8 @@ export default function MapClient({
           if (earthquakeLayerGroupRef.current) {
             earthquakeLayerGroupRef.current.clearLayers();
           }
-          if (shelterLayerGroupRef.current) {
-            shelterLayerGroupRef.current.clearLayers();
+          if (evacuationLocationLayerGroupRef.current) {
+            evacuationLocationLayerGroupRef.current.clearLayers();
           }
           if (facilityLayerGroupRef.current) {
             facilityLayerGroupRef.current.clearLayers();
@@ -425,19 +425,19 @@ export default function MapClient({
   useEffect(() => {
     if (!mapRef.current) return;
 
-    if (shelterLayerGroupRef.current) {
-      mapRef.current.removeLayer(shelterLayerGroupRef.current);
-      shelterLayerGroupRef.current.clearLayers();
-      shelterLayerGroupRef.current = null;
+    if (evacuationLocationLayerGroupRef.current) {
+      mapRef.current.removeLayer(evacuationLocationLayerGroupRef.current);
+      evacuationLocationLayerGroupRef.current.clearLayers();
+      evacuationLocationLayerGroupRef.current = null;
     }
 
-    if (!visibleLayers.shelters || evacuationMarkerData.length === 0) return;
+    if (!visibleLayers.evacuationLocations || evacuationMarkerData.length === 0) return;
 
-    shelterLayerGroupRef.current = createEvacuationClusterLayer(
+    evacuationLocationLayerGroupRef.current = createEvacuationClusterLayer(
       evacuationMarkerData,
-      (shelter) => onShelterClickRef.current?.(shelter),
+      (evacuationLocation) => onEvacuationLocationClickRef.current?.(evacuationLocation),
     ).addTo(mapRef.current);
-  }, [evacuationMarkerData, visibleLayers.shelters]);
+  }, [evacuationMarkerData, visibleLayers.evacuationLocations]);
 
   useEffect(() => {
     if (!mapRef.current || !facilityLayerGroupRef.current) return;
@@ -1150,12 +1150,12 @@ export default function MapClient({
               </label>
               <label className="flex items-center justify-between cursor-pointer group">
                 <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
-                  Shelter
+                  EvacuationLocation
                 </span>
                 <input
                   type="checkbox"
-                  checked={visibleLayers.shelters}
-                  onChange={() => toggleLayer("shelters")}
+                  checked={visibleLayers.evacuationLocations}
+                  onChange={() => toggleLayer("evacuationLocations")}
                   className="rounded border-slate-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
                 />
               </label>
@@ -1293,7 +1293,7 @@ export default function MapClient({
       </div>
 
       <style jsx global>{`
-        .custom-shelter-popup .leaflet-popup-content-wrapper {
+        .custom-evacuationLocation-popup .leaflet-popup-content-wrapper {
           padding: 0;
           border-radius: 12px;
           overflow: hidden;
@@ -1301,14 +1301,14 @@ export default function MapClient({
           border: 1px solid #e2e8f0;
           background: #ffffff;
         }
-        .custom-shelter-popup .leaflet-popup-content {
+        .custom-evacuationLocation-popup .leaflet-popup-content {
           margin: 0;
           line-height: 1.4;
         }
-        .custom-shelter-popup .leaflet-popup-tip-container {
+        .custom-evacuationLocation-popup .leaflet-popup-tip-container {
           display: none;
         }
-        .custom-shelter-popup .leaflet-popup-close-button {
+        .custom-evacuationLocation-popup .leaflet-popup-close-button {
           color: #64748b !important;
           font-size: 20px !important;
           top: 8px !important;
@@ -1323,7 +1323,7 @@ export default function MapClient({
           align-items: center !important;
           justify-content: center !important;
         }
-        .custom-shelter-popup .leaflet-popup-close-button:hover {
+        .custom-evacuationLocation-popup .leaflet-popup-close-button:hover {
           color: #0f172a !important;
         }
         .custom-popup .leaflet-popup-content-wrapper {
@@ -1442,21 +1442,21 @@ export default function MapClient({
         }
       `}</style>
 
-      {/* Shelter Detail Sidebar */}
-      {selectedShelter && (
+      {/* EvacuationLocation Detail Sidebar */}
+      {selectedEvacuationLocation && (
         <div className="absolute bottom-4 left-4 right-4 sm:bottom-auto sm:top-20 sm:left-auto sm:right-4 z-[70] md:z-[600] sm:w-[320px] bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md rounded-xl shadow-2xl border border-slate-200/80 dark:border-zinc-800/60 overflow-y-auto overflow-x-hidden animate-in slide-in-from-bottom-5 sm:slide-in-from-right-5 fade-in duration-300 max-h-[50%] sm:max-h-[calc(100vh-6rem)]">
           {/* Header */}
           <div className="p-3 sm:p-4 border-b border-slate-200/80 dark:border-zinc-800/60 relative">
             <div className="flex items-start justify-between mb-1 sm:mb-2 gap-2">
               <span className="inline-block bg-green-500/20 text-green-400 text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-green-500/30 flex-shrink-0">
-                {selectedShelter.condition === "GOOD"
+                {selectedEvacuationLocation.condition === "GOOD"
                   ? "Baik"
-                  : selectedShelter.condition === "MODERATE"
+                  : selectedEvacuationLocation.condition === "MODERATE"
                     ? "Sedang"
                     : "Buruk"}
               </span>
               <button
-                onClick={() => setSelectedShelter(null)}
+                onClick={() => setSelectedEvacuationLocation(null)}
                 className="text-slate-400 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 transition-colors p-1.5 hover:bg-slate-100 dark:hover:bg-zinc-800/50 rounded-lg flex-shrink-0"
                 style={{ position: "relative", zIndex: 9999 }}
                 aria-label="Close"
@@ -1465,7 +1465,7 @@ export default function MapClient({
               </button>
             </div>
             <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-50 mb-0.5 sm:mb-1 leading-tight">
-              {selectedShelter.name}
+              {selectedEvacuationLocation.name}
             </h3>
             <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-slate-500 dark:text-zinc-400">
               <svg
@@ -1480,7 +1480,7 @@ export default function MapClient({
                 <circle cx="12" cy="10" r="3" />
               </svg>
               <span className="truncate">
-                {selectedShelter.address || "Jl. Parangtritis, Sewon, Bantul"}
+                {selectedEvacuationLocation.address || "Jl. Parangtritis, Sewon, Bantul"}
               </span>
             </div>
           </div>
@@ -1488,8 +1488,8 @@ export default function MapClient({
           {/* Capacity Grid */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3 p-3 sm:p-4 border-b border-slate-200/80 dark:border-zinc-800/60">
             {(() => {
-              const capacity = selectedShelter.capacity || 0;
-              const occupied = selectedShelter.currentOccupancy || 0;
+              const capacity = selectedEvacuationLocation.capacity || 0;
+              const occupied = selectedEvacuationLocation.currentOccupancy || 0;
               const available = capacity - occupied;
               const occupancyPercentage =
                 capacity > 0 ? (occupied / capacity) * 100 : 0;
@@ -1586,7 +1586,7 @@ export default function MapClient({
                 Kategori
               </span>
               <span className="text-xs font-semibold text-slate-900 dark:text-zinc-100">
-                {getShelterCategoryLabel(selectedShelter.category)}
+                {getEvacuationLocationCategoryLabel(selectedEvacuationLocation.category)}
               </span>
             </div>
             <div className="flex justify-between items-center py-2 px-3 bg-slate-50 dark:bg-zinc-900/50 rounded-lg">
@@ -1610,27 +1610,27 @@ export default function MapClient({
                   "onCalculateRouteRef.current:",
                   onCalculateRouteRef.current,
                 );
-                console.log("selectedShelter:", selectedShelter);
+                console.log("selectedEvacuationLocation:", selectedEvacuationLocation);
 
                 if (!onCalculateRouteRef.current) {
                   console.error("onCalculateRouteRef.current is undefined!");
                   return;
                 }
 
-                if (!selectedShelter) {
-                  console.error("selectedShelter is null!");
+                if (!selectedEvacuationLocation) {
+                  console.error("selectedEvacuationLocation is null!");
                   return;
                 }
 
-                // Shelter uses 'geometry' not 'location'
-                const geom = selectedShelter.geometry as any;
+                // EvacuationLocation uses 'geometry' not 'location'
+                const geom = selectedEvacuationLocation.geometry as any;
                 if (!geom || !geom.coordinates) {
                   console.error(
-                    "selectedShelter.geometry.coordinates is undefined!",
+                    "selectedEvacuationLocation.geometry.coordinates is undefined!",
                   );
                   console.log(
-                    "Full shelter object:",
-                    JSON.stringify(selectedShelter, null, 2),
+                    "Full evacuationLocation object:",
+                    JSON.stringify(selectedEvacuationLocation, null, 2),
                   );
                   return;
                 }
@@ -1643,15 +1643,15 @@ export default function MapClient({
                   "lng:",
                   coords[0],
                   "name:",
-                  selectedShelter.name,
+                  selectedEvacuationLocation.name,
                 );
 
                 onCalculateRouteRef.current(
                   coords[1],
                   coords[0],
-                  selectedShelter.name,
+                  selectedEvacuationLocation.name,
                 );
-                setSelectedShelter(null);
+                setSelectedEvacuationLocation(null);
               }}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-900/30 cursor-pointer"
             >

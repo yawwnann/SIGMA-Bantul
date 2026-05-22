@@ -70,12 +70,12 @@ export default function OfficerDashboardPage() {
   }, []);
 
   const handleUpdateOccupancy = async (
-    shelterId: number,
+    evacuationLocationId: number,
     occupancy: number,
   ) => {
-    setUpdating(shelterId);
+    setUpdating(evacuationLocationId);
     try {
-      await officerApi.updateOccupancy(shelterId, occupancy);
+      await officerApi.updateOccupancy(evacuationLocationId, occupancy);
       toast.success("Jumlah penghuni berhasil diperbarui");
       fetchDashboard();
     } catch (error: any) {
@@ -88,13 +88,13 @@ export default function OfficerDashboardPage() {
   };
 
   const handleUpdateCondition = async (
-    shelterId: number,
+    evacuationLocationId: number,
     condition: string,
   ) => {
-    setUpdating(shelterId);
+    setUpdating(evacuationLocationId);
     try {
-      await officerApi.updateCondition(shelterId, condition);
-      toast.success("Kondisi shelter berhasil diperbarui");
+      await officerApi.updateCondition(evacuationLocationId, condition);
+      toast.success("Kondisi lokasi evakuasi berhasil diperbarui");
       fetchDashboard();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Gagal memperbarui kondisi");
@@ -103,10 +103,10 @@ export default function OfficerDashboardPage() {
     }
   };
 
-  const handleUpdateStatus = async (shelterId: number, status: string) => {
-    setUpdating(shelterId);
+  const handleUpdateStatus = async (evacuationLocationId: number, status: string) => {
+    setUpdating(evacuationLocationId);
     try {
-      await officerApi.updateStatus(shelterId, status);
+      await officerApi.updateStatus(evacuationLocationId, status);
       toast.success("Status operasional berhasil diperbarui");
       fetchDashboard();
     } catch (error: any) {
@@ -143,20 +143,19 @@ export default function OfficerDashboardPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Welcome Section */}
-      <div className="relative overflow-hidden bg-linear-to-br from-emerald-900/60 via-emerald-800/30 to-transparent border border-emerald-500/20 shadow-2xl shadow-emerald-900/20 rounded-2xl p-4 md:p-6 lg:p-8 backdrop-blur-xl">
+      <div className="relative overflow-hidden bg-linear-to-br from-emerald-500/10 via-emerald-500/5 to-transparent dark:from-emerald-900/60 dark:via-emerald-800/30 dark:to-transparent border border-emerald-500/20 shadow-xl dark:shadow-2xl shadow-emerald-900/5 dark:shadow-emerald-900/20 rounded-2xl p-4 md:p-6 lg:p-8 backdrop-blur-xl">
         <div className="absolute -top-20 -right-20 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl mix-blend-screen animate-pulse duration-10000" />
         <div className="absolute -bottom-10 left-10 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl opacity-50" />
         <div className="relative flex items-start md:items-center gap-3 md:gap-4 lg:gap-6">
           <div className="p-2.5 md:p-3 lg:p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 flex-shrink-0 shadow-inner">
-            <Building2 className="w-7 h-7 md:w-8 md:h-8 lg:w-10 lg:h-10 text-emerald-400 drop-shadow-md" />
+            <Building2 className="w-7 h-7 md:w-8 md:h-8 lg:w-10 lg:h-10 text-emerald-600 dark:text-emerald-400 drop-shadow-md" />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-white mb-1 md:mb-1.5 tracking-tight drop-shadow-sm">
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white mb-1 md:mb-1.5 tracking-tight drop-shadow-sm">
               Selamat Datang, {dashboard.officer.name}
             </h1>
-            <p className="text-xs md:text-sm lg:text-base text-zinc-300 font-medium tracking-wide">
-              Kelola shelter evakuasi yang menjadi tanggung jawab Anda secara
-              real-time
+            <p className="text-xs md:text-sm lg:text-base text-slate-600 dark:text-zinc-300 font-medium tracking-wide">
+              Kelola lokasi evakuasi yang menjadi tanggung jawab Anda secara real-time
             </p>
           </div>
         </div>
@@ -164,64 +163,64 @@ export default function OfficerDashboardPage() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5">
-        <Card className="relative overflow-hidden bg-zinc-900/40 backdrop-blur-xl border border-zinc-800 hover:border-emerald-500/30 group hover:-translate-y-1 transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/10 rounded-2xl">
+        <Card className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/40 backdrop-blur-xl border border-slate-200/85 dark:border-zinc-800 hover:border-emerald-500/30 group hover:-translate-y-1 transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/10 rounded-2xl">
           <div className="absolute inset-x-0 -top-px h-px bg-linear-to-r from-transparent via-emerald-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute inset-0 bg-linear-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-2.5">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400 flex items-center gap-2.5">
               <div className="p-2 bg-emerald-500/10 rounded-xl flex-shrink-0 border border-emerald-500/10 group-hover:bg-emerald-500/20 transition-colors">
-                <Home className="w-4 h-4 text-emerald-400" />
+                <Home className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
               </div>
-              Total Shelter
+              Total Lokasi Evakuasi
             </CardTitle>
           </CardHeader>
           <CardContent className="relative z-10">
-            <div className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
-              {stats.totalShelters}
+            <div className="text-3xl md:text-4xl font-extrabold text-slate-800 dark:text-white tracking-tight">
+              {stats.totalEvacuationLocations}
             </div>
-            <p className="text-xs text-zinc-500 mt-2 font-medium">
-              Shelter yang dikelola
+            <p className="text-xs text-slate-400 dark:text-zinc-500 mt-2 font-medium">
+              Lokasi evakuasi yang dikelola
             </p>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden bg-zinc-900/40 backdrop-blur-xl border border-zinc-800 hover:border-blue-500/30 group hover:-translate-y-1 transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/10 rounded-2xl">
+        <Card className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/40 backdrop-blur-xl border border-slate-200/85 dark:border-zinc-800 hover:border-blue-500/30 group hover:-translate-y-1 transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/10 rounded-2xl">
           <div className="absolute inset-x-0 -top-px h-px bg-linear-to-r from-transparent via-blue-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute inset-0 bg-linear-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-2.5">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400 flex items-center gap-2.5">
               <div className="p-2 bg-blue-500/10 rounded-xl flex-shrink-0 border border-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
-                <Users className="w-4 h-4 text-blue-400" />
+                <Users className="w-4 h-4 text-blue-500 dark:text-blue-400" />
               </div>
               Kapasitas Total
             </CardTitle>
           </CardHeader>
           <CardContent className="relative z-10">
-            <div className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+            <div className="text-3xl md:text-4xl font-extrabold text-slate-800 dark:text-white tracking-tight">
               {stats.totalCapacity.toLocaleString()}
             </div>
-            <p className="text-xs text-zinc-500 mt-2 font-medium">
+            <p className="text-xs text-slate-400 dark:text-zinc-500 mt-2 font-medium">
               Orang (Maksimal)
             </p>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden bg-zinc-900/40 backdrop-blur-xl border border-zinc-800 hover:border-amber-500/30 group hover:-translate-y-1 transition-all duration-500 hover:shadow-2xl hover:shadow-amber-500/10 rounded-2xl">
+        <Card className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/40 backdrop-blur-xl border border-slate-200/85 dark:border-zinc-800 hover:border-amber-500/30 group hover:-translate-y-1 transition-all duration-500 hover:shadow-2xl hover:shadow-amber-500/10 rounded-2xl">
           <div className="absolute inset-x-0 -top-px h-px bg-linear-to-r from-transparent via-amber-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute inset-0 bg-linear-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-2.5">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400 flex items-center gap-2.5">
               <div className="p-2 bg-amber-500/10 rounded-xl flex-shrink-0 border border-amber-500/10 group-hover:bg-amber-500/20 transition-colors">
-                <TrendingUp className="w-4 h-4 text-amber-400" />
+                <TrendingUp className="w-4 h-4 text-amber-500 dark:text-amber-400" />
               </div>
               Tingkat Hunian
             </CardTitle>
           </CardHeader>
           <CardContent className="relative z-10">
-            <div className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+            <div className="text-3xl md:text-4xl font-extrabold text-slate-800 dark:text-white tracking-tight">
               {occupancyPercentage.toFixed(1)}%
             </div>
-            <p className="text-xs text-zinc-500 mt-2 font-medium">
+            <p className="text-xs text-slate-400 dark:text-zinc-500 mt-2 font-medium">
               {stats.totalOccupancy.toLocaleString()} /{" "}
               {stats.totalCapacity.toLocaleString()} terisi
             </p>
@@ -229,17 +228,17 @@ export default function OfficerDashboardPage() {
         </Card>
       </div>
 
-      {/* Shelter List */}
+      {/* EvacuationLocation List */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h2 className="text-base md:text-lg lg:text-xl font-bold text-white tracking-tight flex items-center gap-2">
-          <Building2 className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" />
-          Shelter yang Dikelola
+        <h2 className="text-base md:text-lg lg:text-xl font-bold text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
+          <Building2 className="w-4 h-4 md:w-5 md:h-5 text-slate-500 dark:text-zinc-400" />
+          Lokasi Evakuasi yang Dikelola
         </h2>
         <Button
           variant="outline"
           size="sm"
           onClick={fetchDashboard}
-          className="bg-zinc-900/50 backdrop-blur-sm border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white transition-all rounded-xl shadow-sm hover:shadow-md text-xs md:text-sm"
+          className="bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white transition-all rounded-xl shadow-sm hover:shadow-md text-xs md:text-sm"
         >
           <RefreshCw className="w-3.5 h-3.5 md:w-4 md:h-4 mr-2" />
           <span className="hidden sm:inline">Perbarui Data</span>
@@ -247,32 +246,32 @@ export default function OfficerDashboardPage() {
         </Button>
       </div>
 
-      {dashboard.shelters.length === 0 ? (
-        <Card className="bg-linear-to-br from-zinc-900 to-zinc-900/50 border-zinc-800">
+      {dashboard.evacuationLocations.length === 0 ? (
+        <Card className="bg-linear-to-br from-white to-slate-50/50 dark:from-zinc-900 dark:to-zinc-900/50 border-slate-200 dark:border-zinc-800">
           <CardContent className="py-16 text-center">
-            <div className="p-4 bg-zinc-800/50 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-              <Home className="w-10 h-10 text-zinc-600" />
+            <div className="p-4 bg-slate-100 dark:bg-zinc-800/50 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+              <Home className="w-10 h-10 text-slate-400 dark:text-zinc-600" />
             </div>
-            <p className="text-zinc-400 text-lg font-medium mb-2">
-              Belum Ada Shelter
+            <p className="text-slate-700 dark:text-zinc-400 text-lg font-medium mb-2">
+              Belum Ada Lokasi Evakuasi
             </p>
-            <p className="text-zinc-500 text-sm">
-              Belum ada shelter yang ditugaskan kepada Anda
+            <p className="text-slate-500 dark:text-zinc-500 text-sm">
+              Belum ada lokasi evakuasi yang ditugaskan kepada Anda
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 2xl:grid-cols-2 gap-4 md:gap-5">
-          {dashboard.shelters.map((shelter) => (
-            <ShelterCard
-              key={shelter.id}
-              shelter={shelter}
-              updating={updating === shelter.id}
+          {dashboard.evacuationLocations.map((evacuationLocation) => (
+            <EvacuationLocationCard
+              key={evacuationLocation.id}
+              evacuationLocation={evacuationLocation}
+              updating={updating === evacuationLocation.id}
               onUpdateOccupancy={handleUpdateOccupancy}
               onUpdateCondition={handleUpdateCondition}
               onUpdateStatus={handleUpdateStatus}
               onManageEvacuees={() =>
-                router.push(`/officer/shelters/${shelter.id}/evacuees`)
+                router.push(`/officer/evacuation-locations/${evacuationLocation.id}/evacuees`)
               }
             />
           ))}
@@ -282,61 +281,61 @@ export default function OfficerDashboardPage() {
   );
 }
 
-interface ShelterCardProps {
-  shelter: any;
+interface EvacuationLocationCardProps {
+  evacuationLocation: any;
   updating: boolean;
-  onUpdateOccupancy: (shelterId: number, occupancy: number) => void;
-  onUpdateCondition: (shelterId: number, condition: string) => void;
-  onUpdateStatus: (shelterId: number, status: string) => void;
+  onUpdateOccupancy: (evacuationLocationId: number, occupancy: number) => void;
+  onUpdateCondition: (evacuationLocationId: number, condition: string) => void;
+  onUpdateStatus: (evacuationLocationId: number, status: string) => void;
   onManageEvacuees: () => void;
 }
 
-function ShelterCard({
-  shelter,
+function EvacuationLocationCard({
+  evacuationLocation,
   updating,
   onUpdateOccupancy,
   onUpdateCondition,
   onUpdateStatus,
   onManageEvacuees,
-}: ShelterCardProps) {
+}: EvacuationLocationCardProps) {
   const [occupancy, setOccupancy] = useState<number | "">(
-    shelter.currentOccupancy,
+    evacuationLocation.currentOccupancy,
   );
-  const [condition, setCondition] = useState(shelter.condition);
-  const [status, setStatus] = useState(shelter.status || "ACTIVE");
+  const [condition, setCondition] = useState(evacuationLocation.condition);
+  const [status, setStatus] = useState(evacuationLocation.status || "ACTIVE");
 
   const parsedOccupancy = typeof occupancy === "number" ? occupancy : 0;
-  const occupancyPercentage = (parsedOccupancy / shelter.capacity) * 100;
+  const occupancyPercentage = (parsedOccupancy / evacuationLocation.capacity) * 100;
   const hasChanges =
-    parsedOccupancy !== shelter.currentOccupancy ||
-    condition !== shelter.condition ||
-    status !== shelter.status;
+    parsedOccupancy !== evacuationLocation.currentOccupancy ||
+    condition !== evacuationLocation.condition ||
+    status !== evacuationLocation.status;
 
   const handleSave = () => {
-    if (parsedOccupancy !== shelter.currentOccupancy) {
-      onUpdateOccupancy(shelter.id, parsedOccupancy);
+    if (parsedOccupancy !== evacuationLocation.currentOccupancy) {
+      onUpdateOccupancy(evacuationLocation.id, parsedOccupancy);
     }
-    if (condition !== shelter.condition) {
-      onUpdateCondition(shelter.id, condition);
+    if (condition !== evacuationLocation.condition) {
+      onUpdateCondition(evacuationLocation.id, condition);
     }
-    if (status !== shelter.status && status) {
-      onUpdateStatus(shelter.id, status);
+    if (status !== evacuationLocation.status && status) {
+      onUpdateStatus(evacuationLocation.id, status);
     }
   };
 
   return (
-    <Card className="group relative bg-zinc-950/40 backdrop-blur-xl border border-zinc-800/80 hover:border-emerald-500/40 transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/5 overflow-hidden rounded-2xl">
-      <div className="absolute inset-x-0 -top-px h-px bg-linear-to-r from-transparent via-white/10 group-hover:via-emerald-500/30 to-transparent transition-all duration-500" />
+    <Card className="group relative bg-white dark:bg-zinc-950/40 backdrop-blur-xl border border-slate-200/80 dark:border-zinc-800/80 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 transition-all duration-500 hover:shadow-lg dark:hover:shadow-2xl hover:shadow-emerald-500/5 dark:hover:shadow-emerald-500/5 overflow-hidden rounded-2xl">
+      <div className="absolute inset-x-0 -top-px h-px bg-linear-to-r from-transparent via-slate-200 dark:via-white/10 group-hover:via-emerald-500/30 to-transparent transition-all duration-500" />
       <CardHeader className="pb-5 relative z-10">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-base md:text-lg font-bold text-white mb-1.5 truncate tracking-tight">
-              {shelter.name}
+            <CardTitle className="text-base md:text-lg font-bold text-slate-800 dark:text-white mb-1.5 truncate tracking-tight">
+              {evacuationLocation.name}
             </CardTitle>
-            <div className="flex items-start gap-1.5 text-xs md:text-sm text-zinc-400 font-medium">
-              <MapPin className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-blue-400" />
+            <div className="flex items-start gap-1.5 text-xs md:text-sm text-slate-500 dark:text-zinc-400 font-medium">
+              <MapPin className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-blue-500 dark:text-blue-400" />
               <span className="line-clamp-2">
-                {shelter.address || "Lokasi tidak tersedia"}
+                {evacuationLocation.address || "Lokasi tidak tersedia"}
               </span>
             </div>
           </div>
@@ -348,7 +347,7 @@ function ShelterCard({
             </Badge>
             <Badge
               variant="outline"
-              className="text-[10px] uppercase font-bold tracking-wider bg-zinc-900/50 text-zinc-300 border-zinc-700/80 px-2 py-0.5 rounded-md shadow-inner"
+              className="text-[10px] uppercase font-bold tracking-wider bg-slate-100 dark:bg-zinc-900/50 text-slate-700 dark:text-zinc-300 border-slate-200 dark:border-zinc-700/80 px-2 py-0.5 rounded-md shadow-inner"
             >
               {statusLabels[status] || status}
             </Badge>
@@ -357,19 +356,19 @@ function ShelterCard({
       </CardHeader>
       <CardContent className="space-y-5 pt-0 relative z-10">
         {/* Occupancy Progress */}
-        <div className="bg-black/30 rounded-xl p-4 border border-white/5 shadow-inner backdrop-blur-sm">
+        <div className="bg-slate-50 dark:bg-black/30 rounded-xl p-4 border border-slate-100 dark:border-white/5 shadow-inner backdrop-blur-sm">
           <div className="flex items-center justify-between text-xs md:text-sm mb-3">
-            <span className="text-zinc-400 font-medium tracking-wide">
+            <span className="text-slate-600 dark:text-zinc-400 font-medium tracking-wide">
               Tingkat Hunian
             </span>
-            <span className="text-white font-bold tabular-nums bg-white/10 px-2.5 py-0.5 rounded-md text-xs">
-              {parsedOccupancy} / {shelter.capacity} (
+            <span className="text-slate-800 dark:text-white font-bold tabular-nums bg-slate-200/60 dark:bg-white/10 px-2.5 py-0.5 rounded-md text-xs">
+              {parsedOccupancy} / {evacuationLocation.capacity} (
               {occupancyPercentage.toFixed(0)}%)
             </span>
           </div>
-          <div className="w-full bg-zinc-800/80 rounded-full h-3 overflow-hidden shadow-inner flex">
+          <div className="w-full bg-slate-200 dark:bg-zinc-800/80 rounded-full h-3 overflow-hidden shadow-inner flex">
             <div
-              className={`h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(255,255,255,0.2)] ${
+              className={`h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(0,0,0,0.05)] dark:shadow-[0_0_10px_rgba(255,255,255,0.2)] ${
                 occupancyPercentage > 90
                   ? "bg-linear-to-r from-red-600 to-red-400"
                   : occupancyPercentage > 70
@@ -384,7 +383,7 @@ function ShelterCard({
         {/* Update Form */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <Label className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2 block font-bold">
+            <Label className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-500 mb-2 block font-bold">
               Penghuni Saat Ini
             </Label>
             <Input
@@ -394,46 +393,46 @@ function ShelterCard({
                 const val = e.target.value;
                 setOccupancy(val === "" ? "" : parseInt(val, 10));
               }}
-              className="bg-zinc-950/50 border-zinc-800 hover:border-zinc-700 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 h-10 text-sm font-medium transition-all rounded-lg shadow-inner text-white"
+              className="bg-white dark:bg-zinc-950/50 border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 focus:border-emerald-500/50 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 h-10 text-sm font-medium transition-all rounded-lg shadow-inner text-slate-800 dark:text-white"
               min={0}
-              max={shelter.capacity}
+              max={evacuationLocation.capacity}
               disabled={updating}
             />
           </div>
           <div>
-            <Label className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2 block font-bold">
-              Kondisi Shelter
+            <Label className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-500 mb-2 block font-bold">
+              Kondisi Lokasi Evakuasi
             </Label>
             <Select
               value={condition}
               onValueChange={setCondition}
               disabled={updating}
             >
-              <SelectTrigger className="bg-zinc-950/50 border-zinc-800 hover:border-zinc-700 focus:border-emerald-500/50 h-10 text-sm font-medium transition-all rounded-lg shadow-inner">
+              <SelectTrigger className="bg-white dark:bg-zinc-950/50 border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 focus:border-emerald-500/50 h-10 text-sm font-medium transition-all rounded-lg shadow-inner text-slate-800 dark:text-zinc-200">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-950 border-zinc-800 rounded-xl shadow-xl text-zinc-200">
+              <SelectContent className="bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800 rounded-xl shadow-xl text-slate-800 dark:text-zinc-200">
                 <SelectItem
                   value="GOOD"
-                  className="focus:bg-zinc-800 focus:text-white"
+                  className="focus:bg-slate-100 dark:focus:bg-zinc-800 focus:text-slate-900 dark:focus:text-white cursor-pointer"
                 >
                   Baik
                 </SelectItem>
                 <SelectItem
                   value="MODERATE"
-                  className="focus:bg-zinc-800 focus:text-white"
+                  className="focus:bg-slate-100 dark:focus:bg-zinc-800 focus:text-slate-900 dark:focus:text-white cursor-pointer"
                 >
                   Sedang
                 </SelectItem>
                 <SelectItem
                   value="NEEDS_REPAIR"
-                  className="focus:bg-zinc-800 focus:text-white"
+                  className="focus:bg-slate-100 dark:focus:bg-zinc-800 focus:text-slate-900 dark:focus:text-white cursor-pointer"
                 >
                   Perlu Perbaikan
                 </SelectItem>
                 <SelectItem
                   value="DAMAGED"
-                  className="focus:bg-zinc-800 focus:text-white"
+                  className="focus:bg-slate-100 dark:focus:bg-zinc-800 focus:text-slate-900 dark:focus:text-white cursor-pointer"
                 >
                   Rusak
                 </SelectItem>
@@ -441,7 +440,7 @@ function ShelterCard({
             </Select>
           </div>
           <div className="sm:col-span-2">
-            <Label className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2 block font-bold">
+            <Label className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-500 mb-2 block font-bold">
               Status Operasional
             </Label>
             <Select
@@ -449,25 +448,25 @@ function ShelterCard({
               onValueChange={setStatus}
               disabled={updating}
             >
-              <SelectTrigger className="bg-zinc-950/50 border-zinc-800 hover:border-zinc-700 focus:border-emerald-500/50 h-10 text-sm font-medium transition-all rounded-lg shadow-inner">
+              <SelectTrigger className="bg-white dark:bg-zinc-950/50 border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 focus:border-emerald-500/50 h-10 text-sm font-medium transition-all rounded-lg shadow-inner text-slate-800 dark:text-zinc-200">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-950 border-zinc-800 rounded-xl shadow-xl text-zinc-200">
+              <SelectContent className="bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800 rounded-xl shadow-xl text-slate-800 dark:text-zinc-200">
                 <SelectItem
                   value="ACTIVE"
-                  className="focus:bg-zinc-800 focus:text-white"
+                  className="focus:bg-slate-100 dark:focus:bg-zinc-800 focus:text-slate-900 dark:focus:text-white cursor-pointer"
                 >
                   Aktif (Menerima Pengungsi)
                 </SelectItem>
                 <SelectItem
                   value="STANDBY"
-                  className="focus:bg-zinc-800 focus:text-white"
+                  className="focus:bg-slate-100 dark:focus:bg-zinc-800 focus:text-slate-900 dark:focus:text-white cursor-pointer"
                 >
                   Siaga (Persiapan)
                 </SelectItem>
                 <SelectItem
                   value="UNAVAILABLE"
-                  className="focus:bg-zinc-800 focus:text-white"
+                  className="focus:bg-slate-100 dark:focus:bg-zinc-800 focus:text-slate-900 dark:focus:text-white cursor-pointer"
                 >
                   Tidak Tersedia
                 </SelectItem>
@@ -497,7 +496,7 @@ function ShelterCard({
         <Button
           onClick={onManageEvacuees}
           variant="outline"
-          className="w-full bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 hover:border-blue-500/50 text-blue-400 hover:text-blue-300 transition-all duration-300 h-11 font-bold rounded-xl mt-2"
+          className="w-full bg-blue-50/80 hover:bg-blue-100/80 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 border-blue-200 dark:border-blue-500/30 hover:border-blue-300 dark:hover:border-blue-500/50 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-all duration-300 h-11 font-bold rounded-xl mt-2"
         >
           <UserPlus className="w-5 h-5 mr-2" />
           Kelola Pengungsi

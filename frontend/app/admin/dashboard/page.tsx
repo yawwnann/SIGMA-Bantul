@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { dashboardApi, shelterApi, evacuationApi, apiClient } from "@/api";
+import { dashboardApi, evacuationLocationApi, evacuationApi, apiClient } from "@/api";
 import {
   Card,
   CardContent,
@@ -38,12 +38,12 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [dashboardData, shelterStats, routeStats] = await Promise.all([
+        const [dashboardData, evacuationLocationStats, routeStats] = await Promise.all([
           dashboardApi.getSummary(),
-          shelterApi.getStatistics(),
+          evacuationLocationApi.getStatistics(),
           evacuationApi.getStatistics(),
         ]);
-        // dashboardData shape: { earthquake: { total, last30Days }, shelter, latestEarthquake, ... }
+        // dashboardData shape: { earthquake: { total, last30Days }, evacuationLocation, latestEarthquake, ... }
         const data = dashboardData as unknown as {
           earthquake?: { total?: number };
           latestEarthquake?: DashboardStats["latestEarthquake"];
@@ -51,7 +51,7 @@ export default function AdminDashboardPage() {
         };
         setRawStats(dashboardData as unknown as Record<string, unknown>);
         setStats({
-          shelterCount: shelterStats.total || 0,
+          evacuationLocationCount: evacuationLocationStats.total || 0,
           earthquakeCount: data.earthquake?.total ?? data.earthquakeCount ?? 0,
           routeCount: routeStats.totalRoutes || 0,
           latestEarthquake: data.latestEarthquake,
@@ -111,7 +111,7 @@ export default function AdminDashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Shelter Card */}
+        {/* EvacuationLocation Card */}
         <Card className="border border-zinc-800 bg-zinc-900/40 relative overflow-hidden group hover:bg-zinc-900/80 transition-all duration-300 hover:border-blue-500/30">
           <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-transform duration-500">
             <Home className="w-40 h-40" />
@@ -122,10 +122,10 @@ export default function AdminDashboardPage() {
             </div>
             <div className="space-y-1">
               <h3 className="text-base font-medium text-zinc-400">
-                Total Shelter
+                Total Lokasi Evakuasi
               </h3>
               <div className="text-5xl font-bold tracking-tight text-white">
-                {stats?.shelterCount || 0}
+                {stats?.evacuationLocationCount || 0}
               </div>
             </div>
             <div className="mt-6 flex items-center text-sm">
@@ -258,13 +258,13 @@ export default function AdminDashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 space-y-3">
-            <Link href="/admin/shelters" className="block group">
+            <Link href="/admin/evacuation-locations" className="block group">
               <Button
                 variant="ghost"
                 className="w-full justify-between bg-zinc-950/50 border border-zinc-800/50 text-zinc-300 hover:bg-blue-600 hover:text-white hover:border-blue-500 transition-all duration-300 h-12"
               >
                 <div className="flex items-center">
-                  <Home className="mr-3 h-4 w-4" /> Manajemen Shelter
+                  <Home className="mr-3 h-4 w-4" /> Manajemen Lokasi Evakuasi
                 </div>
                 <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
               </Button>
@@ -323,7 +323,7 @@ export default function AdminDashboardPage() {
                 const hz = rawStats.hazardZone as
                   | Record<string, number>
                   | undefined;
-                const sh = rawStats.shelter as
+                const sh = rawStats.evacuationLocation as
                   | Record<string, number>
                   | undefined;
                 const ev = rawStats.evacuation as
@@ -347,7 +347,7 @@ export default function AdminDashboardPage() {
                     border: "border-orange-500/20",
                   },
                   {
-                    label: "Kapasitas Shelter",
+                    label: "Kapasitas Lokasi Evakuasi",
                     value: sh?.totalCapacity ?? 0,
                     sub: `${sh?.goodCondition ?? 0} kondisi baik`,
                     color: "text-blue-400",

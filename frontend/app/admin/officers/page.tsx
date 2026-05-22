@@ -110,7 +110,7 @@ export default function AdminOfficersPage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
             <Shield className="h-6 w-6 text-blue-500" />
-            Manajemen Petugas Shelter
+            Manajemen Petugas Evakuasi
           </h2>
           <p className="text-zinc-400 mt-1 text-sm">
             Total {officers.length} petugas terdaftar dalam sistem.
@@ -136,7 +136,7 @@ export default function AdminOfficersPage() {
                   Email
                 </TableHead>
                 <TableHead className="font-semibold text-zinc-400">
-                  Shelter Dikelola
+                  Lokasi Evakuasi Dikelola
                 </TableHead>
                 <TableHead className="font-semibold text-zinc-400 text-right">
                   Aksi
@@ -186,7 +186,7 @@ export default function AdminOfficersPage() {
                         variant="outline"
                         className="bg-zinc-800 font-medium border-zinc-700 text-zinc-300"
                       >
-                        {officer.managedShelters?.length || 0} Shelter
+                        {officer.managedEvacuationLocations?.length || 0} Lokasi Evakuasi
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right space-x-2">
@@ -237,8 +237,8 @@ export default function AdminOfficersPage() {
               </h2>
               <p className="text-zinc-400 text-sm mt-2">
                 {editingOfficer
-                  ? "Perbarui informasi petugas shelter."
-                  : "Buat akun baru untuk petugas shelter yang akan mengelola pengungsian."}
+                  ? "Perbarui informasi petugas evakuasi."
+                  : "Buat akun baru untuk petugas evakuasi yang akan mengelola pengungsian."}
               </p>
             </div>
 
@@ -351,7 +351,7 @@ export default function AdminOfficersPage() {
                     </p>
                     <p className="text-xs text-blue-400/80 leading-relaxed">
                       Petugas yang ditambahkan akan dapat login ke sistem dan
-                      mengelola shelter yang ditugaskan kepada mereka. Pastikan
+                      mengelola lokasi evakuasi yang ditugaskan kepada mereka. Pastikan
                       data yang dimasukkan akurat dan email aktif.
                     </p>
                   </div>

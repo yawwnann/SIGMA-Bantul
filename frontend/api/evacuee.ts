@@ -7,7 +7,7 @@ import type {
 } from "@/types";
 
 export interface CreateEvacueeDto {
-  shelterId: number;
+  evacuationLocationId: number;
   name: string;
   nik?: string;
   gender: EvacueeGender;
@@ -36,9 +36,9 @@ export interface UpdateEvacueeDto {
 }
 
 export const evacueeApi = {
-  async getAll(shelterId?: number, status?: EvacueeStatus): Promise<Evacuee[]> {
+  async getAll(evacuationLocationId?: number, status?: EvacueeStatus): Promise<Evacuee[]> {
     const params = new URLSearchParams();
-    if (shelterId) params.append("shelterId", shelterId.toString());
+    if (evacuationLocationId) params.append("evacuationLocationId", evacuationLocationId.toString());
     if (status) params.append("status", status);
 
     const response = await apiClient.get<Evacuee[]>(
@@ -52,9 +52,9 @@ export const evacueeApi = {
     return response.data;
   },
 
-  async getStats(shelterId: number): Promise<EvacueeStats> {
+  async getStats(evacuationLocationId: number): Promise<EvacueeStats> {
     const response = await apiClient.get<EvacueeStats>(
-      `/evacuees/stats/${shelterId}`,
+      `/evacuees/stats/${evacuationLocationId}`,
     );
     return response.data;
   },

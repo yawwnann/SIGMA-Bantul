@@ -6,7 +6,7 @@ export interface Officer {
   name: string;
   role: string;
   createdAt: string;
-  managedShelters?: Array<{
+  managedEvacuationLocations?: Array<{
     id: number;
     name: string;
     address: string | null;
@@ -17,7 +17,7 @@ export interface Officer {
 }
 
 export interface OfficerStats {
-  totalShelters: number;
+  totalEvacuationLocations: number;
   totalCapacity: number;
   totalOccupancy: number;
   occupancyRate: number;
@@ -29,7 +29,7 @@ export interface DashboardResponse {
     name: string;
     email: string;
   };
-  shelters: Array<{
+  evacuationLocations: Array<{
     id: number;
     name: string;
     address: string | null;
@@ -91,14 +91,14 @@ export const officerApi = {
     return response.data;
   },
 
-  getMyShelters: async () => {
-    const response = await apiClient.get("/officer/shelters");
+  getMyEvacuationLocations: async () => {
+    const response = await apiClient.get("/officer/evacuation-locations");
     return response.data;
   },
 
-  updateOccupancy: async (shelterId: number, occupancy: number) => {
+  updateOccupancy: async (evacuationLocationId: number, occupancy: number) => {
     const response = await apiClient.patch(
-      `/officer/shelters/${shelterId}/occupancy`,
+      `/officer/evacuation-locations/${evacuationLocationId}/occupancy`,
       {
         occupancy,
       },
@@ -106,9 +106,9 @@ export const officerApi = {
     return response.data;
   },
 
-  updateCondition: async (shelterId: number, condition: string) => {
+  updateCondition: async (evacuationLocationId: number, condition: string) => {
     const response = await apiClient.patch(
-      `/officer/shelters/${shelterId}/condition`,
+      `/officer/evacuation-locations/${evacuationLocationId}/condition`,
       {
         condition,
       },
@@ -116,9 +116,9 @@ export const officerApi = {
     return response.data;
   },
 
-  updateStatus: async (shelterId: number, status: string) => {
+  updateStatus: async (evacuationLocationId: number, status: string) => {
     const response = await apiClient.patch(
-      `/officer/shelters/${shelterId}/status`,
+      `/officer/evacuation-locations/${evacuationLocationId}/status`,
       {
         status,
       },

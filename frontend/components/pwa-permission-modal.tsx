@@ -167,7 +167,7 @@ export function PwaPermissionModal() {
             </div>
             <div>
               <h4 className="font-semibold text-slate-900 dark:text-zinc-100 text-sm">Lokasi GPS (Akurat)</h4>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">Untuk menemukan rute evakuasi terdekat ke shelter aman secara otomatis.</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">Untuk menemukan rute evakuasi terdekat ke evacuationLocation aman secara otomatis.</p>
             </div>
           </div>
           <div className="flex gap-4">

@@ -3,18 +3,18 @@
 import { memo, useEffect, useMemo, useState } from "react";
 import { GeoJSON, MapContainer, TileLayer, useMap } from "react-leaflet";
 import { X } from "lucide-react";
-import type { Earthquake, HazardZone, PublicFacility, Shelter } from "@/types";
+import type { Earthquake, HazardZone, PublicFacility, EvacuationLocation } from "@/types";
 import type { UserLocation } from "@/hooks/use-user-location";
 import { Button } from "@/components/ui/button";
 import { NearbyEvacuationMarkers } from "./nearby-evacuation-markers";
 import { UserLocationMarker } from "./user-location-marker";
-import { getShelterCategoryLabel } from "./marker-icons";
+import { getEvacuationLocationCategoryLabel } from "./marker-icons";
 import "leaflet/dist/leaflet.css";
 
 const BANTUL_CENTER: [number, number] = [-7.888, 110.33];
 
 type NearbyEvacuationMapProps = {
-  shelters: Shelter[];
+  evacuationLocations: EvacuationLocation[];
   hazardZones?: HazardZone[];
   earthquakes?: Earthquake[];
   facilities?: PublicFacility[];
@@ -23,9 +23,9 @@ type NearbyEvacuationMapProps = {
   onLocationSelect?: (lat: number, lng: number) => void;
   onEarthquakeClick?: (earthquake: Earthquake) => void;
   onCalculateRoute?: (
-    shelterLat: number,
-    shelterLng: number,
-    shelterName: string,
+    evacuationLocationLat: number,
+    evacuationLocationLng: number,
+    evacuationLocationName: string,
   ) => void;
   roadNetwork?: Record<string, unknown> | null;
   calculatedRoute?: Record<string, any> | null;
@@ -34,10 +34,10 @@ type NearbyEvacuationMapProps = {
   selectedEarthquake?: Earthquake | null;
 };
 
-import { NearbyShelter } from "@/services/evacuation.service";
+import { NearbyEvacuationLocation } from "@/services/evacuation.service";
 
-function getShelterCoordinates(shelter: Shelter) {
-  const geometry = shelter.geometry as
+function getEvacuationLocationCoordinates(evacuationLocation: EvacuationLocation) {
+  const geometry = evacuationLocation.geometry as
     | { coordinates?: [number, number] }
     | undefined;
   const coordinates = geometry?.coordinates;
@@ -83,24 +83,24 @@ const RecenterMap = memo(function RecenterMap({
 });
 
 export default function NearbyEvacuationMap({
-  shelters,
+  evacuationLocations,
   userLocation,
   selectedLocation,
   onCalculateRoute,
   calculatedRoute,
 }: NearbyEvacuationMapProps) {
-  const [selectedShelter, setSelectedShelter] = useState<Shelter | null>(null);
+  const [selectedEvacuationLocation, setSelectedEvacuationLocation] = useState<EvacuationLocation | null>(null);
   const routeData = useMemo(() => calculatedRoute || null, [calculatedRoute]);
-  const selectedShelterCoords = selectedShelter
-    ? getShelterCoordinates(selectedShelter)
+  const selectedEvacuationLocationCoords = selectedEvacuationLocation
+    ? getEvacuationLocationCoordinates(selectedEvacuationLocation)
     : null;
 
-  // Transform Shelter[] to NearbyShelter[] with distance and available capacity
-  const nearbyShelters = useMemo<NearbyShelter[]>(() => {
+  // Transform EvacuationLocation[] to NearbyEvacuationLocation[] with distance and available capacity
+  const nearbyEvacuationLocations = useMemo<NearbyEvacuationLocation[]>(() => {
     if (!selectedLocation) return [];
 
-    return shelters.map((shelter) => {
-      const coords = getShelterCoordinates(shelter);
+    return evacuationLocations.map((evacuationLocation) => {
+      const coords = getEvacuationLocationCoordinates(evacuationLocation);
       const distanceKm = coords
         ? calculateDistance(
             selectedLocation.lat,
@@ -111,12 +111,12 @@ export default function NearbyEvacuationMap({
         : 0;
 
       return {
-        ...shelter,
+        ...evacuationLocation,
         distanceKm,
-        availableCapacity: shelter.capacity, // Assuming full capacity available
+        availableCapacity: evacuationLocation.capacity, // Assuming full capacity available
       };
     });
-  }, [shelters, selectedLocation]);
+  }, [evacuationLocations, selectedLocation]);
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-xl">
@@ -147,8 +147,8 @@ export default function NearbyEvacuationMap({
           />
         )}
         <NearbyEvacuationMarkers
-          shelters={nearbyShelters}
-          onShelterClick={setSelectedShelter}
+          evacuationLocations={nearbyEvacuationLocations}
+          onEvacuationLocationClick={setSelectedEvacuationLocation}
         />
         {routeData?.geometry && (
           <GeoJSON
@@ -163,22 +163,22 @@ export default function NearbyEvacuationMap({
         )}
       </MapContainer>
 
-      {selectedShelter && selectedShelterCoords && (
+      {selectedEvacuationLocation && selectedEvacuationLocationCoords && (
         <div className="absolute bottom-4 left-4 right-4 z-[1000] max-h-[52%] overflow-y-auto rounded-xl border border-slate-200 bg-white/95 p-4 shadow-2xl backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/95 sm:left-auto sm:right-4 sm:top-4 sm:bottom-auto sm:w-[320px]">
           <div className="mb-3 flex items-start justify-between gap-3">
             <div>
               <div className="mb-2 inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
-                {getShelterCategoryLabel(selectedShelter.category)}
+                {getEvacuationLocationCategoryLabel(selectedEvacuationLocation.category)}
               </div>
               <h3 className="text-base font-bold leading-tight text-slate-900 dark:text-zinc-50">
-                {selectedShelter.name}
+                {selectedEvacuationLocation.name}
               </h3>
               <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
-                {selectedShelter.address || "Bantul, DIY"}
+                {selectedEvacuationLocation.address || "Bantul, DIY"}
               </p>
             </div>
             <button
-              onClick={() => setSelectedShelter(null)}
+              onClick={() => setSelectedEvacuationLocation(null)}
               className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
               aria-label="Tutup detail lokasi evakuasi"
             >
@@ -192,7 +192,7 @@ export default function NearbyEvacuationMap({
                 Kapasitas
               </div>
               <div className="mt-1 text-xl font-extrabold text-slate-900 dark:text-zinc-50">
-                {Number(selectedShelter.capacity || 0).toLocaleString("id-ID")}
+                {Number(selectedEvacuationLocation.capacity || 0).toLocaleString("id-ID")}
               </div>
             </div>
             <div className="rounded-lg bg-emerald-50 p-3 dark:bg-emerald-950/20">
@@ -200,7 +200,7 @@ export default function NearbyEvacuationMap({
                 Terisi
               </div>
               <div className="mt-1 text-xl font-extrabold text-emerald-700 dark:text-emerald-300">
-                {Number(selectedShelter.currentOccupancy || 0).toLocaleString(
+                {Number(selectedEvacuationLocation.currentOccupancy || 0).toLocaleString(
                   "id-ID",
                 )}
               </div>
@@ -210,11 +210,11 @@ export default function NearbyEvacuationMap({
           <Button
             onClick={() => {
               onCalculateRoute?.(
-                selectedShelterCoords.lat,
-                selectedShelterCoords.lng,
-                selectedShelter.name,
+                selectedEvacuationLocationCoords.lat,
+                selectedEvacuationLocationCoords.lng,
+                selectedEvacuationLocation.name,
               );
-              setSelectedShelter(null);
+              setSelectedEvacuationLocation(null);
             }}
             className="mt-4 w-full bg-blue-600 text-white hover:bg-blue-700"
           >

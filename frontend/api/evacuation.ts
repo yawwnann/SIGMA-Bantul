@@ -19,8 +19,8 @@ export const evacuationApi = {
     return response.data;
   },
 
-  getNearestShelter: async (lat: number, lon: number, limit?: number) => {
-    const response = await apiClient.get('/routes/nearest-shelter', {
+  getNearestEvacuationLocation: async (lat: number, lon: number, limit?: number) => {
+    const response = await apiClient.get('/routes/nearest-evacuationLocation', {
       params: { lat, lon, limit },
     });
     return response.data;

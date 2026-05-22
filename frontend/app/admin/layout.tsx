@@ -20,13 +20,16 @@ import {
   Activity,
   Menu,
   X,
+  Sun,
+  Moon,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 
 const menuItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/monitoring", label: "Monitoring Sistem", icon: Activity },
-  { href: "/admin/shelters", label: "Shelter Evakuasi", icon: Home },
-  { href: "/admin/officers", label: "Petugas Shelter", icon: ShieldAlert },
+  { href: "/admin/evacuation-locations", label: "Lokasi Evakuasi", icon: Home },
+  { href: "/admin/officers", label: "Petugas Evakuasi", icon: ShieldAlert },
   { href: "/admin/facilities", label: "Fasilitas Umum", icon: Building2 },
   { href: "/admin/routes", label: "Manajemen Evakuasi", icon: MapIcon },
   { href: "/admin/simulation", label: "Simulasi Gempa", icon: Settings },
@@ -42,6 +45,12 @@ export default function AdminLayout({
   const [authed, setAuthed] = useState(false);
   const [user, setUser] = useState<{ name: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     // Login page needs no auth check
@@ -94,7 +103,7 @@ export default function AdminLayout({
   if (!authed) return null;
 
   return (
-    <div className="dark min-h-screen w-full flex bg-zinc-950 text-zinc-50">
+    <div className="min-h-screen w-full flex bg-slate-100 dark:bg-zinc-950 text-slate-900 dark:text-zinc-50">
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
@@ -106,7 +115,7 @@ export default function AdminLayout({
       {/* Sidebar */}
       <aside
         className={`
-          w-64 bg-zinc-950 border-r border-zinc-800 flex-col fixed inset-y-0 left-0 z-50 shadow-xl
+          w-64 bg-white dark:bg-zinc-950 border-r border-slate-200 dark:border-zinc-800 flex-col fixed inset-y-0 left-0 z-50 shadow-xl
           transition-transform duration-300 ease-in-out
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
           md:translate-x-0 md:flex
@@ -115,11 +124,11 @@ export default function AdminLayout({
         {/* Mobile Close Button */}
         <button
           onClick={() => setSidebarOpen(false)}
-          className="absolute top-4 right-4 p-2 rounded-lg hover:bg-zinc-800 md:hidden"
+          className="absolute top-4 right-4 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 md:hidden"
         >
-          <X className="w-5 h-5 text-zinc-400" />
+          <X className="w-5 h-5 text-slate-500 dark:text-zinc-400" />
         </button>
-        <div className="h-16 px-6 border-b border-zinc-800 flex items-center gap-3">
+        <div className="h-16 px-6 border-b border-slate-200 dark:border-zinc-800 flex items-center gap-3">
           <div className="p-1.5 bg-blue-500/10 rounded-lg border border-blue-500/20">
             <ThemedLogo
               width={20}
@@ -127,17 +136,17 @@ export default function AdminLayout({
             />
           </div>
           <div>
-            <h1 className="text-base font-bold text-zinc-50 tracking-tight leading-none">
+            <h1 className="text-base font-bold text-slate-800 dark:text-zinc-50 tracking-tight leading-none">
               SIGMA Bantul
             </h1>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mt-1 leading-none">
+            <p className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase tracking-wider font-medium mt-1 leading-none">
               Admin Panel
             </p>
           </div>
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-          <div className="text-[11px] font-semibold text-zinc-500 uppercase tracking-widest mb-4 px-2">
+          <div className="text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-4 px-2">
             Menu Utama
           </div>
           {menuItems.map((item) => {
@@ -150,11 +159,11 @@ export default function AdminLayout({
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                   isActive
                     ? "bg-blue-600 font-semibold text-white shadow-md shadow-blue-900/20"
-                    : "text-zinc-400 hover:bg-zinc-800/80 hover:text-zinc-100"
+                    : "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800/80 hover:text-slate-900 dark:hover:text-zinc-100"
                 }`}
               >
                 <Icon
-                  className={`w-5 h-5 ${isActive ? "text-white" : "text-zinc-500"}`}
+                  className={`w-5 h-5 ${isActive ? "text-white" : "text-slate-500 dark:text-zinc-500"}`}
                 />
                 <span>{item.label}</span>
               </Link>
@@ -162,16 +171,16 @@ export default function AdminLayout({
           })}
         </nav>
 
-        <div className="p-4 border-t border-zinc-800 bg-zinc-900/50">
+        <div className="p-4 border-t border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50">
           <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700">
-              <UserCircle className="w-5 h-5 text-zinc-400" />
+            <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center border border-slate-200 dark:border-zinc-700">
+              <UserCircle className="w-5 h-5 text-slate-400 dark:text-zinc-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-zinc-500 font-medium leading-tight">
+              <p className="text-xs text-slate-400 dark:text-zinc-500 font-medium leading-tight">
                 Logged in as
               </p>
-              <p className="text-sm font-semibold text-zinc-200 truncate leading-tight">
+              <p className="text-sm font-semibold text-slate-800 dark:text-zinc-200 truncate leading-tight">
                 {user?.name || "Administrator"}
               </p>
             </div>
@@ -180,7 +189,7 @@ export default function AdminLayout({
             variant="outline"
             size="sm"
             onClick={handleLogout}
-            className="w-full bg-zinc-900 border-zinc-700 text-zinc-400 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-colors justify-start px-3"
+            className="w-full bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-colors justify-start px-3"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Logout Account
@@ -190,19 +199,36 @@ export default function AdminLayout({
 
       {/* Main */}
       <main className="flex-1 min-h-screen w-full md:pl-64">
-        <header className="h-16 bg-zinc-900 border-b border-zinc-800 px-4 md:px-6 flex items-center sticky top-0 z-40">
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-lg hover:bg-zinc-800 mr-3 md:hidden"
-          >
-            <Menu className="w-5 h-5 text-zinc-400" />
-          </button>
+        <header className="h-16 bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 px-4 md:px-6 flex items-center justify-between sticky top-0 z-40">
+          <div className="flex items-center">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 mr-3 md:hidden"
+            >
+              <Menu className="w-5 h-5 text-slate-600 dark:text-zinc-400" />
+            </button>
 
-          <h2 className="text-sm md:text-base font-semibold text-zinc-100">
-            {menuItems.find((item) => item.href === pathname)?.label ||
-              "Admin Panel"}
-          </h2>
+            <h2 className="text-sm md:text-base font-semibold text-slate-800 dark:text-zinc-100">
+              {menuItems.find((item) => item.href === pathname)?.label ||
+                "Admin Panel"}
+            </h2>
+          </div>
+
+          {/* Theme Toggle */}
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="p-2 rounded-full border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+            title="Toggle Tema"
+          >
+            {mounted && theme === "dark" ? (
+              <Sun className="h-4 w-4 text-zinc-400" />
+            ) : mounted && theme !== "dark" ? (
+              <Moon className="h-4 w-4 text-slate-600" />
+            ) : (
+              <div className="h-4 w-4" />
+            )}
+          </button>
         </header>
         <div className="p-4 md:p-6">{children}</div>
       </main>

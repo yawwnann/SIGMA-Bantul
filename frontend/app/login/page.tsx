@@ -35,7 +35,7 @@ export default function LoginPage() {
 
       if (token) {
         // Redirect based on user role
-        if (user.role === "SHELTER_OFFICER") {
+        if (user.role === "EVACUATION_LOCATION_OFFICER") {
           window.location.replace("/officer/dashboard");
         } else if (user.role === "ADMIN") {
           window.location.replace("/admin/dashboard");

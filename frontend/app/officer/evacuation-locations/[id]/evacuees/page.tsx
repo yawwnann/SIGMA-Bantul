@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { evacueeApi, shelterApi, type CreateEvacueeDto } from "@/api";
+import { evacueeApi, evacuationLocationApi, type CreateEvacueeDto } from "@/api";
 import {
   EvacueeGender,
   EvacueeStatus,
   type Evacuee,
-  type Shelter,
+  type EvacuationLocation,
 } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,16 +37,16 @@ import {
 export default function EvacueesPage() {
   const params = useParams();
   const router = useRouter();
-  const shelterId = parseInt(params.id as string);
+  const evacuationLocationId = parseInt(params.id as string);
 
-  const [shelter, setShelter] = useState<Shelter | null>(null);
+  const [evacuationLocation, setEvacuationLocation] = useState<EvacuationLocation | null>(null);
   const [evacuees, setEvacuees] = useState<Evacuee[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isQuickMode, setIsQuickMode] = useState(false);
   const [editingEvacuee, setEditingEvacuee] = useState<Evacuee | null>(null);
   const [formData, setFormData] = useState<CreateEvacueeDto>({
-    shelterId,
+    evacuationLocationId,
     name: "",
     gender: EvacueeGender.MALE,
     age: 0,
@@ -55,11 +55,11 @@ export default function EvacueesPage() {
 
   const fetchData = async () => {
     try {
-      const [shelterData, evacueeData] = await Promise.all([
-        shelterApi.getById(shelterId),
-        evacueeApi.getAll(shelterId),
+      const [evacuationLocationData, evacueeData] = await Promise.all([
+        evacuationLocationApi.getById(evacuationLocationId),
+        evacueeApi.getAll(evacuationLocationId),
       ]);
-      setShelter(shelterData);
+      setEvacuationLocation(evacuationLocationData);
       setEvacuees(evacueeData);
     } catch (error: any) {
       toast.error("Gagal memuat data");
@@ -70,7 +70,7 @@ export default function EvacueesPage() {
 
   useEffect(() => {
     fetchData();
-  }, [shelterId]);
+  }, [evacuationLocationId]);
 
   const handleSubmit = async () => {
     try {
@@ -118,7 +118,7 @@ export default function EvacueesPage() {
   const resetForm = () => {
     setEditingEvacuee(null);
     setFormData({
-      shelterId,
+      evacuationLocationId,
       name: "",
       gender: EvacueeGender.MALE,
       age: 0,
@@ -140,20 +140,20 @@ export default function EvacueesPage() {
     );
   }
 
-  if (!shelter) {
+  if (!evacuationLocation) {
     return (
       <div className="flex flex-col items-center justify-center min-h-100 text-zinc-500">
         <AlertCircle className="w-12 h-12 mb-4 opacity-50" />
-        <p>Shelter tidak ditemukan</p>
+        <p>Lokasi evakuasi tidak ditemukan</p>
       </div>
     );
   }
 
-  const currentOccupancy = shelter.currentOccupancy ?? 0;
+  const currentOccupancy = evacuationLocation.currentOccupancy ?? 0;
   const activeEvacuees = evacuees.filter(
     (e) => e.status === EvacueeStatus.ACTIVE,
   );
-  const occupancyPercentage = (currentOccupancy / shelter.capacity) * 100;
+  const occupancyPercentage = (currentOccupancy / evacuationLocation.capacity) * 100;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -162,31 +162,31 @@ export default function EvacueesPage() {
         <Button
           variant="ghost"
           onClick={() => router.back()}
-          className="hover:bg-zinc-800"
+          className="hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Kembali
         </Button>
       </div>
 
-      {/* Shelter Info */}
-      <div className="bg-linear-to-br from-zinc-900 to-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+      {/* EvacuationLocation Info */}
+      <div className="bg-white dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
               <Home className="w-6 h-6 text-blue-500" />
-              {shelter.name}
+              {evacuationLocation.name}
             </h1>
-            <p className="text-zinc-400 text-sm flex items-center gap-1.5">
+            <p className="text-slate-500 dark:text-zinc-400 text-sm flex items-center gap-1.5">
               <MapPin className="w-4 h-4" />
-              {shelter.address || "Alamat tidak tersedia"}
+              {evacuationLocation.address || "Alamat tidak tersedia"}
             </p>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-bold text-white mb-1">
-              {shelter.currentOccupancy} / {shelter.capacity}
+            <div className="text-3xl font-bold text-slate-800 dark:text-white mb-1">
+              {evacuationLocation.currentOccupancy} / {evacuationLocation.capacity}
             </div>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-slate-400 dark:text-zinc-500">
               {occupancyPercentage.toFixed(0)}% Terisi
             </p>
           </div>
@@ -194,7 +194,7 @@ export default function EvacueesPage() {
 
         {/* Progress Bar */}
         <div className="mt-4">
-          <div className="w-full bg-zinc-800 rounded-full h-3 overflow-hidden">
+          <div className="w-full bg-slate-100 dark:bg-zinc-800 rounded-full h-3 overflow-hidden">
             <div
               className={`h-full transition-all duration-500 ${
                 occupancyPercentage > 90
@@ -211,48 +211,48 @@ export default function EvacueesPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-lg">
-              <Users className="w-5 h-5 text-blue-400" />
+            <div className="p-2 bg-blue-50 dark:bg-blue-500/10 rounded-lg">
+              <Users className="w-5 h-5 text-blue-500 dark:text-blue-400" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-2xl font-bold text-slate-800 dark:text-white">
                 {activeEvacuees.length}
               </div>
-              <p className="text-xs text-zinc-500">Pengungsi Aktif</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-500">Pengungsi Aktif</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/10 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-emerald-400" />
+            <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg">
+              <CheckCircle className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-2xl font-bold text-slate-800 dark:text-white">
                 {
                   evacuees.filter(
                     (e) => e.status === EvacueeStatus.RETURNED_HOME,
                   ).length
                 }
               </div>
-              <p className="text-xs text-zinc-500">Sudah Pulang</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-500">Sudah Pulang</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-500/10 rounded-lg">
-              <Home className="w-5 h-5 text-amber-400" />
+            <div className="p-2 bg-amber-50 dark:bg-amber-500/10 rounded-lg">
+              <Home className="w-5 h-5 text-amber-500 dark:text-amber-400" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-white">
-                {shelter.capacity - currentOccupancy}
+              <div className="text-2xl font-bold text-slate-800 dark:text-white">
+                {evacuationLocation.capacity - currentOccupancy}
               </div>
-              <p className="text-xs text-zinc-500">Kapasitas Tersisa</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-500">Kapasitas Tersisa</p>
             </div>
           </div>
         </div>
@@ -260,7 +260,7 @@ export default function EvacueesPage() {
 
       {/* Actions */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className="text-xl font-bold text-white">Daftar Pengungsi</h2>
+        <h2 className="text-xl font-bold text-slate-800 dark:text-white">Daftar Pengungsi</h2>
         <div className="flex gap-2">
           <Button
             onClick={() => {
@@ -269,7 +269,7 @@ export default function EvacueesPage() {
               setIsDialogOpen(true);
             }}
             variant="outline"
-            className="bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-400"
+            className="bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400"
           >
             <UserPlus className="w-4 h-4 mr-2" />
             Daftar Cepat
@@ -280,7 +280,7 @@ export default function EvacueesPage() {
               setIsQuickMode(false);
               setIsDialogOpen(true);
             }}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             <UserPlus className="w-4 h-4 mr-2" />
             Daftar Lengkap
@@ -289,17 +289,17 @@ export default function EvacueesPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
         <Table>
-          <TableHeader className="bg-zinc-950/50">
-            <TableRow className="border-b border-zinc-800 hover:bg-transparent">
-              <TableHead className="text-zinc-400">Nama</TableHead>
-              <TableHead className="text-zinc-400">Gender</TableHead>
-              <TableHead className="text-zinc-400">Umur</TableHead>
-              <TableHead className="text-zinc-400">Jumlah Keluarga</TableHead>
-              <TableHead className="text-zinc-400">Kontak</TableHead>
-              <TableHead className="text-zinc-400">Status</TableHead>
-              <TableHead className="text-zinc-400 text-right">Aksi</TableHead>
+          <TableHeader className="bg-slate-50/80 dark:bg-zinc-950/50">
+            <TableRow className="border-b border-slate-200 dark:border-zinc-800 hover:bg-transparent">
+              <TableHead className="text-slate-500 dark:text-zinc-400">Nama</TableHead>
+              <TableHead className="text-slate-500 dark:text-zinc-400">Gender</TableHead>
+              <TableHead className="text-slate-500 dark:text-zinc-400">Umur</TableHead>
+              <TableHead className="text-slate-500 dark:text-zinc-400">Jumlah Keluarga</TableHead>
+              <TableHead className="text-slate-500 dark:text-zinc-400">Kontak</TableHead>
+              <TableHead className="text-slate-500 dark:text-zinc-400">Status</TableHead>
+              <TableHead className="text-slate-500 dark:text-zinc-400 text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -307,7 +307,7 @@ export default function EvacueesPage() {
               <TableRow>
                 <TableCell
                   colSpan={7}
-                  className="text-center py-12 text-zinc-500"
+                  className="text-center py-12 text-slate-500 dark:text-zinc-500"
                 >
                   <Users className="w-8 h-8 opacity-20 mx-auto mb-3" />
                   Belum ada pengungsi terdaftar
@@ -317,33 +317,33 @@ export default function EvacueesPage() {
               evacuees.map((evacuee) => (
                 <TableRow
                   key={evacuee.id}
-                  className="border-b border-zinc-800/50 hover:bg-zinc-800/20"
+                  className="border-b border-slate-100 dark:border-zinc-800/50 hover:bg-slate-50/50 dark:hover:bg-zinc-800/20"
                 >
-                  <TableCell className="font-medium text-zinc-200">
+                  <TableCell className="font-medium text-slate-800 dark:text-zinc-200">
                     {evacuee.name}
                   </TableCell>
-                  <TableCell className="text-zinc-400">
+                  <TableCell className="text-slate-600 dark:text-zinc-400">
                     {evacuee.gender === EvacueeGender.MALE
                       ? "Laki-laki"
                       : "Perempuan"}
                   </TableCell>
-                  <TableCell className="text-zinc-400">
+                  <TableCell className="text-slate-600 dark:text-zinc-400">
                     {evacuee.age} tahun
                   </TableCell>
-                  <TableCell className="text-zinc-400">
+                  <TableCell className="text-slate-600 dark:text-zinc-400">
                     {evacuee.familySize} orang
                   </TableCell>
-                  <TableCell className="text-zinc-400">
+                  <TableCell className="text-slate-600 dark:text-zinc-400">
                     {evacuee.phone || "-"}
                   </TableCell>
                   <TableCell>
                     <Badge
                       className={
                         evacuee.status === EvacueeStatus.ACTIVE
-                          ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-500/20"
                           : evacuee.status === EvacueeStatus.RETURNED_HOME
-                            ? "bg-blue-500/10 text-blue-500 border-blue-500/20"
-                            : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                            ? "bg-blue-500/10 text-blue-600 dark:text-blue-500 border-blue-500/20"
+                            : "bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-500/20"
                       }
                     >
                       {evacuee.status === EvacueeStatus.ACTIVE
@@ -359,7 +359,7 @@ export default function EvacueesPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleCheckOut(evacuee.id)}
-                        className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                        className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
                       >
                         Pulang
                       </Button>
@@ -368,7 +368,7 @@ export default function EvacueesPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(evacuee.id)}
-                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                      className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10"
                     >
                       Hapus
                     </Button>
@@ -384,12 +384,12 @@ export default function EvacueesPage() {
       {isDialogOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-xs"
             onClick={() => setIsDialogOpen(false)}
           />
-          <div className="relative bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="border-b border-zinc-800 p-6">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+          <div className="relative bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="border-b border-slate-100 dark:border-zinc-800 p-6">
+              <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
                 {isQuickMode ? (
                   <>
                     <UserPlus className="w-6 h-6 text-amber-500" />
@@ -402,17 +402,16 @@ export default function EvacueesPage() {
                   </>
                 )}
               </h2>
-              <p className="text-zinc-400 text-sm mt-2">
+              <p className="text-slate-500 dark:text-zinc-400 text-sm mt-2">
                 {isQuickMode
                   ? "Pendaftaran cepat untuk situasi darurat - data bisa dilengkapi nanti"
                   : "Masukkan data lengkap pengungsi untuk administrasi"}
               </p>
               {isQuickMode && (
-                <div className="mt-3 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
-                  <p className="text-xs text-amber-400 flex items-center gap-2">
+                <div className="mt-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg p-3">
+                  <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />
-                    Mode darurat: Hanya nama kepala keluarga dan jumlah anggota
-                    yang wajib diisi
+                    Mode darurat: Hanya nama kepala keluarga dan jumlah anggota yang wajib diisi
                   </p>
                 </div>
               )}
@@ -421,8 +420,8 @@ export default function EvacueesPage() {
             <div className="p-6 space-y-5">
               {/* Nama - Always Required */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-zinc-300">
-                  Nama Kepala Keluarga <span className="text-red-400">*</span>
+                <label className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
+                  Nama Kepala Keluarga <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -431,15 +430,15 @@ export default function EvacueesPage() {
                     setFormData({ ...formData, name: e.target.value })
                   }
                   placeholder="Contoh: Ahmad Fauzi"
-                  className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-white dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               {/* Jumlah Keluarga - Always Required */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-zinc-300">
+                <label className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
                   Jumlah Anggota Keluarga{" "}
-                  <span className="text-red-400">*</span>
+                  <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -452,9 +451,9 @@ export default function EvacueesPage() {
                   }
                   placeholder="1"
                   min="1"
-                  className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-white dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-slate-500 dark:text-zinc-500">
                   Total orang yang mengungsi (termasuk kepala keluarga)
                 </p>
               </div>
@@ -462,15 +461,15 @@ export default function EvacueesPage() {
               {/* Detail Fields - Only in Full Mode */}
               {!isQuickMode && (
                 <>
-                  <div className="border-t border-zinc-800 pt-5 mt-5">
-                    <p className="text-sm font-semibold text-zinc-400 mb-4">
+                  <div className="border-t border-slate-100 dark:border-zinc-800 pt-5 mt-5">
+                    <p className="text-sm font-semibold text-slate-500 dark:text-zinc-400 mb-4">
                       Data Detail (Opsional)
                     </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-zinc-300">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
                         Gender
                       </label>
                       <select
@@ -481,7 +480,7 @@ export default function EvacueesPage() {
                             gender: e.target.value as EvacueeGender,
                           })
                         }
-                        className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full bg-white dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value={EvacueeGender.MALE}>Laki-laki</option>
                         <option value={EvacueeGender.FEMALE}>Perempuan</option>
@@ -489,7 +488,7 @@ export default function EvacueesPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-zinc-300">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
                         Umur
                       </label>
                       <input
@@ -502,13 +501,13 @@ export default function EvacueesPage() {
                           })
                         }
                         placeholder="0"
-                        className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full bg-white dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-zinc-300">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
                       NIK (Nomor Induk Kependudukan)
                     </label>
                     <input
@@ -519,12 +518,12 @@ export default function EvacueesPage() {
                       }
                       placeholder="3402010101900001"
                       maxLength={16}
-                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-white dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-zinc-300">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
                       Nomor Telepon
                     </label>
                     <input
@@ -534,12 +533,12 @@ export default function EvacueesPage() {
                         setFormData({ ...formData, phone: e.target.value })
                       }
                       placeholder="081234567890"
-                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-white dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-zinc-300">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
                       Alamat Asal
                     </label>
                     <input
@@ -549,12 +548,12 @@ export default function EvacueesPage() {
                         setFormData({ ...formData, address: e.target.value })
                       }
                       placeholder="Alamat lengkap"
-                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-white dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-zinc-300">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
                       Kebutuhan Khusus
                     </label>
                     <input
@@ -567,12 +566,12 @@ export default function EvacueesPage() {
                         })
                       }
                       placeholder="Contoh: Kursi roda, Susu bayi, dll"
-                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-white dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-zinc-300">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
                       Kondisi Medis
                     </label>
                     <input
@@ -585,12 +584,12 @@ export default function EvacueesPage() {
                         })
                       }
                       placeholder="Contoh: Diabetes, Hipertensi, dll"
-                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-white dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-zinc-300">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
                       Catatan Tambahan
                     </label>
                     <textarea
@@ -600,7 +599,7 @@ export default function EvacueesPage() {
                       }
                       placeholder="Catatan lainnya..."
                       rows={3}
-                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      className="w-full bg-white dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     />
                   </div>
                 </>
@@ -608,22 +607,22 @@ export default function EvacueesPage() {
 
               {/* Info Box */}
               {isQuickMode ? (
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-                  <p className="text-sm text-amber-300 mb-2 font-medium">
+                <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg p-4">
+                  <p className="text-sm text-amber-800 dark:text-amber-300 mb-2 font-medium">
                     💡 Tips Pendaftaran Cepat:
                   </p>
-                  <ul className="text-xs text-amber-400 space-y-1 list-disc list-inside">
+                  <ul className="text-xs text-amber-700 dark:text-amber-400 space-y-1 list-disc list-inside">
                     <li>Cukup catat nama kepala keluarga dan jumlah anggota</li>
                     <li>Data detail bisa dilengkapi setelah situasi aman</li>
                     <li>Fokus pada evakuasi dan keselamatan terlebih dahulu</li>
                   </ul>
                 </div>
               ) : (
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-                  <p className="text-sm text-blue-300 mb-2 font-medium">
+                <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-lg p-4">
+                  <p className="text-sm text-blue-800 dark:text-blue-300 mb-2 font-medium">
                     📋 Pendaftaran Lengkap
                   </p>
-                  <p className="text-xs text-blue-400">
+                  <p className="text-xs text-blue-600 dark:text-blue-400">
                     Data lengkap membantu dalam distribusi bantuan, koordinasi
                     dengan keluarga, dan identifikasi kebutuhan khusus.
                   </p>
@@ -631,10 +630,10 @@ export default function EvacueesPage() {
               )}
             </div>
 
-            <div className="border-t border-zinc-800 p-6 flex justify-end gap-3">
+            <div className="border-t border-slate-100 dark:border-zinc-800 p-6 flex justify-end gap-3">
               <button
                 onClick={() => setIsDialogOpen(false)}
-                className="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-lg transition-colors"
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-100 rounded-lg transition-colors"
               >
                 Batal
               </button>

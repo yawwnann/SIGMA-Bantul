@@ -1,5 +1,5 @@
-import type { Shelter } from "@/types";
-import { getShelterCategoryLabel } from "./marker-icons";
+import type { EvacuationLocation } from "@/types";
+import { getEvacuationLocationCategoryLabel } from "./marker-icons";
 
 function escapeHtml(value: unknown) {
   return String(value ?? "")
@@ -10,8 +10,8 @@ function escapeHtml(value: unknown) {
     .replace(/'/g, "&#039;");
 }
 
-export function createEvacuationPopupHtml(shelter: Shelter) {
-  const categoryLabel = getShelterCategoryLabel(shelter.category);
+export function createEvacuationPopupHtml(evacuationLocation: EvacuationLocation) {
+  const categoryLabel = getEvacuationLocationCategoryLabel(evacuationLocation.category);
 
   return `
     <div class="evacuation-popup">
@@ -19,7 +19,7 @@ export function createEvacuationPopupHtml(shelter: Shelter) {
         <span>${escapeHtml(categoryLabel)}</span>
       </div>
       <div class="evacuation-popup__body">
-        <h3>${escapeHtml(shelter.name)}</h3>
+        <h3>${escapeHtml(evacuationLocation.name)}</h3>
         <dl>
           <div>
             <dt>Kategori</dt>
@@ -27,11 +27,11 @@ export function createEvacuationPopupHtml(shelter: Shelter) {
           </div>
           <div>
             <dt>Alamat</dt>
-            <dd>${escapeHtml(shelter.address || "Bantul, DIY")}</dd>
+            <dd>${escapeHtml(evacuationLocation.address || "Bantul, DIY")}</dd>
           </div>
           <div>
             <dt>Kapasitas</dt>
-            <dd>${Number(shelter.capacity || 0).toLocaleString("id-ID")}</dd>
+            <dd>${Number(evacuationLocation.capacity || 0).toLocaleString("id-ID")}</dd>
           </div>
         </dl>
       </div>

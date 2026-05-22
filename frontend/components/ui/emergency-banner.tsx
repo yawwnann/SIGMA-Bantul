@@ -149,7 +149,7 @@ function EmergencyBannerInner({
         <AlertTitle className="font-bold">ZONA KUNING: WASPADA</AlertTitle>
         <AlertDescription>
           Anda berada di area waspada. Harap ikuti rute evakuasi yang tersedia
-          menuju shelter aman terdekat dengan hati-hati.
+          menuju evacuationLocation aman terdekat dengan hati-hati.
         </AlertDescription>
       </Alert>
     );

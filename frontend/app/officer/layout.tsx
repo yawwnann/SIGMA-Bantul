@@ -16,7 +16,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { LogOut, UserCircle } from "lucide-react";
+import { LogOut, UserCircle, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
 
 type CurrentUser = {
   name: string;
@@ -34,6 +35,12 @@ export default function OfficerLayout({
   const [authed, setAuthed] = useState(false);
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -44,8 +51,8 @@ export default function OfficerLayout({
       return;
     }
 
-    if (currentUser.role !== "SHELTER_OFFICER") {
-      toast.error("Akses ditolak. Anda bukan petugas shelter.");
+    if (currentUser.role !== "EVACUATION_LOCATION_OFFICER") {
+      toast.error("Akses ditolak. Anda bukan petugas evakuasi.");
       window.location.replace("/login");
       return;
     }
@@ -58,7 +65,7 @@ export default function OfficerLayout({
   const pageTitle = useMemo(() => {
     if (pathname.startsWith("/officer/dashboard")) return "Dashboard";
     if (pathname.includes("/evacuees")) return "Data Pengungsi";
-    return "Petugas Shelter";
+    return "Petugas Evakuasi";
   }, [pathname]);
 
   const handleLogout = () => {
@@ -69,7 +76,7 @@ export default function OfficerLayout({
 
   if (!checked) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-100 dark:bg-zinc-950 flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -78,8 +85,8 @@ export default function OfficerLayout({
   if (!authed) return null;
 
   return (
-    <div className="dark min-h-screen w-full flex flex-col bg-zinc-950 text-zinc-50">
-      <header className="h-16 bg-zinc-900 border-b border-zinc-800 px-4 md:px-6 flex items-center justify-between sticky top-0 z-40">
+    <div className="min-h-screen w-full flex flex-col bg-slate-100 dark:bg-zinc-950 text-slate-900 dark:text-zinc-50">
+      <header className="h-16 bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 px-4 md:px-6 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3 min-w-0">
           <Link href="/officer/dashboard" className="flex items-center gap-3">
             <div className="p-1.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
@@ -89,25 +96,40 @@ export default function OfficerLayout({
               />
             </div>
             <div className="hidden sm:block">
-              <div className="text-sm font-bold text-zinc-50 tracking-tight leading-none">
+              <div className="text-sm font-bold text-slate-800 dark:text-zinc-50 tracking-tight leading-none">
                 SIGMA Bantul
               </div>
-              <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mt-1 leading-none">
-                Petugas Shelter
+              <div className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase tracking-wider font-medium mt-1 leading-none">
+                Petugas Evakuasi
               </div>
             </div>
           </Link>
 
-          <div className="hidden md:block h-8 w-px bg-zinc-800" />
+          <div className="hidden md:block h-8 w-px bg-slate-200 dark:bg-zinc-800" />
 
-          <h2 className="text-sm md:text-base font-semibold text-zinc-100 truncate">
+          <h2 className="text-sm md:text-base font-semibold text-slate-800 dark:text-zinc-100 truncate">
             {pageTitle}
           </h2>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="hidden md:flex items-center gap-2 text-xs text-zinc-400 max-w-[320px]">
-            <UserCircle className="w-4 h-4 text-zinc-500" />
+          {/* Theme Toggle */}
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="p-2 rounded-full border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors mr-1"
+            title="Toggle Tema"
+          >
+            {mounted && theme === "dark" ? (
+              <Sun className="h-4 w-4 text-zinc-400" />
+            ) : mounted && theme !== "dark" ? (
+              <Moon className="h-4 w-4 text-slate-600" />
+            ) : (
+              <div className="h-4 w-4" />
+            )}
+          </button>
+
+          <div className="hidden md:flex items-center gap-2 text-xs text-slate-500 dark:text-zinc-400 max-w-[320px]">
+            <UserCircle className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
             <span className="truncate">{user?.name}</span>
           </div>
 
@@ -115,7 +137,7 @@ export default function OfficerLayout({
             variant="outline"
             size="sm"
             onClick={() => setLogoutDialogOpen(true)}
-            className="bg-zinc-900 border-zinc-700 text-zinc-400 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-colors"
+            className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-colors"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Logout
@@ -126,20 +148,20 @@ export default function OfficerLayout({
       <main className="flex-1 p-4 md:p-6">{children}</main>
 
       <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
-        <DialogContent className="bg-zinc-900 border border-zinc-800 text-zinc-50">
+        <DialogContent className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-zinc-50">
           <DialogHeader>
             <DialogTitle>Konfirmasi Logout</DialogTitle>
-            <DialogDescription className="text-zinc-400">
-              Kamu yakin ingin keluar dari akun petugas shelter?
+            <DialogDescription className="text-slate-500 dark:text-zinc-400">
+              Kamu yakin ingin keluar dari akun petugas evakuasi?
             </DialogDescription>
           </DialogHeader>
 
-          <DialogFooter className="border-zinc-800 bg-zinc-900/50">
+          <DialogFooter className="border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50">
             <DialogClose
               render={
                 <Button
                   variant="outline"
-                  className="border-zinc-700 bg-zinc-950 text-zinc-200 hover:bg-zinc-800"
+                  className="border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800"
                 />
               }
             >

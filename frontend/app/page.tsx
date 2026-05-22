@@ -11,7 +11,7 @@ import {
 import { analysisApi } from "@/api/analysis";
 import { setBantulPolygon, isWithinBantul } from "@/lib/bantul-boundary";
 import { socketService } from "@/lib/socket";
-import type { Earthquake, Shelter, HazardZone, PublicFacility } from "@/types";
+import type { Earthquake, EvacuationLocation, HazardZone, PublicFacility } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ import {
   Activity,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-// Import hook dan service baru untuk nearby shelters
+// Import hook dan service baru untuk nearby evacuationLocations
 import { useUserLocation } from "@/hooks/use-user-location";
 import { evacuationService } from "@/services/evacuation.service";
 
@@ -105,12 +105,12 @@ export default function Dashboard() {
 
   // Data State
   const [earthquakes, setEarthquakes] = useState<Earthquake[]>([]);
-  const [shelters, setShelters] = useState<Shelter[]>([]);
+  const [evacuationLocations, setEvacuationLocations] = useState<EvacuationLocation[]>([]);
   const [hazardZones, setHazardZones] = useState<HazardZone[]>([]);
   const [facilities, setFacilities] = useState<PublicFacility[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [roadNetwork, setRoadNetwork] = useState<any>(null);
-  const [expandedShelterId, setExpandedShelterId] = useState<number | null>(
+  const [expandedEvacuationLocationId, setExpandedEvacuationLocationId] = useState<number | null>(
     null,
   );
 
@@ -126,7 +126,7 @@ export default function Dashboard() {
   } | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [calculatedRoute, setCalculatedRoute] = useState<any>(null);
-  const [, setNearestShelters] = useState<(Shelter & { distance: number })[]>(
+  const [, setNearestEvacuationLocations] = useState<(EvacuationLocation & { distance: number })[]>(
     [],
   );
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -153,7 +153,7 @@ export default function Dashboard() {
     zoom?: number;
   } | null>(null);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  const [, setIsShelterDetailOpen] = useState(false);
+  const [, setIsEvacuationLocationDetailOpen] = useState(false);
 
   useEffect(() => {
     setCurrentTime(new Date());
@@ -175,10 +175,10 @@ export default function Dashboard() {
   }, []);
 
   // Refs untuk menghindari stale closure di socket callback
-  const sheltersRef = useRef(shelters);
+  const evacuationLocationsRef = useRef(evacuationLocations);
   useEffect(() => {
-    sheltersRef.current = shelters;
-  }, [shelters]);
+    evacuationLocationsRef.current = evacuationLocations;
+  }, [evacuationLocations]);
   const userLocationRef = useRef(userLocation);
   useEffect(() => {
     userLocationRef.current = userLocation;
@@ -187,11 +187,11 @@ export default function Dashboard() {
   const emergencyHandlerRef = useRef<() => void>(() => {});
 
   const handleEmergencyEvacuation = useCallback(() => {
-    const currentShelters = sheltersRef.current;
+    const currentEvacuationLocations = evacuationLocationsRef.current;
 
-    if (currentShelters.length === 0) {
+    if (currentEvacuationLocations.length === 0) {
       toast.info("Mencari rute evakuasi darurat...", {
-        description: "Data shelter belum tersedia, mohon tunggu sebentar",
+        description: "Data evacuationLocation belum tersedia, mohon tunggu sebentar",
         duration: 5000,
       });
       return;
@@ -212,16 +212,16 @@ export default function Dashboard() {
           return;
         }
 
-        let availableShelters = currentShelters.filter(
+        let availableEvacuationLocations = currentEvacuationLocations.filter(
           (s) => s.capacity - (s.currentOccupancy ?? 0) > 0,
         );
-        if (availableShelters.length === 0) {
-          availableShelters = [...currentShelters];
+        if (availableEvacuationLocations.length === 0) {
+          availableEvacuationLocations = [...currentEvacuationLocations];
         }
 
-        let nearestShelter = availableShelters[0];
+        let nearestEvacuationLocation = availableEvacuationLocations[0];
         let minDistance = Infinity;
-        availableShelters.forEach((s) => {
+        availableEvacuationLocations.forEach((s) => {
           const coords = s.geometry as { coordinates: [number, number] };
           const dist = calculateDistance(
             userLat,
@@ -231,11 +231,11 @@ export default function Dashboard() {
           );
           if (dist < minDistance) {
             minDistance = dist;
-            nearestShelter = s;
+            nearestEvacuationLocation = s;
           }
         });
 
-        const targetCoords = nearestShelter.geometry as {
+        const targetCoords = nearestEvacuationLocation.geometry as {
           coordinates: [number, number];
         };
 
@@ -243,7 +243,7 @@ export default function Dashboard() {
         setRoutingMode(true);
 
         try {
-          toast.info(`Menghitung rute ke ${nearestShelter.name}...`);
+          toast.info(`Menghitung rute ke ${nearestEvacuationLocation.name}...`);
           const route = await roadApi.calculateRoute(
             userLat,
             userLng,
@@ -257,10 +257,10 @@ export default function Dashboard() {
             lat: targetCoords.coordinates[1],
             lng: targetCoords.coordinates[0],
           });
-          setDestinationName(nearestShelter.name);
+          setDestinationName(nearestEvacuationLocation.name);
           setIsMapExpanded(true);
           toast.success(
-            `Rute darurat ke ${nearestShelter.name} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
+            `Rute darurat ke ${nearestEvacuationLocation.name} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
           );
         } catch (error) {
           console.error(
@@ -268,7 +268,7 @@ export default function Dashboard() {
             error,
           );
           toast.error("Gagal menghitung rute darurat dari lokasi saat ini.", {
-            description: "Silakan coba lagi atau pilih shelter secara manual",
+            description: "Silakan coba lagi atau pilih evacuationLocation secara manual",
             duration: 5000,
           });
         } finally {
@@ -353,7 +353,7 @@ export default function Dashboard() {
       } catch {
         // gagal fetch boundary, fallback bounding box tetap jalan
       }
-      // Don't fetch all shelters here - will fetch nearby shelters based on user location
+      // Don't fetch all evacuationLocations here - will fetch nearby evacuationLocations based on user location
       setHazardZones(hazardData as HazardZone[]);
       setEarthquakes(earthquakesResponse.data);
       setFacilities(facilitiesData as PublicFacility[]);
@@ -366,42 +366,42 @@ export default function Dashboard() {
     }
   };
 
-  // NEW: Fetch nearby shelters when user location is available
+  // NEW: Fetch nearby evacuationLocations when user location is available
   useEffect(() => {
     if (!userLocation) return;
 
-    const fetchNearbyShelters = async () => {
+    const fetchNearbyEvacuationLocations = async () => {
       try {
         console.log(
-          "[Dashboard] Fetching nearby shelters for location:",
+          "[Dashboard] Fetching nearby evacuationLocations for location:",
           userLocation,
         );
-        const nearbyShelters = await evacuationService.getNearbyShelters({
+        const nearbyEvacuationLocations = await evacuationService.getNearbyEvacuationLocations({
           lat: userLocation.lat,
           lng: userLocation.lng,
           radius: nearbyRadius,
-          limit: 10, // max 10 shelters
+          limit: 10, // max 10 evacuationLocations
         });
 
         console.log(
-          "[Dashboard] Found nearby shelters:",
-          nearbyShelters.length,
+          "[Dashboard] Found nearby evacuationLocations:",
+          nearbyEvacuationLocations.length,
         );
-        setShelters(nearbyShelters as Shelter[]);
+        setEvacuationLocations(nearbyEvacuationLocations as EvacuationLocation[]);
 
-        if (nearbyShelters.length > 0) {
+        if (nearbyEvacuationLocations.length > 0) {
           toast.success(
-            `Ditemukan ${nearbyShelters.length} lokasi evakuasi terdekat`,
+            `Ditemukan ${nearbyEvacuationLocations.length} lokasi evakuasi terdekat`,
           );
         }
       } catch (error) {
-        console.error("[Dashboard] Error fetching nearby shelters:", error);
+        console.error("[Dashboard] Error fetching nearby evacuationLocations:", error);
         toast.error("Gagal memuat lokasi evakuasi terdekat");
-        setShelters([]); // Set empty if error
+        setEvacuationLocations([]); // Set empty if error
       }
     };
 
-    fetchNearbyShelters();
+    fetchNearbyEvacuationLocations();
   }, [userLocation, nearbyRadius]);
 
   // NEW: Auto set selected location and fly to user location when available
@@ -485,7 +485,7 @@ export default function Dashboard() {
         zone === "RED"
           ? "Tetap berlindung di tempat aman!"
           : zone === "YELLOW"
-            ? "Segera evakuasi ke shelter terdekat!"
+            ? "Segera evakuasi ke evacuationLocation terdekat!"
             : "Pantau informasi gempa lebih lanjut.";
 
       const borderColor =
@@ -534,27 +534,27 @@ export default function Dashboard() {
         return;
       }
       setSelectedLocation({ lat, lng });
-      if (shelters.length > 0) {
-        const withDistance = shelters.map((shelter) => {
-          const coords = shelter.geometry as { coordinates: [number, number] };
+      if (evacuationLocations.length > 0) {
+        const withDistance = evacuationLocations.map((evacuationLocation) => {
+          const coords = evacuationLocation.geometry as { coordinates: [number, number] };
           const distance = calculateDistance(
             lat,
             lng,
             coords.coordinates[1],
             coords.coordinates[0],
           );
-          return { ...shelter, distance };
+          return { ...evacuationLocation, distance };
         });
         withDistance.sort((a, b) => a.distance - b.distance);
-        setNearestShelters(withDistance.slice(0, 3));
+        setNearestEvacuationLocations(withDistance.slice(0, 3));
       }
     },
-    [shelters],
+    [evacuationLocations],
   );
 
   // Handle emergency routing from push notification click or toast
   useEffect(() => {
-    if (shelters.length === 0) return;
+    if (evacuationLocations.length === 0) return;
 
     const searchParams = new URLSearchParams(window.location.search);
     if (searchParams.get("emergency") === "true") {
@@ -593,28 +593,28 @@ export default function Dashboard() {
             return;
           }
 
-          // 1. Find shelters with available capacity
-          let availableShelters = shelters.filter(
+          // 1. Find evacuationLocations with available capacity
+          let availableEvacuationLocations = evacuationLocations.filter(
             (s) => s.capacity - (s.currentOccupancy ?? 0) > 0,
           );
           console.log(
-            "[Emergency] Available shelters:",
-            availableShelters.length,
+            "[Emergency] Available evacuationLocations:",
+            availableEvacuationLocations.length,
           );
 
-          if (availableShelters.length === 0) {
+          if (availableEvacuationLocations.length === 0) {
             toast.error(
-              "Peringatan: Tidak ada shelter dengan kapasitas tersedia. Mencari shelter terdekat...",
+              "Peringatan: Tidak ada evacuationLocation dengan kapasitas tersedia. Mencari evacuationLocation terdekat...",
             );
-            // Fallback to all shelters if none available
-            availableShelters = [...shelters];
+            // Fallback to all evacuationLocations if none available
+            availableEvacuationLocations = [...evacuationLocations];
           }
 
-          // 2. Locate nearest available shelter
-          let nearestShelter = availableShelters[0];
+          // 2. Locate nearest available evacuationLocation
+          let nearestEvacuationLocation = availableEvacuationLocations[0];
           let minDistance = Infinity;
 
-          availableShelters.forEach((s) => {
+          availableEvacuationLocations.forEach((s) => {
             const coords = s.geometry as { coordinates: [number, number] };
             const dist = calculateDistance(
               userLat,
@@ -624,11 +624,11 @@ export default function Dashboard() {
             );
             if (dist < minDistance) {
               minDistance = dist;
-              nearestShelter = s;
+              nearestEvacuationLocation = s;
             }
           });
 
-          const targetCoords = nearestShelter.geometry as {
+          const targetCoords = nearestEvacuationLocation.geometry as {
             coordinates: [number, number];
           };
 
@@ -638,7 +638,7 @@ export default function Dashboard() {
 
           // 3. Immediately calculate map route
           try {
-            toast.info(`Menghitung rute ke ${nearestShelter.name}...`);
+            toast.info(`Menghitung rute ke ${nearestEvacuationLocation.name}...`);
             const route = await roadApi.calculateRoute(
               userLat,
               userLng,
@@ -652,7 +652,7 @@ export default function Dashboard() {
               lat: targetCoords.coordinates[1],
               lng: targetCoords.coordinates[0],
             });
-            setDestinationName(nearestShelter.name);
+            setDestinationName(nearestEvacuationLocation.name);
             setIsMapExpanded(true);
 
             const threateningEq = earthquakes.find((eq) =>
@@ -663,7 +663,7 @@ export default function Dashboard() {
             setRoutingMode(false);
 
             toast.success(
-              `Rute darurat ke ${nearestShelter.name} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
+              `Rute darurat ke ${nearestEvacuationLocation.name} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
             );
           } catch (error) {
             console.error(
@@ -671,7 +671,7 @@ export default function Dashboard() {
               error,
             );
             toast.error("Gagal menghitung rute darurat dari lokasi saat ini.", {
-              description: "Silakan coba lagi atau pilih shelter secara manual",
+              description: "Silakan coba lagi atau pilih evacuationLocation secara manual",
               duration: 5000,
             });
           } finally {
@@ -716,7 +716,7 @@ export default function Dashboard() {
         },
       );
     }
-  }, [shelters.length]);
+  }, [evacuationLocations.length]);
 
   const handleMapClick = (lat: number, lng: number) => {
     if (!isWithinBantul(lat, lng)) {
@@ -801,16 +801,16 @@ export default function Dashboard() {
     }
   };
 
-  const calculateRouteToShelter = async (
-    shelterLat: number,
-    shelterLng: number,
-    shelterName: string,
+  const calculateRouteToEvacuationLocation = async (
+    evacuationLocationLat: number,
+    evacuationLocationLng: number,
+    evacuationLocationName: string,
   ) => {
     // Jika routing mode ON tanpa routeStart, set tujuan dulu
     if (routingMode && !routeStart) {
-      setRouteEnd({ lat: shelterLat, lng: shelterLng });
+      setRouteEnd({ lat: evacuationLocationLat, lng: evacuationLocationLng });
       toast.info(
-        `Tujuan di set ke ${shelterName}. Klik pada peta untuk memilih titik awal evakuasi Anda.`,
+        `Tujuan di set ke ${evacuationLocationName}. Klik pada peta untuk memilih titik awal evakuasi Anda.`,
       );
       return;
     }
@@ -846,14 +846,14 @@ export default function Dashboard() {
           const route = await roadApi.calculateRoute(
             startLat,
             startLng,
-            shelterLat,
-            shelterLng,
+            evacuationLocationLat,
+            evacuationLocationLng,
           );
 
           setCalculatedRoute(route);
           setRouteStart({ lat: startLat, lng: startLng });
-          setRouteEnd({ lat: shelterLat, lng: shelterLng });
-          setDestinationName(shelterName);
+          setRouteEnd({ lat: evacuationLocationLat, lng: evacuationLocationLng });
+          setDestinationName(evacuationLocationName);
           setIsMapExpanded(true);
 
           const threateningEq = earthquakes.find((eq) =>
@@ -862,7 +862,7 @@ export default function Dashboard() {
           if (threateningEq) setSelectedEarthquake(threateningEq);
 
           toast.success(
-            `Rute ke ${shelterName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
+            `Rute ke ${evacuationLocationName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
           );
         } catch (error) {
           console.error("Error calculating route:", error);
@@ -904,7 +904,7 @@ export default function Dashboard() {
             </h2>
             <p className="text-slate-600 dark:text-zinc-400 text-sm">
               Sedang melacak lokasi Anda dan menghitung rute teraman menuju
-              shelter terdekat. Mohon tunggu sebentar.
+              evacuationLocation terdekat. Mohon tunggu sebentar.
             </p>
           </div>
         </div>
@@ -1018,18 +1018,18 @@ export default function Dashboard() {
                       </Card>
                     </div>
                   )}
-                  {/* Nearest Shelter Module */}
-                  {shelters.length > 0 && selectedLocation && (
+                  {/* Nearest EvacuationLocation Module */}
+                  {evacuationLocations.length > 0 && selectedLocation && (
                     <div className="space-y-3">
                       <h2 className="text-sm font-bold text-slate-900 dark:text-zinc-100 border-b border-slate-200 dark:border-zinc-800 pb-2 flex items-center justify-between">
-                        <span>5 Shelter Terdekat</span>
+                        <span>5 EvacuationLocation Terdekat</span>
                         <Badge variant="outline" className="text-xs">
-                          {shelters.length} total
+                          {evacuationLocations.length} total
                         </Badge>
                       </h2>
                       <div className="space-y-2">
-                        {shelters.slice(0, 5).map((shelter, i) => {
-                          const coords = shelter.geometry as {
+                        {evacuationLocations.slice(0, 5).map((evacuationLocation, i) => {
+                          const coords = evacuationLocation.geometry as {
                             coordinates: [number, number];
                           };
                           const distance = selectedLocation
@@ -1043,13 +1043,13 @@ export default function Dashboard() {
 
                           return (
                             <Card
-                              key={shelter.id}
-                              className={`bg-white dark:bg-zinc-900 shadow-sm cursor-pointer transition-colors ${expandedShelterId === shelter.id ? "border-primary ring-1 ring-primary" : "border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700"}`}
+                              key={evacuationLocation.id}
+                              className={`bg-white dark:bg-zinc-900 shadow-sm cursor-pointer transition-colors ${expandedEvacuationLocationId === evacuationLocation.id ? "border-primary ring-1 ring-primary" : "border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700"}`}
                               onClick={() =>
-                                setExpandedShelterId(
-                                  expandedShelterId === shelter.id
+                                setExpandedEvacuationLocationId(
+                                  expandedEvacuationLocationId === evacuationLocation.id
                                     ? null
-                                    : shelter.id,
+                                    : evacuationLocation.id,
                                 )
                               }
                             >
@@ -1061,7 +1061,7 @@ export default function Dashboard() {
                                         #{i + 1}
                                       </span>
                                       <p className="font-semibold text-slate-800 dark:text-zinc-200">
-                                        {shelter.name}
+                                        {evacuationLocation.name}
                                       </p>
                                     </div>
                                     <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
@@ -1070,7 +1070,7 @@ export default function Dashboard() {
                                   </div>
                                 </div>
 
-                                {expandedShelterId === shelter.id && (
+                                {expandedEvacuationLocationId === evacuationLocation.id && (
                                   <div className="mt-2 pt-3 border-t border-slate-100 dark:border-zinc-800/60 animate-in fade-in slide-in-from-top-2 flex flex-col gap-2.5">
                                     <div className="grid grid-cols-2 gap-2">
                                       <div>
@@ -1078,7 +1078,7 @@ export default function Dashboard() {
                                           Kondisi
                                         </p>
                                         <p className="text-xs font-medium text-slate-700 dark:text-zinc-300">
-                                          {shelter.condition}
+                                          {evacuationLocation.condition}
                                         </p>
                                       </div>
                                       <div>
@@ -1086,7 +1086,7 @@ export default function Dashboard() {
                                           Kapasitas
                                         </p>
                                         <p className="text-xs font-medium text-slate-700 dark:text-zinc-300">
-                                          {shelter.capacity} Orang
+                                          {evacuationLocation.capacity} Orang
                                         </p>
                                       </div>
                                     </div>
@@ -1096,9 +1096,9 @@ export default function Dashboard() {
                                       </p>
                                       <p
                                         className="text-xs font-medium text-slate-700 dark:text-zinc-300 line-clamp-2"
-                                        title={shelter.address || ""}
+                                        title={evacuationLocation.address || ""}
                                       >
-                                        {shelter.address || "-"}
+                                        {evacuationLocation.address || "-"}
                                       </p>
                                     </div>
                                     <Button
@@ -1106,13 +1106,13 @@ export default function Dashboard() {
                                       className="w-full mt-1 bg-blue-600 hover:bg-blue-700 text-white"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        const coords = shelter.geometry as {
+                                        const coords = evacuationLocation.geometry as {
                                           coordinates: [number, number];
                                         };
-                                        calculateRouteToShelter(
+                                        calculateRouteToEvacuationLocation(
                                           coords.coordinates[1],
                                           coords.coordinates[0],
-                                          shelter.name,
+                                          evacuationLocation.name,
                                         );
                                       }}
                                     >
@@ -1501,27 +1501,27 @@ export default function Dashboard() {
                   Memuat data peta...
                 </p>
                 <p className="text-slate-500 dark:text-zinc-500 text-sm mt-2">
-                  Mengambil data shelter, gempa, dan zona rawan
+                  Mengambil data evacuationLocation, gempa, dan zona rawan
                 </p>
               </div>
             )}
             <MapClient
               earthquakes={earthquakes}
-              shelters={shelters}
+              evacuationLocations={evacuationLocations}
               hazardZones={hazardZones}
               facilities={facilities}
               userLocation={userLocation}
               selectedLocation={selectedLocation}
               onLocationSelect={handleMapClick}
               onEarthquakeClick={handleEarthquakeClick}
-              onCalculateRoute={calculateRouteToShelter}
+              onCalculateRoute={calculateRouteToEvacuationLocation}
               roadNetwork={roadNetwork}
               calculatedRoute={calculatedRoute}
               routeStart={routeStart}
               routeEnd={routeEnd}
               selectedEarthquake={selectedEarthquake}
               flyToLocation={flyToLocation}
-              onShelterDetailOpen={setIsShelterDetailOpen}
+              onEvacuationLocationDetailOpen={setIsEvacuationLocationDetailOpen}
             />
           </div>
         </div>
@@ -1532,19 +1532,19 @@ export default function Dashboard() {
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
-          {/* Widget 1: Shelter Statistics */}
+          {/* Widget 1: EvacuationLocation Statistics */}
           <Card className="border border-slate-200 dark:border-zinc-800/50 bg-white dark:bg-zinc-950/80 shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-blue-600" />
-                Shelter Tersedia
+                EvacuationLocation Tersedia
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-baseline gap-2">
                   <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-                    {shelters.length}
+                    {evacuationLocations.length}
                   </span>
                   <span className="text-sm text-slate-500 dark:text-zinc-400">
                     lokasi
@@ -1556,7 +1556,7 @@ export default function Dashboard() {
                       Total Kapasitas
                     </span>
                     <span className="font-bold text-slate-900 dark:text-zinc-100">
-                      {shelters
+                      {evacuationLocations
                         .reduce((sum, s) => sum + (s.capacity || 0), 0)
                         .toLocaleString()}{" "}
                       orang

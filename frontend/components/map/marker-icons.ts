@@ -1,8 +1,8 @@
 import L from "leaflet";
-import type { ShelterCategory } from "@/types";
+import type { EvacuationLocationCategory } from "@/types";
 
 const CATEGORY_STYLES: Record<
-  ShelterCategory,
+  EvacuationLocationCategory,
   { color: string; label: string; svgPath: string }
 > = {
   SCHOOL: {
@@ -23,14 +23,14 @@ const CATEGORY_STYLES: Record<
   },
 };
 
-export function getShelterCategoryLabel(category?: string) {
+export function getEvacuationLocationCategoryLabel(category?: string) {
   if (category === "SCHOOL") return CATEGORY_STYLES.SCHOOL.label;
   if (category === "FIELD") return CATEGORY_STYLES.FIELD.label;
   if (category === "GOVERNMENT") return CATEGORY_STYLES.GOVERNMENT.label;
   return "Lokasi Evakuasi";
 }
 
-export function getShelterCategoryColor(category?: string) {
+export function getEvacuationLocationCategoryColor(category?: string) {
   if (category === "SCHOOL") return CATEGORY_STYLES.SCHOOL.color;
   if (category === "FIELD") return CATEGORY_STYLES.FIELD.color;
   if (category === "GOVERNMENT") return CATEGORY_STYLES.GOVERNMENT.color;

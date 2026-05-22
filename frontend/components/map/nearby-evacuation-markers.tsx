@@ -12,16 +12,16 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { NearbyShelter } from "@/services/evacuation.service";
+import { NearbyEvacuationLocation } from "@/services/evacuation.service";
 
 interface NearbyEvacuationMarkersProps {
-  shelters: NearbyShelter[];
-  onShelterClick?: (shelter: NearbyShelter) => void;
-  onRouteClick?: (shelter: NearbyShelter) => void;
+  evacuationLocations: NearbyEvacuationLocation[];
+  onEvacuationLocationClick?: (evacuationLocation: NearbyEvacuationLocation) => void;
+  onRouteClick?: (evacuationLocation: NearbyEvacuationLocation) => void;
 }
 
 // Icon configurations per category
-const getShelterIcon = (category: string) => {
+const getEvacuationLocationIcon = (category: string) => {
   const iconConfigs = {
     SCHOOL: {
       color: "#3b82f6", // blue
@@ -47,7 +47,7 @@ const getShelterIcon = (category: string) => {
     iconConfigs[category as keyof typeof iconConfigs] || iconConfigs.GOVERNMENT;
 
   return L.divIcon({
-    className: "custom-shelter-marker",
+    className: "custom-evacuationLocation-marker",
     html: `
       <div style="
         position: relative;
@@ -102,14 +102,14 @@ const getCategoryColor = (category: string) => {
 };
 
 export function NearbyEvacuationMarkers({
-  shelters,
-  onShelterClick,
+  evacuationLocations,
+  onEvacuationLocationClick,
   onRouteClick,
 }: NearbyEvacuationMarkersProps) {
   return (
     <>
-      {shelters.map((shelter) => {
-        const coords = shelter.geometry as { coordinates: [number, number] };
+      {evacuationLocations.map((evacuationLocation) => {
+        const coords = evacuationLocation.geometry as { coordinates: [number, number] };
         const position: [number, number] = [
           coords.coordinates[1],
           coords.coordinates[0],
@@ -117,13 +117,13 @@ export function NearbyEvacuationMarkers({
 
         return (
           <Marker
-            key={shelter.id}
+            key={evacuationLocation.id}
             position={position}
-            icon={getShelterIcon(shelter.category)}
+            icon={getEvacuationLocationIcon(evacuationLocation.category)}
             eventHandlers={{
               click: () => {
-                if (onShelterClick) {
-                  onShelterClick(shelter);
+                if (onEvacuationLocationClick) {
+                  onEvacuationLocationClick(evacuationLocation);
                 }
               },
             }}
@@ -132,12 +132,12 @@ export function NearbyEvacuationMarkers({
               <div className="p-2">
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <h3 className="font-bold text-base text-slate-900">
-                    {shelter.name}
+                    {evacuationLocation.name}
                   </h3>
                   <Badge
-                    className={`${getCategoryColor(shelter.category)} text-xs px-2 py-0.5`}
+                    className={`${getCategoryColor(evacuationLocation.category)} text-xs px-2 py-0.5`}
                   >
-                    {getCategoryLabel(shelter.category)}
+                    {getCategoryLabel(evacuationLocation.category)}
                   </Badge>
                 </div>
 
@@ -145,28 +145,28 @@ export function NearbyEvacuationMarkers({
                   <div className="flex items-center gap-2 text-slate-600">
                     <MapPin className="w-4 h-4 text-blue-500" />
                     <span className="font-medium text-blue-600">
-                      {shelter.distanceKm} km dari Anda
+                      {evacuationLocation.distanceKm} km dari Anda
                     </span>
                   </div>
 
                   <div className="flex items-center gap-2 text-slate-600">
                     <Users className="w-4 h-4" />
                     <span>
-                      Kapasitas: <strong>{shelter.availableCapacity}</strong> /{" "}
-                      {shelter.capacity}
+                      Kapasitas: <strong>{evacuationLocation.availableCapacity}</strong> /{" "}
+                      {evacuationLocation.capacity}
                     </span>
                   </div>
 
-                  {shelter.address && (
+                  {evacuationLocation.address && (
                     <p className="text-xs text-slate-500 mt-2">
-                      {shelter.address}
+                      {evacuationLocation.address}
                     </p>
                   )}
 
-                  {shelter.facilities && (
+                  {evacuationLocation.facilities && (
                     <div className="mt-2 pt-2 border-t border-slate-200">
                       <p className="text-xs text-slate-600">
-                        <strong>Fasilitas:</strong> {shelter.facilities}
+                        <strong>Fasilitas:</strong> {evacuationLocation.facilities}
                       </p>
                     </div>
                   )}
@@ -174,7 +174,7 @@ export function NearbyEvacuationMarkers({
 
                 {onRouteClick && (
                   <Button
-                    onClick={() => onRouteClick(shelter)}
+                    onClick={() => onRouteClick(evacuationLocation)}
                     className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white"
                     size="sm"
                   >

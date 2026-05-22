@@ -220,7 +220,7 @@ export default function SimulationPage() {
           <CardContent>
             <div className="h-112.5 w-full rounded-md border border-slate-200 dark:border-zinc-800 overflow-hidden">
               <DynamicMap
-                shelters={[]}
+                evacuationLocations={[]}
                 earthquakes={[]}
                 hazardZones={[]}
                 facilities={[]}

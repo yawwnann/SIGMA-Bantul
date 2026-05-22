@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { shelterApi, officerApi, type Officer } from "@/api";
+import { evacuationLocationApi, officerApi, type Officer } from "@/api";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -31,7 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Home, Plus, MapPin, Users, UserCheck, UserX } from "lucide-react";
-import type { Shelter, ShelterCondition } from "@/types";
+import type { EvacuationLocation, EvacuationLocationCondition } from "@/types";
 
 const LocationPickerMap = dynamic(
   () => import("@/components/map/location-picker-map"),
@@ -57,14 +57,14 @@ const conditionLabels: Record<string, string> = {
   DAMAGED: "Rusak",
 };
 
-export default function AdminSheltersPage() {
-  const [shelters, setShelters] = useState<Shelter[]>([]);
+export default function AdminEvacuationLocationsPage() {
+  const [evacuationLocations, setEvacuationLocations] = useState<EvacuationLocation[]>([]);
   const [officers, setOfficers] = useState<Officer[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const [editingShelter, setEditingShelter] = useState<Shelter | null>(null);
-  const [assigningShelter, setAssigningShelter] = useState<Shelter | null>(
+  const [editingEvacuationLocation, setEditingEvacuationLocation] = useState<EvacuationLocation | null>(null);
+  const [assigningEvacuationLocation, setAssigningEvacuationLocation] = useState<EvacuationLocation | null>(
     null,
   );
   const [selectedOfficerId, setSelectedOfficerId] = useState<string>("");
@@ -72,18 +72,18 @@ export default function AdminSheltersPage() {
     name: "",
     address: "",
     capacity: 0,
-    condition: "GOOD" as ShelterCondition,
+    condition: "GOOD" as EvacuationLocationCondition,
     lat: -7.888,
     lon: 110.33,
   });
 
   const fetchData = async () => {
     try {
-      const [shelterData, officerData] = await Promise.all([
-        shelterApi.getAll(),
+      const [evacuationLocationData, officerData] = await Promise.all([
+        evacuationLocationApi.getAll(),
         officerApi.getAll(),
       ]);
-      setShelters(shelterData);
+      setEvacuationLocations(evacuationLocationData);
       setOfficers(officerData);
     } catch (error) {
       toast.error("Gagal memuat data");
@@ -109,65 +109,65 @@ export default function AdminSheltersPage() {
         },
       };
 
-      if (editingShelter) {
-        await shelterApi.update(editingShelter.id, payload);
-        toast.success("Shelter berhasil diperbarui");
+      if (editingEvacuationLocation) {
+        await evacuationLocationApi.update(editingEvacuationLocation.id, payload);
+        toast.success("Lokasi Evakuasi berhasil diperbarui");
       } else {
-        await shelterApi.create(payload);
-        toast.success("Shelter berhasil ditambahkan");
+        await evacuationLocationApi.create(payload);
+        toast.success("Lokasi Evakuasi berhasil ditambahkan");
       }
       setIsDialogOpen(false);
       fetchData();
       resetForm();
     } catch (error) {
-      toast.error("Gagal menyimpan shelter");
+      toast.error("Gagal menyimpan lokasi evakuasi");
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus shelter ini?")) return;
+    if (!confirm("Apakah Anda yakin ingin menghapus lokasi evakuasi ini?")) return;
     try {
-      await shelterApi.delete(id);
-      toast.success("Shelter berhasil dihapus");
+      await evacuationLocationApi.delete(id);
+      toast.success("Lokasi Evakuasi berhasil dihapus");
       fetchData();
     } catch (error) {
-      toast.error("Gagal menghapus shelter");
+      toast.error("Gagal menghapus lokasi evakuasi");
     }
   };
 
-  const handleEdit = (shelter: Shelter) => {
-    setEditingShelter(shelter);
-    const coords = (shelter.geometry as { coordinates?: [number, number] })
+  const handleEdit = (evacuationLocation: EvacuationLocation) => {
+    setEditingEvacuationLocation(evacuationLocation);
+    const coords = (evacuationLocation.geometry as { coordinates?: [number, number] })
       ?.coordinates;
     setFormData({
-      name: shelter.name,
-      address: shelter.address || "",
-      capacity: shelter.capacity,
-      condition: shelter.condition,
+      name: evacuationLocation.name,
+      address: evacuationLocation.address || "",
+      capacity: evacuationLocation.capacity,
+      condition: evacuationLocation.condition,
       lat: coords?.[1] || -7.888,
       lon: coords?.[0] || 110.33,
     });
     setIsDialogOpen(true);
   };
 
-  const handleOpenAssign = (shelter: Shelter) => {
-    setAssigningShelter(shelter);
-    setSelectedOfficerId(shelter.officerId?.toString() || "none");
+  const handleOpenAssign = (evacuationLocation: EvacuationLocation) => {
+    setAssigningEvacuationLocation(evacuationLocation);
+    setSelectedOfficerId(evacuationLocation.officerId?.toString() || "none");
     setIsAssignDialogOpen(true);
   };
 
   const handleAssign = async () => {
-    if (!assigningShelter) return;
+    if (!assigningEvacuationLocation) return;
     try {
       if (selectedOfficerId && selectedOfficerId !== "none") {
-        await shelterApi.assignOfficer(
-          assigningShelter.id,
+        await evacuationLocationApi.assignOfficer(
+          assigningEvacuationLocation.id,
           parseInt(selectedOfficerId),
         );
         toast.success("Petugas berhasil ditugaskan");
       } else {
-        await shelterApi.unassignOfficer(assigningShelter.id);
-        toast.success("Petugas berhasil dilepas dari shelter");
+        await evacuationLocationApi.unassignOfficer(assigningEvacuationLocation.id);
+        toast.success("Petugas berhasil dilepas dari lokasi evakuasi");
       }
       setIsAssignDialogOpen(false);
       fetchData();
@@ -177,12 +177,12 @@ export default function AdminSheltersPage() {
   };
 
   const resetForm = () => {
-    setEditingShelter(null);
+    setEditingEvacuationLocation(null);
     setFormData({
       name: "",
       address: "",
       capacity: 0,
-      condition: "GOOD" as ShelterCondition,
+      condition: "GOOD" as EvacuationLocationCondition,
       lat: -7.888,
       lon: 110.33,
     });
@@ -199,10 +199,10 @@ export default function AdminSheltersPage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
             <Home className="h-6 w-6 text-blue-500" />
-            Manajemen Shelter Evakuasi
+            Manajemen Lokasi Evakuasi
           </h2>
           <p className="text-zinc-400 mt-1 text-sm">
-            Total {shelters.length} titik pengungsian terdaftar dalam pangkalan
+            Total {evacuationLocations.length} titik pengungsian terdaftar dalam pangkalan
             data.
           </p>
         </div>
@@ -210,24 +210,24 @@ export default function AdminSheltersPage() {
           onClick={openAddDialog}
           className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/20"
         >
-          <Plus className="w-4 h-4 mr-2" /> Tambah Shelter
+          <Plus className="w-4 h-4 mr-2" /> Tambah Lokasi Evakuasi
         </Button>
       </div>
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Shelters */}
+        {/* Total EvacuationLocations */}
         <div className="bg-gradient-to-br from-zinc-900 to-zinc-900/50 border border-zinc-800 rounded-xl p-5 hover:border-blue-700/50 transition-all duration-300">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2 bg-blue-500/10 rounded-lg">
               <Home className="w-5 h-5 text-blue-400" />
             </div>
             <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
-              Total Shelter
+              Total Lokasi Evakuasi
             </span>
           </div>
           <div className="text-3xl font-bold text-white mb-1">
-            {shelters.length}
+            {evacuationLocations.length}
           </div>
           <p className="text-xs text-zinc-500">Titik pengungsian</p>
         </div>
@@ -243,7 +243,7 @@ export default function AdminSheltersPage() {
             </span>
           </div>
           <div className="text-3xl font-bold text-white mb-1">
-            {shelters.reduce((sum, s) => sum + s.capacity, 0).toLocaleString()}
+            {evacuationLocations.reduce((sum, s) => sum + s.capacity, 0).toLocaleString()}
           </div>
           <p className="text-xs text-zinc-500">Orang</p>
         </div>
@@ -259,9 +259,9 @@ export default function AdminSheltersPage() {
             </span>
           </div>
           <div className="text-3xl font-bold text-white mb-1">
-            {shelters.filter((s) => s.officerId).length}
+            {evacuationLocations.filter((s) => s.officerId).length}
           </div>
-          <p className="text-xs text-zinc-500">Shelter dengan petugas</p>
+          <p className="text-xs text-zinc-500">Lokasi evakuasi dengan petugas</p>
         </div>
 
         {/* Unassigned */}
@@ -275,7 +275,7 @@ export default function AdminSheltersPage() {
             </span>
           </div>
           <div className="text-3xl font-bold text-white mb-1">
-            {shelters.filter((s) => !s.officerId).length}
+            {evacuationLocations.filter((s) => !s.officerId).length}
           </div>
           <p className="text-xs text-zinc-500">Perlu penugasan</p>
         </div>
@@ -287,7 +287,7 @@ export default function AdminSheltersPage() {
             <TableHeader className="bg-zinc-950/50">
               <TableRow className="border-b border-zinc-800 hover:bg-transparent">
                 <TableHead className="font-semibold text-zinc-400">
-                  Nama Shelter
+                  Nama Lokasi Evakuasi
                 </TableHead>
                 <TableHead className="font-semibold text-zinc-400">
                   Alamat
@@ -319,33 +319,33 @@ export default function AdminSheltersPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : shelters.length === 0 ? (
+              ) : evacuationLocations.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={6}
                     className="text-center py-12 text-zinc-500"
                   >
                     <Home className="w-8 h-8 opacity-20 mx-auto mb-3" />
-                    Tidak ada data shelter yang dikelola.
+                    Tidak ada data lokasi evakuasi yang dikelola.
                   </TableCell>
                 </TableRow>
               ) : (
-                shelters.map((shelter) => (
+                evacuationLocations.map((evacuationLocation) => (
                   <TableRow
-                    key={shelter.id}
+                    key={evacuationLocation.id}
                     className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors"
                   >
                     <TableCell className="font-medium text-zinc-200">
-                      {shelter.name}
+                      {evacuationLocation.name}
                     </TableCell>
                     <TableCell className="text-zinc-400 max-w-[200px]">
                       <div className="flex items-center gap-1.5">
                         <MapPin className="h-3 w-3 shrink-0" />
                         <span
                           className="truncate block"
-                          title={shelter.address || "Area Tidak Diketahui"}
+                          title={evacuationLocation.address || "Area Tidak Diketahui"}
                         >
-                          {shelter.address || "Area Tidak Diketahui"}
+                          {evacuationLocation.address || "Area Tidak Diketahui"}
                         </span>
                       </div>
                     </TableCell>
@@ -355,20 +355,20 @@ export default function AdminSheltersPage() {
                         className="bg-zinc-800 font-medium border-zinc-700 text-zinc-300"
                       >
                         <Users className="w-3 h-3 mr-1 opacity-50" />
-                        {shelter.capacity.toLocaleString()} Jiwa
+                        {evacuationLocation.capacity.toLocaleString()} Jiwa
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge className={conditionColors[shelter.condition]}>
-                        {conditionLabels[shelter.condition] ||
-                          shelter.condition}
+                      <Badge className={conditionColors[evacuationLocation.condition]}>
+                        {conditionLabels[evacuationLocation.condition] ||
+                          evacuationLocation.condition}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {shelter.officer ? (
+                      {evacuationLocation.officer ? (
                         <div className="flex items-center gap-1.5 text-emerald-400 text-sm">
                           <UserCheck className="h-3.5 w-3.5 shrink-0" />
-                          {shelter.officer.name}
+                          {evacuationLocation.officer.name}
                         </div>
                       ) : (
                         <span className="text-zinc-600 text-sm italic">
@@ -380,7 +380,7 @@ export default function AdminSheltersPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleOpenAssign(shelter)}
+                        onClick={() => handleOpenAssign(evacuationLocation)}
                         className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
                       >
                         <UserCheck className="w-3.5 h-3.5 mr-1" />
@@ -389,7 +389,7 @@ export default function AdminSheltersPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleEdit(shelter)}
+                        onClick={() => handleEdit(evacuationLocation)}
                         className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
                       >
                         Edit
@@ -397,7 +397,7 @@ export default function AdminSheltersPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(shelter.id)}
+                        onClick={() => handleDelete(evacuationLocation.id)}
                         className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                       >
                         Hapus
@@ -420,16 +420,16 @@ export default function AdminSheltersPage() {
               Tugaskan Petugas
             </DialogTitle>
             <DialogDescription className="text-zinc-400 mt-2">
-              Pilih petugas yang akan bertanggung jawab mengelola shelter{" "}
+              Pilih petugas yang akan bertanggung jawab mengelola lokasi evakuasi{" "}
               <span className="text-white font-medium">
-                {assigningShelter?.name}
+                {assigningEvacuationLocation?.name}
               </span>
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
             <div>
               <Label className="text-sm font-medium text-zinc-300 mb-2 block">
-                Petugas Shelter
+                Petugas Lokasi Evakuasi
               </Label>
               <Select
                 value={selectedOfficerId}
@@ -484,11 +484,11 @@ export default function AdminSheltersPage() {
                             <div className="text-xs text-zinc-500 truncate">
                               {officer.email}
                             </div>
-                            {officer.managedShelters &&
-                              officer.managedShelters.length > 0 && (
+                            {officer.managedEvacuationLocations &&
+                              officer.managedEvacuationLocations.length > 0 && (
                                 <div className="text-xs text-amber-500 mt-0.5">
-                                  Mengelola {officer.managedShelters.length}{" "}
-                                  shelter
+                                  Mengelola {officer.managedEvacuationLocations.length}{" "}
+                                  evacuationLocation
                                 </div>
                               )}
                           </div>
@@ -506,7 +506,7 @@ export default function AdminSheltersPage() {
                 <div className="flex items-start gap-2">
                   <UserCheck className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
                   <div className="text-sm text-emerald-400">
-                    Petugas akan dapat mengakses dan mengelola shelter ini
+                    Petugas akan dapat mengakses dan mengelola evacuationLocation ini
                     melalui dashboard mereka
                   </div>
                 </div>
@@ -532,7 +532,7 @@ export default function AdminSheltersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Add/Edit Shelter Dialog */}
+      {/* Add/Edit EvacuationLocation Dialog */}
       {isDialogOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           {/* Backdrop */}
@@ -550,11 +550,11 @@ export default function AdminSheltersPage() {
             <div className="border-b border-zinc-800 p-6">
               <h2 className="text-2xl font-bold flex items-center gap-2 text-white">
                 <Home className="w-6 h-6 text-blue-500" />
-                {editingShelter ? "Perbarui Shelter" : "Tambah Shelter Baru"}
+                {editingEvacuationLocation ? "Perbarui Lokasi Evakuasi" : "Tambah Lokasi Evakuasi Baru"}
               </h2>
               <p className="text-zinc-400 text-sm mt-2">
-                {editingShelter
-                  ? "Perbarui informasi shelter evakuasi yang sudah terdaftar"
+                {editingEvacuationLocation
+                  ? "Perbarui informasi lokasi evakuasi yang sudah terdaftar"
                   : "Masukkan data logistik untuk penambahan situs bantuan/pengungsian."}
               </p>
             </div>
@@ -563,14 +563,14 @@ export default function AdminSheltersPage() {
             <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Left Column - Form Fields */}
               <div className="space-y-5">
-                {/* Nama Shelter */}
+                {/* Nama EvacuationLocation */}
                 <div className="space-y-2">
                   <label
                     htmlFor="name"
                     className="text-sm font-semibold text-zinc-300 flex items-center gap-1.5"
                   >
                     <Home className="w-4 h-4 text-blue-400" />
-                    Nama Shelter Utama
+                    Nama Lokasi Evakuasi Utama
                     <span className="text-red-400">*</span>
                   </label>
                   <input
@@ -584,7 +584,7 @@ export default function AdminSheltersPage() {
                     className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   />
                   <p className="text-xs text-zinc-500">
-                    Nama resmi lokasi shelter yang mudah dikenali
+                    Nama resmi lokasi evakuasi yang mudah dikenali
                   </p>
                 </div>
 
@@ -655,7 +655,7 @@ export default function AdminSheltersPage() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        condition: e.target.value as ShelterCondition,
+                        condition: e.target.value as EvacuationLocationCondition,
                       })
                     }
                     className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
@@ -666,7 +666,7 @@ export default function AdminSheltersPage() {
                     <option value="DAMAGED">Rusak Berat</option>
                   </select>
                   <p className="text-xs text-zinc-500">
-                    Status kondisi bangunan shelter
+                    Status kondisi bangunan lokasi evakuasi
                   </p>
                 </div>
 
@@ -762,7 +762,7 @@ export default function AdminSheltersPage() {
                 </div>
                 <p className="text-xs text-zinc-500">
                   Klik pada peta atau seret penanda untuk memilih koordinat
-                  shelter
+                  lokasi evakuasi
                 </p>
                 <div className="rounded-lg overflow-hidden border border-zinc-800 h-auto">
                   <LocationPickerMap
@@ -793,7 +793,7 @@ export default function AdminSheltersPage() {
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-lg shadow-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
               >
                 <Home className="w-4 h-4" />
-                {editingShelter ? "Simpan Perubahan" : "Simpan Shelter"}
+                {editingEvacuationLocation ? "Simpan Perubahan" : "Simpan Lokasi Evakuasi"}
               </button>
             </div>
           </div>
