@@ -29,9 +29,9 @@ interface GeoJSONFeatureCollection {
 }
 
 async function main() {
-  console.log('🚀 Starting road network import from Jalan_Lengkap.geojson...');
+  console.log('🚀 Starting road network import from Jalan_fix.geojson...');
 
-  const geojsonPath = path.join(__dirname, '../Data/GeoJSon/Jalan_Lengkap.geojson');
+  const geojsonPath = path.join(__dirname, '../Data/GeoJSon/Jalan_fix.geojson');
 
   if (!fs.existsSync(geojsonPath)) {
     console.error('❌ Dataset not found at:', geojsonPath);
@@ -39,7 +39,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log('📁 Reading Jalan_Lengkap.geojson...');
+  console.log('📁 Reading Jalan_fix.geojson...');
   const geojsonData: GeoJSONFeatureCollection = JSON.parse(
     fs.readFileSync(geojsonPath, 'utf-8'),
   );
@@ -150,7 +150,55 @@ async function main() {
   console.log(`✅ Successfully imported: ${imported} roads`);
   console.log(`⚠️  Skipped (invalid geometry/errors): ${skipped} roads`);
   
-  console.log(`\nNext recommended step: run fix-topology and fix-all-roads scripts to rebuild routing data.`);
+  // ==========================================
+  // AUTOMATIC TOPOLOGY & COST CALCULATION
+  // ==========================================
+  console.log('\n📏 Menghitung panjang jalan dan cost...');
+  const lengthResult = await prisma.$executeRaw`
+    UPDATE "Road"
+    SET 
+      length = ST_Length(geom::geography),
+      length_m = ST_Length(geom::geography),
+      cost = (ST_Length(geom::geography) / 1000.0) / 40.0 * 60.0,
+      reverse_cost = (ST_Length(geom::geography) / 1000.0) / 40.0 * 60.0,
+      safe_cost = ST_Length(geom::geography) * (1 + COALESCE("combinedHazard", 2) * 0.5)
+    WHERE geom IS NOT NULL
+  `;
+  console.log(`✅ ${lengthResult} jalan updated dengan length, cost, safe_cost, dan reverse_cost`);
+
+  console.log('\n🗺️  Membuat topology untuk routing...');
+  console.log('   (Ini mungkin memakan waktu beberapa menit, harap sabar...)');
+  
+  try {
+    await prisma.$executeRaw`
+      SELECT pgr_createTopology(
+        'Road',
+        0.0001,
+        'geom',
+        'id',
+        'source',
+        'target',
+        rows_where := 'geom IS NOT NULL'
+      )
+    `;
+    console.log('✅ Topology berhasil dibuat');
+
+    await prisma.$executeRaw`
+      SELECT pgr_analyzeGraph(
+        'Road',
+        0.0001,
+        'geom',
+        'id',
+        'source',
+        'target'
+      )
+    `;
+    console.log('✅ Topology berhasil dianalisis');
+  } catch (error: any) {
+    console.log('⚠️  pgRouting belum terinstall atau error:', error.message);
+  }
+
+  console.log(`\n✅ Selesai! Data jalan, topology, dan perhitungan biaya rute sudah komplit.`);
 }
 
 main()
