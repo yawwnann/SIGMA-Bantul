@@ -141,6 +141,7 @@ async function main() {
         console.log(`  ⏳ Imported ${imported} roads...`);
       }
     } catch (error: any) {
+      console.error(`Error on road ${imported + skipped + 1}:`, error.message || error);
       skipped++;
     }
   }
