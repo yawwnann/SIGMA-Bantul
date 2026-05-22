@@ -11,7 +11,12 @@ import {
 import { analysisApi } from "@/api/analysis";
 import { setBantulPolygon, isWithinBantul } from "@/lib/bantul-boundary";
 import { socketService } from "@/lib/socket";
-import type { Earthquake, EvacuationLocation, HazardZone, PublicFacility } from "@/types";
+import type {
+  Earthquake,
+  EvacuationLocation,
+  HazardZone,
+  PublicFacility,
+} from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -105,14 +110,15 @@ export default function Dashboard() {
 
   // Data State
   const [earthquakes, setEarthquakes] = useState<Earthquake[]>([]);
-  const [evacuationLocations, setEvacuationLocations] = useState<EvacuationLocation[]>([]);
+  const [evacuationLocations, setEvacuationLocations] = useState<
+    EvacuationLocation[]
+  >([]);
   const [hazardZones, setHazardZones] = useState<HazardZone[]>([]);
   const [facilities, setFacilities] = useState<PublicFacility[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [roadNetwork, setRoadNetwork] = useState<any>(null);
-  const [expandedEvacuationLocationId, setExpandedEvacuationLocationId] = useState<number | null>(
-    null,
-  );
+  const [expandedEvacuationLocationId, setExpandedEvacuationLocationId] =
+    useState<number | null>(null);
 
   // App State
   const [loading, setLoading] = useState(true);
@@ -126,9 +132,9 @@ export default function Dashboard() {
   } | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [calculatedRoute, setCalculatedRoute] = useState<any>(null);
-  const [, setNearestEvacuationLocations] = useState<(EvacuationLocation & { distance: number })[]>(
-    [],
-  );
+  const [, setNearestEvacuationLocations] = useState<
+    (EvacuationLocation & { distance: number })[]
+  >([]);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [selectedEarthquake, setSelectedEarthquake] =
@@ -191,7 +197,8 @@ export default function Dashboard() {
 
     if (currentEvacuationLocations.length === 0) {
       toast.info("Mencari rute evakuasi darurat...", {
-        description: "Data evacuationLocation belum tersedia, mohon tunggu sebentar",
+        description:
+          "Data evacuationLocation belum tersedia, mohon tunggu sebentar",
         duration: 5000,
       });
       return;
@@ -268,7 +275,8 @@ export default function Dashboard() {
             error,
           );
           toast.error("Gagal menghitung rute darurat dari lokasi saat ini.", {
-            description: "Silakan coba lagi atau pilih evacuationLocation secara manual",
+            description:
+              "Silakan coba lagi atau pilih evacuationLocation secara manual",
             duration: 5000,
           });
         } finally {
@@ -376,18 +384,21 @@ export default function Dashboard() {
           "[Dashboard] Fetching nearby evacuationLocations for location:",
           userLocation,
         );
-        const nearbyEvacuationLocations = await evacuationService.getNearbyEvacuationLocations({
-          lat: userLocation.lat,
-          lng: userLocation.lng,
-          radius: nearbyRadius,
-          limit: 10, // max 10 evacuationLocations
-        });
+        const nearbyEvacuationLocations =
+          await evacuationService.getNearbyEvacuationLocations({
+            lat: userLocation.lat,
+            lng: userLocation.lng,
+            radius: nearbyRadius,
+            limit: 10, // max 10 evacuationLocations
+          });
 
         console.log(
           "[Dashboard] Found nearby evacuationLocations:",
           nearbyEvacuationLocations.length,
         );
-        setEvacuationLocations(nearbyEvacuationLocations as EvacuationLocation[]);
+        setEvacuationLocations(
+          nearbyEvacuationLocations as EvacuationLocation[],
+        );
 
         if (nearbyEvacuationLocations.length > 0) {
           toast.success(
@@ -395,7 +406,10 @@ export default function Dashboard() {
           );
         }
       } catch (error) {
-        console.error("[Dashboard] Error fetching nearby evacuationLocations:", error);
+        console.error(
+          "[Dashboard] Error fetching nearby evacuationLocations:",
+          error,
+        );
         toast.error("Gagal memuat lokasi evakuasi terdekat");
         setEvacuationLocations([]); // Set empty if error
       }
@@ -536,7 +550,9 @@ export default function Dashboard() {
       setSelectedLocation({ lat, lng });
       if (evacuationLocations.length > 0) {
         const withDistance = evacuationLocations.map((evacuationLocation) => {
-          const coords = evacuationLocation.geometry as { coordinates: [number, number] };
+          const coords = evacuationLocation.geometry as {
+            coordinates: [number, number];
+          };
           const distance = calculateDistance(
             lat,
             lng,
@@ -638,7 +654,9 @@ export default function Dashboard() {
 
           // 3. Immediately calculate map route
           try {
-            toast.info(`Menghitung rute ke ${nearestEvacuationLocation.name}...`);
+            toast.info(
+              `Menghitung rute ke ${nearestEvacuationLocation.name}...`,
+            );
             const route = await roadApi.calculateRoute(
               userLat,
               userLng,
@@ -671,7 +689,8 @@ export default function Dashboard() {
               error,
             );
             toast.error("Gagal menghitung rute darurat dari lokasi saat ini.", {
-              description: "Silakan coba lagi atau pilih evacuationLocation secara manual",
+              description:
+                "Silakan coba lagi atau pilih evacuationLocation secara manual",
               duration: 5000,
             });
           } finally {
@@ -852,7 +871,10 @@ export default function Dashboard() {
 
           setCalculatedRoute(route);
           setRouteStart({ lat: startLat, lng: startLng });
-          setRouteEnd({ lat: evacuationLocationLat, lng: evacuationLocationLng });
+          setRouteEnd({
+            lat: evacuationLocationLat,
+            lng: evacuationLocationLng,
+          });
           setDestinationName(evacuationLocationName);
           setIsMapExpanded(true);
 
@@ -1028,103 +1050,110 @@ export default function Dashboard() {
                         </Badge>
                       </h2>
                       <div className="space-y-2">
-                        {evacuationLocations.slice(0, 5).map((evacuationLocation, i) => {
-                          const coords = evacuationLocation.geometry as {
-                            coordinates: [number, number];
-                          };
-                          const distance = selectedLocation
-                            ? calculateDistance(
-                                selectedLocation.lat,
-                                selectedLocation.lng,
-                                coords.coordinates[1],
-                                coords.coordinates[0],
-                              )
-                            : 0;
-
-                          return (
-                            <Card
-                              key={evacuationLocation.id}
-                              className={`bg-white dark:bg-zinc-900 shadow-sm cursor-pointer transition-colors ${expandedEvacuationLocationId === evacuationLocation.id ? "border-primary ring-1 ring-primary" : "border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700"}`}
-                              onClick={() =>
-                                setExpandedEvacuationLocationId(
-                                  expandedEvacuationLocationId === evacuationLocation.id
-                                    ? null
-                                    : evacuationLocation.id,
+                        {evacuationLocations
+                          .slice(0, 5)
+                          .map((evacuationLocation, i) => {
+                            const coords = evacuationLocation.geometry as {
+                              coordinates: [number, number];
+                            };
+                            const distance = selectedLocation
+                              ? calculateDistance(
+                                  selectedLocation.lat,
+                                  selectedLocation.lng,
+                                  coords.coordinates[1],
+                                  coords.coordinates[0],
                                 )
-                              }
-                            >
-                              <CardContent className="pt-4 pb-4 flex flex-col gap-2 text-sm">
-                                <div className="flex justify-between items-start">
-                                  <div className="pr-2">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                                        #{i + 1}
-                                      </span>
-                                      <p className="font-semibold text-slate-800 dark:text-zinc-200">
-                                        {evacuationLocation.name}
-                                      </p>
-                                    </div>
-                                    <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
-                                      {distance.toFixed(2)} km
-                                    </p>
-                                  </div>
-                                </div>
+                              : 0;
 
-                                {expandedEvacuationLocationId === evacuationLocation.id && (
-                                  <div className="mt-2 pt-3 border-t border-slate-100 dark:border-zinc-800/60 animate-in fade-in slide-in-from-top-2 flex flex-col gap-2.5">
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <div>
-                                        <p className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">
-                                          Kondisi
-                                        </p>
-                                        <p className="text-xs font-medium text-slate-700 dark:text-zinc-300">
-                                          {evacuationLocation.condition}
+                            return (
+                              <Card
+                                key={evacuationLocation.id}
+                                className={`bg-white dark:bg-zinc-900 shadow-sm cursor-pointer transition-colors ${expandedEvacuationLocationId === evacuationLocation.id ? "border-primary ring-1 ring-primary" : "border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700"}`}
+                                onClick={() =>
+                                  setExpandedEvacuationLocationId(
+                                    expandedEvacuationLocationId ===
+                                      evacuationLocation.id
+                                      ? null
+                                      : evacuationLocation.id,
+                                  )
+                                }
+                              >
+                                <CardContent className="pt-4 pb-4 flex flex-col gap-2 text-sm">
+                                  <div className="flex justify-between items-start">
+                                    <div className="pr-2">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                                          #{i + 1}
+                                        </span>
+                                        <p className="font-semibold text-slate-800 dark:text-zinc-200">
+                                          {evacuationLocation.name}
                                         </p>
                                       </div>
-                                      <div>
-                                        <p className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">
-                                          Kapasitas
-                                        </p>
-                                        <p className="text-xs font-medium text-slate-700 dark:text-zinc-300">
-                                          {evacuationLocation.capacity} Orang
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <p className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">
-                                        Alamat
-                                      </p>
-                                      <p
-                                        className="text-xs font-medium text-slate-700 dark:text-zinc-300 line-clamp-2"
-                                        title={evacuationLocation.address || ""}
-                                      >
-                                        {evacuationLocation.address || "-"}
+                                      <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
+                                        {distance.toFixed(2)} km
                                       </p>
                                     </div>
-                                    <Button
-                                      size="sm"
-                                      className="w-full mt-1 bg-blue-600 hover:bg-blue-700 text-white"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const coords = evacuationLocation.geometry as {
-                                          coordinates: [number, number];
-                                        };
-                                        calculateRouteToEvacuationLocation(
-                                          coords.coordinates[1],
-                                          coords.coordinates[0],
-                                          evacuationLocation.name,
-                                        );
-                                      }}
-                                    >
-                                      <Navigation className="w-3 h-3 mr-2" />
-                                      Dapatkan Rute
-                                    </Button>
                                   </div>
-                                )}
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
+
+                                  {expandedEvacuationLocationId ===
+                                    evacuationLocation.id && (
+                                    <div className="mt-2 pt-3 border-t border-slate-100 dark:border-zinc-800/60 animate-in fade-in slide-in-from-top-2 flex flex-col gap-2.5">
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                          <p className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">
+                                            Kondisi
+                                          </p>
+                                          <p className="text-xs font-medium text-slate-700 dark:text-zinc-300">
+                                            {evacuationLocation.condition}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <p className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">
+                                            Kapasitas
+                                          </p>
+                                          <p className="text-xs font-medium text-slate-700 dark:text-zinc-300">
+                                            {evacuationLocation.capacity} Orang
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">
+                                          Alamat
+                                        </p>
+                                        <p
+                                          className="text-xs font-medium text-slate-700 dark:text-zinc-300 line-clamp-2"
+                                          title={
+                                            evacuationLocation.address || ""
+                                          }
+                                        >
+                                          {evacuationLocation.address || "-"}
+                                        </p>
+                                      </div>
+                                      <Button
+                                        size="sm"
+                                        className="w-full mt-1 bg-blue-600 hover:bg-blue-700 text-white"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const coords =
+                                            evacuationLocation.geometry as {
+                                              coordinates: [number, number];
+                                            };
+                                          calculateRouteToEvacuationLocation(
+                                            coords.coordinates[1],
+                                            coords.coordinates[0],
+                                            evacuationLocation.name,
+                                          );
+                                        }}
+                                      >
+                                        <Navigation className="w-3 h-3 mr-2" />
+                                        Dapatkan Rute
+                                      </Button>
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
                       </div>
                     </div>
                   )}
@@ -1537,7 +1566,7 @@ export default function Dashboard() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-blue-600" />
-                EvacuationLocation Tersedia
+                Tempat Evakuasi Tersedia
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -1564,18 +1593,20 @@ export default function Dashboard() {
                   </div>
                   <div className="flex justify-between items-center text-xs mt-2">
                     <span className="text-slate-600 dark:text-zinc-400">
-                      Radius Terdekat
+                      Tempat Evakuasi Terdekat
                     </span>
-                    <select
-                      value={nearbyRadius}
-                      onChange={(e) => setNearbyRadius(Number(e.target.value))}
-                      className="font-bold text-green-600 dark:text-green-400 bg-transparent border border-green-300 dark:border-green-700 rounded px-1 py-0.5 text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-green-500"
+                    <span
+                      className="font-bold text-green-600 dark:text-green-400 text-right max-w-[50%] truncate"
+                      title={
+                        evacuationLocations.length > 0
+                          ? evacuationLocations[0].name
+                          : "Tidak ada"
+                      }
                     >
-                      <option value={1}>1 km</option>
-                      <option value={3}>3 km</option>
-                      <option value={5}>5 km</option>
-                      <option value={10}>10 km</option>
-                    </select>
+                      {evacuationLocations.length > 0
+                        ? evacuationLocations[0].name
+                        : "Tidak ada"}
+                    </span>
                   </div>
                 </div>
               </div>

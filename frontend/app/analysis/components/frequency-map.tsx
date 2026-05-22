@@ -23,6 +23,7 @@ interface FrequencyMapProps {
     time: string;
     location: string;
   }>;
+  selectedEarthquakeId?: number | null;
 }
 
 export default function FrequencyMap({
@@ -30,6 +31,7 @@ export default function FrequencyMap({
   showBpbdLayer = false,
   showEarthquakes = false,
   earthquakes = [],
+  selectedEarthquakeId = null,
 }: FrequencyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -39,6 +41,9 @@ export default function FrequencyMap({
   const bpbdLayerRef = useRef<L.GeoJSON | null>(null);
   const earthquakeLayerRef = useRef<L.LayerGroup | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const earthquakeMarkersRef = useRef<Map<number, L.Marker>>(new Map());
+  const earthquakeCirclesRef = useRef<Map<number, L.LayerGroup>>(new Map());
+  const activeCircleRef = useRef<L.LayerGroup | null>(null);
   const [bantulBoundary, setBantulBoundary] = useState<any>(null);
   const [bpbdData, setBpbdData] = useState<any>(null);
   const { resolvedTheme } = useTheme();
@@ -366,6 +371,42 @@ export default function FrequencyMap({
           icon: markerIcon,
         });
 
+        const baseRadius = Math.pow(eq.magnitude, 2.5) * 50;
+
+        const redZone = L.circle([eq.lat, eq.lon], {
+          radius: baseRadius,
+          color: "#dc2626",
+          fillColor: "#dc2626",
+          fillOpacity: 0,
+          weight: 0,
+          opacity: 0,
+          interactive: false,
+        });
+
+        const yellowZone = L.circle([eq.lat, eq.lon], {
+          radius: baseRadius * 3,
+          color: "#eab308",
+          fillColor: "#eab308",
+          fillOpacity: 0,
+          weight: 0,
+          opacity: 0,
+          interactive: false,
+        });
+
+        const greenZone = L.circle([eq.lat, eq.lon], {
+          radius: baseRadius * 6,
+          color: "#22c55e",
+          fillColor: "#22c55e",
+          fillOpacity: 0,
+          weight: 0,
+          opacity: 0,
+          interactive: false,
+        });
+
+        const radiusGroup = L.layerGroup([greenZone, yellowZone, redZone]);
+        radiusGroup.addTo(earthquakeLayerRef.current!);
+        earthquakeCirclesRef.current.set(eq.id, radiusGroup);
+
         marker.bindPopup(
           `<div class="p-3 min-w-[200px]">
             <div class="flex items-center gap-2 mb-2">
@@ -386,12 +427,56 @@ export default function FrequencyMap({
           </div>`,
         );
 
+        earthquakeMarkersRef.current.set(eq.id, marker);
         marker.addTo(earthquakeLayerRef.current!);
       });
 
       earthquakeLayerRef.current.addTo(mapRef.current);
     }
   }, [showEarthquakes, earthquakes]);
+
+  // Handle flyTo when an earthquake is selected
+  useEffect(() => {
+    if (selectedEarthquakeId && mapRef.current && showEarthquakes) {
+      if (activeCircleRef.current) {
+        activeCircleRef.current.eachLayer((layer) => {
+          const pathLayer = layer as L.Path;
+          if (pathLayer.setStyle) {
+            pathLayer.setStyle({ fillOpacity: 0, weight: 0, opacity: 0 });
+          }
+        });
+      }
+
+      const marker = earthquakeMarkersRef.current.get(selectedEarthquakeId);
+      if (marker) {
+        mapRef.current.flyTo(marker.getLatLng(), 12, {
+          duration: 1.5,
+        });
+        
+        const radiusGroup = earthquakeCirclesRef.current.get(selectedEarthquakeId);
+        if (radiusGroup) {
+          radiusGroup.eachLayer((layer) => {
+            if (layer instanceof L.Circle) {
+              const circleLayer = layer as L.Circle;
+              const color = (circleLayer.options as any).color as string;
+              if (color === "#dc2626")
+                circleLayer.setStyle({ fillOpacity: 0.25, weight: 2, opacity: 0.8 });
+              else if (color === "#eab308")
+                circleLayer.setStyle({ fillOpacity: 0.15, weight: 2, opacity: 0.6 });
+              else if (color === "#22c55e")
+                circleLayer.setStyle({ fillOpacity: 0.1, weight: 1.5, opacity: 0.4 });
+            }
+          });
+          activeCircleRef.current = radiusGroup;
+        }
+
+        // Wait for flyTo to finish before opening popup
+        setTimeout(() => {
+          marker.openPopup();
+        }, 1500);
+      }
+    }
+  }, [selectedEarthquakeId, showEarthquakes]);
 
   // Cleanup on unmount
   useEffect(() => {

@@ -67,6 +67,7 @@ export default function AnalysisPage() {
   const [minMagnitude, setMinMagnitude] = useState(0);
   const [showBpbdLayer, setShowBpbdLayer] = useState(false);
   const [showEarthquakes, setShowEarthquakes] = useState(false);
+  const [selectedEarthquakeId, setSelectedEarthquakeId] = useState<number | null>(null);
 
   const fetchAnalysis = async () => {
     setLoading(true);
@@ -310,7 +311,12 @@ export default function AnalysisPage() {
                   earthquakes.slice(0, 5).map((eq, i) => (
                     <div
                       key={`eq-${eq.id}-${i}`}
-                      className="p-4 hover:bg-slate-50 dark:hover:bg-zinc-900/30 transition-colors"
+                      className="p-4 hover:bg-slate-50 dark:hover:bg-zinc-900/30 transition-colors cursor-pointer"
+                      onClick={() => {
+                        setSelectedEarthquakeId(eq.id);
+                        setShowEarthquakes(true);
+                        document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth' });
+                      }}
                     >
                       <div className="flex justify-between items-start mb-2 gap-2">
                         <span className="font-mono text-xs font-bold text-slate-900 dark:text-zinc-200 line-clamp-1">
@@ -443,7 +449,7 @@ export default function AnalysisPage() {
         </Card>
 
         {/* Map Section */}
-        <Card className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-950/80">
+        <Card id="map-section" className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-950/80">
           <CardHeader className="pb-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-zinc-100">
@@ -536,6 +542,7 @@ export default function AnalysisPage() {
                   showBpbdLayer={showBpbdLayer}
                   showEarthquakes={showEarthquakes}
                   earthquakes={earthquakes}
+                  selectedEarthquakeId={selectedEarthquakeId}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-zinc-950">
