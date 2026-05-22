@@ -25,6 +25,7 @@
     "db:seed": "ts-node prisma/seed.ts",
     "db:seed-evacuation-locations": "ts-node prisma/seeders/seed-evacuation-locations.ts",
     "db:studio": "prisma studio",
+    "db:seed-jalan": "ts-node scripts/seed-jalan-lengkap.ts",
     "db:import-roads": "ts-node scripts/import-roads.ts",
     "db:enrich-roads": "ts-node scripts/enrich-roads.ts",
     "db:import-bpbd": "ts-node scripts/import-bpbd-zones.ts",
