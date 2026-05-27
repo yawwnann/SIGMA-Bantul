@@ -13,6 +13,7 @@ import {
 import { EvacuationLocationService } from './evacuation-location.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CreateEvacuationLocationDto } from './dto/create-evacuation-location.dto';
+import { BantulBoundaryService } from '../common/services/bantul-boundary.service';
 import {
   EvacuationLocationCategory,
   EvacuationLocationCondition,
@@ -20,7 +21,10 @@ import {
 
 @Controller('evacuation-locations')
 export class EvacuationLocationController {
-  constructor(private evacuationLocationService: EvacuationLocationService) {}
+  constructor(
+    private evacuationLocationService: EvacuationLocationService,
+    private bantulBoundary: BantulBoundaryService,
+  ) {}
 
   @Get()
   async findAll(
@@ -37,9 +41,13 @@ export class EvacuationLocationController {
     @Query('radius') radius?: string,
     @Query('limit') limit?: string,
   ) {
+    const latNum = parseFloat(lat);
+    const lonNum = parseFloat(lon);
+    // Validate coordinates are within Bantul
+    await this.bantulBoundary.validateOrThrow(latNum, lonNum);
     return this.evacuationLocationService.getNearby(
-      parseFloat(lat),
-      parseFloat(lon),
+      latNum,
+      lonNum,
       radius ? parseFloat(radius) : 3,
       limit ? parseInt(limit) : 10,
     );

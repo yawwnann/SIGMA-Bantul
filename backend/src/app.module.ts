@@ -9,6 +9,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AppGateway } from './websocket/app.gateway';
 import { RequestTrackingInterceptor } from './common/interceptors/request-tracking.interceptor';
+import { CommonModule } from './common/common.module';
 
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
@@ -42,6 +43,7 @@ import { EvacueeModule } from './evacuee/evacuee.module';
     ]),
     ScheduleModule.forRoot(),
     HttpModule,
+    CommonModule,
     PrismaModule,
     RedisModule,
     AuthModule,

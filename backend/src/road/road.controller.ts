@@ -15,10 +15,14 @@ import { RoadService } from './road.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CreateRoadDto } from './dto/create-road.dto';
 import { RoadCondition, RoadType } from '@prisma/client';
+import { BantulBoundaryService } from '../common/services/bantul-boundary.service';
 
 @Controller('roads')
 export class RoadController {
-  constructor(private roadService: RoadService) {}
+  constructor(
+    private roadService: RoadService,
+    private bantulBoundary: BantulBoundaryService,
+  ) {}
 
   @Get()
   async findAll(
@@ -90,6 +94,8 @@ export class RoadController {
     @Query('endLat', ParseFloatPipe) endLat: number,
     @Query('endLon', ParseFloatPipe) endLon: number,
   ) {
+    // Validate both coordinates are within Bantul
+    await this.bantulBoundary.validateRoute(startLat, startLon, endLat, endLon);
     return this.roadService.calculateRoute(startLat, startLon, endLat, endLon);
   }
 

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EvacuationLocationController } from './evacuation-location.controller';
 import { EvacuationLocationService } from './evacuation-location.service';
+import { BantulBoundaryService } from '../common/services/bantul-boundary.service';
 import {
   EvacuationLocationCategory,
   EvacuationLocationCondition,
@@ -24,6 +25,10 @@ describe('EvacuationLocationController', () => {
     unassignOfficer: jest.fn(),
   };
 
+  const mockBoundaryService = {
+    validateOrThrow: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [EvacuationLocationController],
@@ -31,6 +36,10 @@ describe('EvacuationLocationController', () => {
         {
           provide: EvacuationLocationService,
           useValue: mockService,
+        },
+        {
+          provide: BantulBoundaryService,
+          useValue: mockBoundaryService,
         },
       ],
     }).compile();

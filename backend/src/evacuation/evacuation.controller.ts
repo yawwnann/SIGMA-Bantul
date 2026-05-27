@@ -3,13 +3,19 @@ import { EvacuationService, RouteScore } from './evacuation.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CalculateRouteDto } from './dto/calculate-route.dto';
 import { RouteType } from '@prisma/client';
+import { BantulBoundaryService } from '../common/services/bantul-boundary.service';
 
 @Controller('routes')
 export class EvacuationController {
-  constructor(private evacuationService: EvacuationService) {}
+  constructor(
+    private evacuationService: EvacuationService,
+    private bantulBoundary: BantulBoundaryService,
+  ) {}
 
   @Post('recommendation')
   async calculateRoute(@Body() dto: CalculateRouteDto): Promise<RouteScore[]> {
+    // Validate both coordinates are within Bantul
+    await this.bantulBoundary.validateRoute(dto.startLat, dto.startLon, dto.endLat, dto.endLon);
     return this.evacuationService.calculateWeightedOverlay(
       dto.startLat,
       dto.startLon,
@@ -37,9 +43,13 @@ export class EvacuationController {
     @Query('lon') lon: string,
     @Query('limit') limit?: string,
   ) {
+    const latNum = parseFloat(lat);
+    const lonNum = parseFloat(lon);
+    // Validate coordinates are within Bantul
+    await this.bantulBoundary.validateOrThrow(latNum, lonNum);
     return this.evacuationService.getNearestEvacuationLocation(
-      parseFloat(lat),
-      parseFloat(lon),
+      latNum,
+      lonNum,
       limit ? parseInt(limit) : 5,
     );
   }
