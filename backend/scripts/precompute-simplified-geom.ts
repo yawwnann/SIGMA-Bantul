@@ -45,26 +45,30 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS "Road_geom_simplified_gist_idx" ON "Road
     console.log(`📊 Total roads dengan geometri: ${totalRoads}\n`);
 
     // Batch update untuk menghindari memory issues
+    // PostgreSQL doesn't support LIMIT in UPDATE, so we use ctid
     const BATCH_SIZE = 5000;
     let processed = 0;
     let updated = 0;
 
-    while (processed < totalRoads) {
-      const result = await prisma.$executeRaw`
+    while (true) {
+      // Get ctid of rows to update (using subquery approach)
+      const updateResult = await prisma.$executeRawUnsafe(`
         UPDATE "Road"
         SET geom_simplified = ST_SimplifyPreserveTopology(geom, ${SIMPLIFY_TOLERANCE})
-        WHERE geom IS NOT NULL
-          AND geom_simplified IS NULL
-        LIMIT ${BATCH_SIZE}
-      `;
+        WHERE ctid IN (
+          SELECT ctid FROM "Road"
+          WHERE geom IS NOT NULL AND geom_simplified IS NULL
+          LIMIT ${BATCH_SIZE}
+        )
+      `);
 
-      if (result === 0) {
+      if (updateResult === 0) {
         console.log('📦 Tidak ada baris yang perlu diupdate. Selesai!');
         break;
       }
 
-      updated += result;
-      processed += result;
+      updated += updateResult;
+      processed += updateResult;
 
       const progress = ((processed / totalRoads) * 100).toFixed(1);
       console.log(`📈 Progress: ${processed}/${totalRoads} (${progress}%) - Updated: ${updated} rows`);
