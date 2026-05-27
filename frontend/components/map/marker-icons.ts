@@ -69,7 +69,7 @@ export function getCapacityStyles(capacity: number, currentOccupancy?: number) {
   };
 }
 
-function getCapacityLabel(capacity: number, currentOccupancy?: number) {
+export function getCapacityLabel(capacity: number, currentOccupancy?: number) {
   const pct = getOccupancyPercentage(capacity, currentOccupancy);
   if (pct === null) return "Lokasi Evakuasi";
   if (pct >= 90) return "Kritis";
