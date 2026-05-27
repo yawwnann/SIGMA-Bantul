@@ -1159,39 +1159,7 @@ export default function MapClient({
                   className="rounded border-slate-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
                 />
               </label>
-              <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
-                  Zona Rawan
-                </span>
-                <input
-                  type="checkbox"
-                  checked={visibleLayers.hazardZones}
-                  onChange={() => toggleLayer("hazardZones")}
-                  className="rounded border-slate-300 dark:border-zinc-700 text-orange-600 focus:ring-orange-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
-                />
-              </label>
-              <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
-                  Titik Gempa
-                </span>
-                <input
-                  type="checkbox"
-                  checked={visibleLayers.earthquakes}
-                  onChange={() => toggleLayer("earthquakes")}
-                  className="rounded border-slate-300 dark:border-zinc-700 text-red-600 focus:ring-red-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
-                />
-              </label>
-              <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
-                  Fasilitas
-                </span>
-                <input
-                  type="checkbox"
-                  checked={visibleLayers.facilities}
-                  onChange={() => toggleLayer("facilities")}
-                  className="rounded border-slate-300 dark:border-zinc-700 text-green-600 focus:ring-green-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
-                />
-              </label>
+
               <label className="flex items-center justify-between cursor-pointer group">
                 <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
                   List Jalan
@@ -1203,40 +1171,7 @@ export default function MapClient({
                   className="rounded border-slate-300 dark:border-zinc-700 text-slate-600 focus:ring-slate-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
                 />
               </label>
-              <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors">
-                  Zona BPBD
-                </span>
-                <input
-                  type="checkbox"
-                  checked={visibleLayers.bpbdRisk}
-                  onChange={() => toggleLayer("bpbdRisk")}
-                  className="rounded border-slate-300 dark:border-zinc-700 text-amber-600 focus:ring-amber-500 w-3.5 h-3.5 cursor-pointer bg-slate-50 dark:bg-zinc-900"
-                />
-              </label>
             </div>
-
-            {visibleLayers.bpbdRisk && (
-              <div className="mt-4 pt-4 border-t border-slate-200 dark:border-zinc-800/60">
-                <h4 className="text-[10px] uppercase font-bold text-slate-700 dark:text-zinc-400 mb-2 tracking-wider">
-                  Legenda BPBD
-                </h4>
-                <div className="space-y-2.5 text-xs text-slate-600 dark:text-zinc-300">
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 bg-[#10b981] rounded border border-white dark:border-zinc-900 shadow-sm"></div>
-                    <span className="font-medium">Risiko Rendah</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 bg-[#f59e0b] rounded border border-white dark:border-zinc-900 shadow-sm"></div>
-                    <span className="font-medium">Risiko Sedang</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 bg-[#ef4444] rounded border border-white dark:border-zinc-900 shadow-sm"></div>
-                    <span className="font-medium">Risiko Tinggi</span>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {visibleLayers.earthquakes && earthquakes.length > 0 && (
               <div className="mt-4 pt-4 border-t border-slate-200 dark:border-zinc-800/60">

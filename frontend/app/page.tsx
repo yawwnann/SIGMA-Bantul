@@ -604,14 +604,14 @@ export default function Dashboard() {
             })
             .then((loc) => {
               const availableLocations = loc.filter(
-                (s: EvacuationLocation) => s.capacity - (s.currentOccupancy ?? 0) > 0
+                (s) => s.capacity - (s.currentOccupancy ?? 0) > 0
               );
               if (availableLocations.length === 0) return;
 
               let nearestLoc = availableLocations[0];
               let minDistance = Infinity;
 
-              availableLocations.forEach((s: EvacuationLocation) => {
+              availableLocations.forEach((s) => {
                 const coords = s.geometry as { coordinates: [number, number] };
                 const d = calculateDistance(
                   userLat,
@@ -1252,7 +1252,7 @@ export default function Dashboard() {
               </div>
             </div>
           )}
-          <div className="absolute top-4 right-4 z-1000 flex flex-row gap-2">
+          <div className="absolute top-4 right-4 z-50 flex flex-row gap-2">
             {/* Info Panel Toggle */}
             <Sheet open={sheetOpen} onOpenChange={setSheetOpen} modal={false}>
               <SheetTrigger className="inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-zinc-800 shadow-lg bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors h-10 w-10">
@@ -1260,7 +1260,7 @@ export default function Dashboard() {
               </SheetTrigger>
               <SheetContent
                 side="right"
-                className="w-95 p-0 bg-slate-50 dark:bg-zinc-950 border-l border-slate-200 dark:border-zinc-800 z-[1001]"
+                className="w-95 p-0 bg-slate-50 dark:bg-zinc-950 border-l border-slate-200 dark:border-zinc-800 z-[70]"
               >
                 <div className="sticky top-0 z-10 bg-white dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 p-5 flex items-center justify-between">
                   <h1 className="text-lg font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
@@ -1987,7 +1987,7 @@ export default function Dashboard() {
           if (!open) setRedZoneEmergency(null);
         }}
       >
-        <DialogContent className="sm:max-w-md border-0 bg-transparent shadow-none p-0 overflow-hidden">
+        <DialogContent className="sm:max-w-md border-0 bg-transparent shadow-none p-0 overflow-hidden z-[100]">
           <div className="relative overflow-hidden rounded-3xl border border-red-500/30 bg-white/80 p-6 dark:bg-zinc-950/80 backdrop-blur-2xl shadow-2xl transition-all duration-300 animate-in fade-in zoom-in-95">
             {/* Background warning pattern */}
             <div className="absolute top-0 right-0 -z-10 h-32 w-32 rounded-full bg-red-500/10 blur-2xl" />

@@ -159,7 +159,7 @@ export function ManualLocationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[450px] bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800 shadow-2xl">
+      <DialogContent className="sm:max-w-[450px] bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800 shadow-2xl z-[100]">
         <DialogHeader className="pb-2">
           <div className="flex items-center gap-3">
             <div className="bg-amber-100 dark:bg-amber-900/30 p-3 rounded-full">
