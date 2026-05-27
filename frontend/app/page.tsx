@@ -51,7 +51,8 @@ import { useTheme } from "next-themes";
 // Import hook dan service baru untuk nearby evacuationLocations
 import { useUserLocation } from "@/hooks/use-user-location";
 import { evacuationService } from "@/services/evacuation.service";
-import { getCurrentPositionRobust } from "@/lib/geolocation-utils";
+import { getCurrentPositionRobust, saveLastKnownLocation } from "@/lib/geolocation-utils";
+import { ManualLocationModal } from "@/components/manual-location-modal";
 
 const MapClient = dynamic(
   () => import("@/components/map/map-client").then((mod) => mod.default),
@@ -173,6 +174,10 @@ export default function Dashboard() {
   const [, setIsEvacuationLocationDetailOpen] = useState(false);
   const [redZoneEmergency, setRedZoneEmergency] = useState<Earthquake | null>(null);
   const processedEmergencyRef = useRef<string | null>(null);
+
+  // Manual location modal state
+  const [manualLocationModalOpen, setManualLocationModalOpen] = useState(false);
+  const [pendingEarthquake, setPendingEarthquake] = useState<Earthquake | null>(null);
 
   useEffect(() => {
     setCurrentTime(new Date());
@@ -345,6 +350,8 @@ export default function Dashboard() {
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
 
+        // Save location for future fallback
+        saveLastKnownLocation(userLat, userLng);
         setSelectedLocation({ lat: userLat, lng: userLng });
 
         const distKm = calculateDistance(userLat, userLng, eq.lat, eq.lon);
@@ -490,13 +497,24 @@ export default function Dashboard() {
       },
       (error) => {
         console.error("[Emergency Geolocation Error]", error);
-        toast.error("Gagal melacak lokasi Anda secara otomatis.", {
-          description: "Silakan periksa izin GPS Anda. Menampilkan episentrum gempa pada peta.",
+        setGettingLocation(false);
+
+        // Determine error type
+        const isPermissionDenied = error.code === error.PERMISSION_DENIED;
+        const errorMessage = isPermissionDenied
+          ? "Izin lokasi ditolak. Silakan pilih metode alternatif."
+          : "Gagal mendapatkan lokasi GPS Anda.";
+
+        toast.error(errorMessage, {
+          description: isPermissionDenied
+            ? "Pilih lokasi manual atau gunakan lokasi terakhir yang tersimpan."
+            : "Silakan coba lagi atau gunakan lokasi manual.",
           duration: 8000,
         });
-        setSelectedEarthquake(eq);
-        setFlyToLocation({ lat: eq.lat, lon: eq.lon, zoom: 11 });
-        setGettingLocation(false);
+
+        // Open manual location modal for user to select alternative
+        setPendingEarthquake(eq);
+        setManualLocationModalOpen(true);
       },
       {
         enableHighAccuracy: true,
@@ -510,6 +528,153 @@ export default function Dashboard() {
   useEffect(() => {
     processEmergencyFlowRef.current = processEmergencyFlow;
   }, [processEmergencyFlow]);
+
+  // Handle manual location selection from ManualLocationModal
+  const handleManualLocationSelected = useCallback(
+    (location: { lat: number; lng: number; source: string }) => {
+      setManualLocationModalOpen(false);
+
+      if (!pendingEarthquake) return;
+
+      const eq = pendingEarthquake;
+      const userLat = location.lat;
+      const userLng = location.lng;
+
+      // Save if it's a valid location
+      if (location.source !== "manual" || (userLat && userLng)) {
+        saveLastKnownLocation(userLat, userLng);
+      }
+
+      setSelectedLocation({ lat: userLat, lng: userLng });
+
+      const distKm = calculateDistance(userLat, userLng, eq.lat, eq.lon);
+      const distMeters = distKm * 1000;
+      const baseRadius = Math.pow(eq.magnitude, 2.5) * 50;
+
+      console.log(
+        `[Manual Location] Source: ${location.source}, Coords: ${userLat}, ${userLng}. Dist: ${distMeters.toFixed(1)}m. baseRadius: ${baseRadius.toFixed(1)}m`
+      );
+
+      setSelectedEarthquake(eq);
+
+      if (distMeters <= baseRadius) {
+        // RED ZONE
+        setRedZoneEmergency(eq);
+        setFlyToLocation({ lat: eq.lat, lon: eq.lon, zoom: 14 });
+        setCalculatedRoute(null);
+        setRouteStart(null);
+        setRouteEnd(null);
+        setGettingLocation(false);
+        toast.error("🔴 ANDA BERADA DI ZONA MERAH (BAHAYA TINGGI)", {
+          description: location.source === "manual"
+            ? "Lokasi manual terdeteksi di zona bahaya. Tetap berlindung di tempat aman."
+            : "Bahaya reruntuhan tinggi! Tetap berlindung di tempat aman/shelter-in-place.",
+          duration: 10000,
+        });
+      } else if (distMeters <= baseRadius * 6) {
+        // YELLOW or GREEN ZONE
+        const isYellow = distMeters <= baseRadius * 3;
+        toast.info(
+          isYellow
+            ? "🟡 Anda berada di Zona Kuning (Dampak Menengah)"
+            : "🟢 Anda berada di Zona Hijau (Dampak Ringan)",
+          {
+            description: "Mencari rute evakuasi otomatis menuju lokasi terdekat...",
+            duration: 5000,
+          }
+        );
+
+        // Get or fetch evacuation locations
+        let locations = evacuationLocationsRef.current;
+        if (locations.length === 0) {
+          evacuationService
+            .getNearbyEvacuationLocations({
+              lat: userLat,
+              lng: userLng,
+              radius: 15,
+              limit: 15,
+            })
+            .then((loc) => {
+              setEvacuationLocations(loc);
+              return loc;
+            })
+            .catch((err) => {
+              console.error("Gagal memuat tempat evakuasi", err);
+              return [];
+            })
+            .then((loc) => {
+              const availableLocations = loc.filter(
+                (s: EvacuationLocation) => s.capacity - (s.currentOccupancy ?? 0) > 0
+              );
+              if (availableLocations.length === 0) return;
+
+              let nearestLoc = availableLocations[0];
+              let minDistance = Infinity;
+
+              availableLocations.forEach((s: EvacuationLocation) => {
+                const coords = s.geometry as { coordinates: [number, number] };
+                const d = calculateDistance(
+                  userLat,
+                  userLng,
+                  coords.coordinates[1],
+                  coords.coordinates[0]
+                );
+                if (d < minDistance) {
+                  minDistance = d;
+                  nearestLoc = s;
+                }
+              });
+
+              const targetCoords = nearestLoc.geometry as { coordinates: [number, number] };
+              setRoutingMode(true);
+
+              roadApi
+                .calculateRoute(
+                  userLat,
+                  userLng,
+                  targetCoords.coordinates[1],
+                  targetCoords.coordinates[0]
+                )
+                .then((route) => {
+                  setCalculatedRoute(route);
+                  setRouteStart({ lat: userLat, lng: userLng });
+                  setRouteEnd({
+                    lat: targetCoords.coordinates[1],
+                    lng: targetCoords.coordinates[0],
+                  });
+                  setDestinationName(nearestLoc.name);
+                  setIsMapExpanded(true);
+                  setFlyToLocation({ lat: userLat, lon: userLng, zoom: 14 });
+                  toast.success(
+                    `Rute evakuasi ke ${nearestLoc.name} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
+                    { duration: 8000 }
+                  );
+                })
+                .catch((routeErr) => {
+                  console.error("Error calculating route:", routeErr);
+                  toast.error("Gagal menghitung rute evakuasi.", { duration: 8000 });
+                })
+                .finally(() => setGettingLocation(false));
+            });
+        }
+      } else {
+        // OUTSIDE ZONE
+        setFlyToLocation({ lat: eq.lat, lon: eq.lon, zoom: 11 });
+        setCalculatedRoute(null);
+        setRouteStart(null);
+        setRouteEnd(null);
+        setGettingLocation(false);
+        toast.success(
+          "Safe Zone: Anda berada di luar radius dampak gempa.",
+          {
+            description: `Jarak Anda ke pusat gempa: ${distKm.toFixed(1)} km. Memfokuskan peta ke episentrum.`,
+            duration: 8000,
+          }
+        );
+      }
+    },
+    [pendingEarthquake]
+  );
 
   useEffect(() => {
     emergencyHandlerRef.current = handleEmergencyEvacuation;
@@ -1803,6 +1968,18 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
+
+      {/* Manual Location Modal - Fallback when GPS fails */}
+      <ManualLocationModal
+        isOpen={manualLocationModalOpen}
+        onClose={() => {
+          setManualLocationModalOpen(false);
+          setGettingLocation(false);
+        }}
+        onLocationSelected={handleManualLocationSelected}
+        earthquakeLat={pendingEarthquake?.lat}
+        earthquakeLon={pendingEarthquake?.lon}
+      />
 
       <Dialog
         open={!!redZoneEmergency}

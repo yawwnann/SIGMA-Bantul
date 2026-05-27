@@ -9,6 +9,93 @@ export interface RobustPositionOptions extends PositionOptions {
   fallbackTimeout?: number;
 }
 
+const LAST_LOCATION_KEY = 'sigma_last_location';
+
+/**
+ * Interface for last known location
+ */
+export interface LastKnownLocation {
+  lat: number;
+  lng: number;
+  timestamp: number;
+}
+
+/**
+ * Save location to localStorage for future fallback use
+ */
+export function saveLastKnownLocation(lat: number, lng: number): void {
+  if (typeof window === "undefined") return;
+  try {
+    const data: LastKnownLocation = {
+      lat,
+      lng,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.warn('[Geolocation] Failed to save last known location:', e);
+  }
+}
+
+/**
+ * Get last known location from localStorage
+ * Returns null if no saved location or if older than 1 hour
+ */
+export function getLastKnownLocation(): LastKnownLocation | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem(LAST_LOCATION_KEY);
+    if (!stored) return null;
+
+    const data: LastKnownLocation = JSON.parse(stored);
+
+    // Check if location is not older than 1 hour
+    const ONE_HOUR = 60 * 60 * 1000;
+    if (Date.now() - data.timestamp > ONE_HOUR) {
+      return null;
+    }
+
+    return data;
+  } catch (e) {
+    console.warn('[Geolocation] Failed to get last known location:', e);
+    return null;
+  }
+}
+
+/**
+ * Clear last known location
+ */
+export function clearLastKnownLocation(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(LAST_LOCATION_KEY);
+  } catch (e) {
+    console.warn('[Geolocation] Failed to clear last known location:', e);
+  }
+}
+
+/**
+ * Check if geolocation is available in browser
+ */
+export function isGeolocationAvailable(): boolean {
+  return typeof window !== "undefined" && "geolocation" in navigator;
+}
+
+/**
+ * Check if geolocation permission is granted
+ */
+export async function checkGeolocationPermission(): Promise<'granted' | 'prompt' | 'denied'> {
+  if (typeof window === "undefined" || !navigator.permissions) {
+    return 'prompt';
+  }
+  try {
+    const result = await navigator.permissions.query({ name: "geolocation" });
+    return result.state as 'granted' | 'prompt' | 'denied';
+  } catch {
+    return 'prompt';
+  }
+}
+
 /**
  * Robust wrapper for navigator.geolocation.getCurrentPosition.
  * If enableHighAccuracy is true and it fails due to TIMEOUT or POSITION_UNAVAILABLE,
