@@ -27,7 +27,6 @@ import { useTheme } from "next-themes";
 
 const menuItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/monitoring", label: "Monitoring Sistem", icon: Activity },
   { href: "/admin/evacuation-locations", label: "Lokasi Evakuasi", icon: Home },
   { href: "/admin/officers", label: "Petugas Evakuasi", icon: ShieldAlert },
   { href: "/admin/facilities", label: "Fasilitas Umum", icon: Building2 },
