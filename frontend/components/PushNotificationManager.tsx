@@ -38,7 +38,7 @@ function getEarthquakeNotificationMessage(earthquake: Earthquake): {
   return {
     title: `Peringatan Gempa M${magnitude}`,
     body: `${location} • Kedalaman ${depth} km. Segera cek info evakuasi.`,
-    url: "/?emergency=true",
+    url: `/?emergency=${earthquake.id}`,
   };
 }
 

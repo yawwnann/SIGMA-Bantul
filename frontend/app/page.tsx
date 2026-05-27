@@ -21,6 +21,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -36,6 +45,7 @@ import {
   Car,
   Clock,
   Activity,
+  AlertTriangle,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 // Import hook dan service baru untuk nearby evacuationLocations
@@ -161,6 +171,8 @@ export default function Dashboard() {
   } | null>(null);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [, setIsEvacuationLocationDetailOpen] = useState(false);
+  const [redZoneEmergency, setRedZoneEmergency] = useState<Earthquake | null>(null);
+  const processedEmergencyRef = useRef<string | null>(null);
 
   useEffect(() => {
     setCurrentTime(new Date());
@@ -320,6 +332,184 @@ export default function Dashboard() {
       },
     );
   }, []);
+
+  const processEmergencyFlow = useCallback(async (eq: Earthquake) => {
+    setGettingLocation(true);
+    toast.info("Memproses respons darurat...", {
+      description: "Sedang mendapatkan koordinat lokasi Anda untuk menentukan zona keselamatan.",
+      duration: 4000,
+    });
+
+    getCurrentPositionRobust(
+      async (position) => {
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+
+        setSelectedLocation({ lat: userLat, lng: userLng });
+
+        const distKm = calculateDistance(userLat, userLng, eq.lat, eq.lon);
+        const distMeters = distKm * 1000;
+        const baseRadius = Math.pow(eq.magnitude, 2.5) * 50;
+
+        console.log(`[Emergency Flow] User coords: ${userLat}, ${userLng}. Dist: ${distMeters.toFixed(1)}m. baseRadius: ${baseRadius.toFixed(1)}m`);
+
+        setSelectedEarthquake(eq);
+
+        // Check if starting point is within Bantul
+        if (!isWithinBantul(userLat, userLng)) {
+          setFlyToLocation({ lat: eq.lat, lon: eq.lon, zoom: 11 });
+          setGettingLocation(false);
+          toast.warning("Lokasi Anda terdeteksi di luar Bantul.", {
+            description: "Sistem evakuasi otomatis hanya mendukung wilayah Kabupaten Bantul. Memfokuskan peta ke episentrum.",
+            duration: 8000,
+          });
+          return;
+        }
+
+        if (distMeters <= baseRadius) {
+          // RED ZONE
+          setRedZoneEmergency(eq);
+          setFlyToLocation({ lat: eq.lat, lon: eq.lon, zoom: 14 });
+          // Jangan menghitung rute navigasi
+          setCalculatedRoute(null);
+          setRouteStart(null);
+          setRouteEnd(null);
+          setGettingLocation(false);
+          toast.error("🔴 ANDA BERADA DI ZONA MERAH (BAHAYA TINGGI)", {
+            description: "Bahaya reruntuhan tinggi! Tetap berlindung di tempat aman/shelter-in-place.",
+            duration: 10000,
+          });
+        } else if (distMeters <= baseRadius * 6) {
+          // YELLOW or GREEN ZONE (radius * 3 or radius * 6)
+          const isYellow = distMeters <= baseRadius * 3;
+          toast.info(isYellow ? "🟡 Anda berada di Zona Kuning (Dampak Menengah)" : "🟢 Anda berada di Zona Hijau (Dampak Ringan)", {
+            description: "Mencari rute evakuasi otomatis menuju lokasi terdekat...",
+            duration: 5000,
+          });
+
+          // Get or fetch evacuation locations
+          let locations = evacuationLocationsRef.current;
+          if (locations.length === 0) {
+            try {
+              locations = await evacuationService.getNearbyEvacuationLocations({
+                lat: userLat,
+                lng: userLng,
+                radius: 15,
+                limit: 15,
+              });
+              setEvacuationLocations(locations);
+            } catch (err) {
+              console.error("Gagal memuat tempat evakuasi secara dinamis", err);
+            }
+          }
+
+          // Filter by capacity
+          let availableLocations = locations.filter(
+            (s) => s.capacity - (s.currentOccupancy ?? 0) > 0,
+          );
+          if (availableLocations.length === 0) {
+            availableLocations = [...locations];
+          }
+
+          if (availableLocations.length === 0) {
+            toast.error("Tidak ada lokasi evakuasi terdekat yang ditemukan.", {
+              description: "Silakan pantau pengumuman keselamatan atau pilih lokasi manual.",
+            });
+            setGettingLocation(false);
+            setFlyToLocation({ lat: eq.lat, lon: eq.lon, zoom: 12 });
+            return;
+          }
+
+          // Find nearest available
+          let nearestLoc = availableLocations[0];
+          let minDistance = Infinity;
+
+          availableLocations.forEach((s) => {
+            const coords = s.geometry as { coordinates: [number, number] };
+            const d = calculateDistance(
+              userLat,
+              userLng,
+              coords.coordinates[1],
+              coords.coordinates[0],
+            );
+            if (d < minDistance) {
+              minDistance = d;
+              nearestLoc = s;
+            }
+          });
+
+          const targetCoords = nearestLoc.geometry as {
+            coordinates: [number, number];
+          };
+
+          setRoutingMode(true);
+
+          try {
+            const route = await roadApi.calculateRoute(
+              userLat,
+              userLng,
+              targetCoords.coordinates[1],
+              targetCoords.coordinates[0],
+            );
+
+            setCalculatedRoute(route);
+            setRouteStart({ lat: userLat, lng: userLng });
+            setRouteEnd({
+              lat: targetCoords.coordinates[1],
+              lng: targetCoords.coordinates[0],
+            });
+            setDestinationName(nearestLoc.name);
+            setIsMapExpanded(true);
+            setFlyToLocation({ lat: userLat, lon: userLng, zoom: 14 });
+
+            toast.success(
+              `Rute evakuasi ke ${nearestLoc.name} berhasil ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
+              { duration: 8000 }
+            );
+          } catch (routeErr) {
+            console.error("Error calculating emergency route:", routeErr);
+            toast.error("Gagal menghitung rute evakuasi darurat otomatis.", {
+              description: "Coba pilih tempat evakuasi secara manual pada panel informasi.",
+              duration: 8000,
+            });
+          } finally {
+            setGettingLocation(false);
+          }
+        } else {
+          // OUTSIDE ZONE
+          setFlyToLocation({ lat: eq.lat, lon: eq.lon, zoom: 11 });
+          setCalculatedRoute(null);
+          setRouteStart(null);
+          setRouteEnd(null);
+          setGettingLocation(false);
+          toast.success("Safe Zone: Anda berada di luar radius dampak gempa.", {
+            description: `Jarak Anda ke pusat gempa: ${distKm.toFixed(1)} km. Memfokuskan peta ke episentrum gempa.`,
+            duration: 8000,
+          });
+        }
+      },
+      (error) => {
+        console.error("[Emergency Geolocation Error]", error);
+        toast.error("Gagal melacak lokasi Anda secara otomatis.", {
+          description: "Silakan periksa izin GPS Anda. Menampilkan episentrum gempa pada peta.",
+          duration: 8000,
+        });
+        setSelectedEarthquake(eq);
+        setFlyToLocation({ lat: eq.lat, lon: eq.lon, zoom: 11 });
+        setGettingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 0,
+      }
+    );
+  }, []);
+
+  const processEmergencyFlowRef = useRef<(eq: Earthquake) => void>(() => {});
+  useEffect(() => {
+    processEmergencyFlowRef.current = processEmergencyFlow;
+  }, [processEmergencyFlow]);
 
   useEffect(() => {
     emergencyHandlerRef.current = handleEmergencyEvacuation;
@@ -503,8 +693,7 @@ export default function Dashboard() {
       );
 
       const handleClickToast = () => {
-        setFlyToLocation({ lat: newEq.lat, lon: newEq.lon, zoom: 11 });
-        setSelectedEarthquake(newEq);
+        processEmergencyFlowRef.current(newEq);
       };
 
       const zoneLabel =
@@ -518,7 +707,7 @@ export default function Dashboard() {
         zone === "RED"
           ? "Tetap berlindung di tempat aman!"
           : zone === "YELLOW"
-            ? "Segera evakuasi ke evacuationLocation terdekat!"
+            ? "Segera evakuasi ke tempat evakuasi terdekat!"
             : "Pantau informasi gempa lebih lanjut.";
 
       const borderColor =
@@ -544,8 +733,8 @@ export default function Dashboard() {
           <div className="text-xs mt-1 font-medium">
             Kamu berada di {zoneLabel}. {zoneAction}
           </div>
-          <div className="text-xs text-blue-600 mt-1">
-            Klik untuk melihat detail
+          <div className="text-xs text-blue-600 mt-1 font-semibold">
+            Klik untuk melihat detail & panduan keselamatan
           </div>
         </div>,
         { duration: 15000 },
@@ -589,172 +778,50 @@ export default function Dashboard() {
 
   // Handle emergency routing from push notification click or toast
   useEffect(() => {
-    if (evacuationLocations.length === 0) return;
-
     const searchParams = new URLSearchParams(window.location.search);
-    if (searchParams.get("emergency") === "true") {
-      console.log("[Emergency] Emergency mode activated from URL parameter");
+    const emergencyParam = searchParams.get("emergency");
 
-      // Remove param from URL to prevent re-triggering on refresh
+    if (emergencyParam) {
+      // Prevent duplicate processing
+      if (processedEmergencyRef.current === emergencyParam) return;
+      processedEmergencyRef.current = emergencyParam;
+
+      // Clean up URL parameter immediately to avoid re-triggering
       window.history.replaceState({}, document.title, window.location.pathname);
 
-      toast.info("Mencari rute evakuasi darurat...", {
-        description:
-          "Mohon izinkan akses lokasi untuk menghitung rute terdekat",
-        duration: 5000,
-      });
+      const runEmergency = async () => {
+        try {
+          let targetEq: Earthquake | null = null;
 
-      if (!navigator.geolocation) {
-        console.error("[Emergency] Geolocation not supported");
-        toast.error("Geolocation tidak didukung oleh browser ini.");
-        return;
-      }
-
-      setGettingLocation(true);
-
-      console.log("[Emergency] Requesting geolocation...");
-      getCurrentPositionRobust(
-        async (position) => {
-          console.log("[Emergency] Geolocation obtained:", position.coords);
-          const userLat = position.coords.latitude;
-          const userLng = position.coords.longitude;
-
-          if (!isWithinBantul(userLat, userLng)) {
-            console.warn("[Emergency] User location outside Bantul");
-            toast.error(
-              "Lokasi Anda di luar wilayah Kabupaten Bantul. Sistem hanya mendukung evakuasi di wilayah Bantul.",
-            );
-            setGettingLocation(false);
-            return;
-          }
-
-          // 1. Find evacuationLocations with available capacity
-          let availableEvacuationLocations = evacuationLocations.filter(
-            (s) => s.capacity - (s.currentOccupancy ?? 0) > 0,
-          );
-          console.log(
-            "[Emergency] Available evacuationLocations:",
-            availableEvacuationLocations.length,
-          );
-
-          if (availableEvacuationLocations.length === 0) {
-            toast.error(
-              "Peringatan: Tidak ada evacuationLocation dengan kapasitas tersedia. Mencari evacuationLocation terdekat...",
-            );
-            // Fallback to all evacuationLocations if none available
-            availableEvacuationLocations = [...evacuationLocations];
-          }
-
-          // 2. Locate nearest available evacuationLocation
-          let nearestEvacuationLocation = availableEvacuationLocations[0];
-          let minDistance = Infinity;
-
-          availableEvacuationLocations.forEach((s) => {
-            const coords = s.geometry as { coordinates: [number, number] };
-            const dist = calculateDistance(
-              userLat,
-              userLng,
-              coords.coordinates[1],
-              coords.coordinates[0],
-            );
-            if (dist < minDistance) {
-              minDistance = dist;
-              nearestEvacuationLocation = s;
+          if (emergencyParam === "true") {
+            // Fallback: get the latest earthquake
+            targetEq = await earthquakeApi.getLatest();
+          } else {
+            const eqId = Number(emergencyParam);
+            if (!isNaN(eqId)) {
+              // Try to find in the already loaded list
+              targetEq = earthquakes.find((e) => e.id === eqId) || null;
+              if (!targetEq) {
+                // Fetch from API
+                targetEq = await earthquakeApi.getById(eqId);
+              }
             }
-          });
-
-          const targetCoords = nearestEvacuationLocation.geometry as {
-            coordinates: [number, number];
-          };
-
-          // Set state for location select first
-          setSelectedLocation({ lat: userLat, lng: userLng });
-          setRoutingMode(true);
-
-          // 3. Immediately calculate map route
-          try {
-            toast.info(
-              `Menghitung rute ke ${nearestEvacuationLocation.name}...`,
-            );
-            const route = await roadApi.calculateRoute(
-              userLat,
-              userLng,
-              targetCoords.coordinates[1],
-              targetCoords.coordinates[0],
-            );
-
-            setCalculatedRoute(route);
-            setRouteStart({ lat: userLat, lng: userLng });
-            setRouteEnd({
-              lat: targetCoords.coordinates[1],
-              lng: targetCoords.coordinates[0],
-            });
-            setDestinationName(nearestEvacuationLocation.name);
-            setIsMapExpanded(true);
-
-            const threateningEq = earthquakes.find((eq) =>
-              isThreatened(userLat, userLng, eq.lat, eq.lon, eq.magnitude),
-            );
-            if (threateningEq) setSelectedEarthquake(threateningEq);
-
-            setRoutingMode(false);
-
-            toast.success(
-              `Rute darurat ke ${nearestEvacuationLocation.name} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
-            );
-          } catch (error) {
-            console.error(
-              "[Emergency] Error calculating emergency route:",
-              error,
-            );
-            toast.error("Gagal menghitung rute darurat dari lokasi saat ini.", {
-              description:
-                "Silakan coba lagi atau pilih evacuationLocation secara manual",
-              duration: 5000,
-            });
-          } finally {
-            setGettingLocation(false);
-          }
-        },
-        (error) => {
-          console.error("[Emergency] Geolocation error:", error);
-
-          let errorMessage =
-            "Gagal mendapatkan lokasi GPS Anda untuk evakuasi.";
-          let errorDescription = "";
-
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              errorMessage = "Izin lokasi ditolak";
-              errorDescription =
-                "Silakan aktifkan izin lokasi di pengaturan browser untuk menggunakan fitur rute darurat";
-              break;
-            case error.POSITION_UNAVAILABLE:
-              errorMessage = "Lokasi tidak tersedia";
-              errorDescription =
-                "GPS tidak dapat menentukan lokasi Anda saat ini";
-              break;
-            case error.TIMEOUT:
-              errorMessage = "Waktu habis";
-              errorDescription =
-                "Permintaan lokasi memakan waktu terlalu lama. Silakan coba lagi";
-              break;
           }
 
-          toast.error(errorMessage, {
-            description: `${errorDescription} (debug: app/page.tsx - line 743, error_code: ${error.code})`,
-            duration: 7000,
-          });
-          setGettingLocation(false);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0,
-        },
-      );
+          if (targetEq) {
+            processEmergencyFlow(targetEq);
+          } else {
+            toast.error("Data gempa darurat tidak ditemukan.");
+          }
+        } catch (err) {
+          console.error("Gagal memproses data gempa darurat:", err);
+          toast.error("Terjadi kesalahan saat memproses data gempa darurat.");
+        }
+      };
+
+      runEmergency();
     }
-  }, [evacuationLocations.length]);
+  }, [earthquakes, processEmergencyFlow]);
 
   const handleMapClick = (lat: number, lng: number) => {
     if (!isWithinBantul(lat, lng)) {
@@ -1736,6 +1803,76 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
+
+      <Dialog
+        open={!!redZoneEmergency}
+        onOpenChange={(open) => {
+          if (!open) setRedZoneEmergency(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md border-0 bg-transparent shadow-none p-0 overflow-hidden">
+          <div className="relative overflow-hidden rounded-3xl border border-red-500/30 bg-white/80 p-6 dark:bg-zinc-950/80 backdrop-blur-2xl shadow-2xl transition-all duration-300 animate-in fade-in zoom-in-95">
+            {/* Background warning pattern */}
+            <div className="absolute top-0 right-0 -z-10 h-32 w-32 rounded-full bg-red-500/10 blur-2xl" />
+            <div className="absolute -left-10 -bottom-10 -z-10 h-32 w-32 rounded-full bg-orange-500/10 blur-2xl" />
+
+            <div className="flex flex-col items-center text-center space-y-4 pt-4">
+              {/* Animated Warning Icon Container */}
+              <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 animate-pulse">
+                <AlertTriangle className="h-10 w-10 text-red-500 stroke-[2.5]" />
+              </div>
+
+              <div className="space-y-2">
+                <Badge variant="destructive" className="px-3 py-1 text-xs font-bold uppercase tracking-wider bg-red-600 hover:bg-red-700 animate-bounce">
+                  ZONA MERAH: BAHAYA TINGGI
+                </Badge>
+                <DialogTitle className="text-2xl font-black tracking-tight text-slate-900 dark:text-zinc-50">
+                  {redZoneEmergency?.location}
+                </DialogTitle>
+                <div className="text-xs font-semibold text-slate-500 dark:text-zinc-400 font-mono">
+                  Magnitude {redZoneEmergency?.magnitude} &middot; Kedalaman {redZoneEmergency?.depth} Km
+                </div>
+              </div>
+
+              <DialogDescription className="text-sm text-slate-600 dark:text-zinc-300 leading-relaxed text-left bg-red-500/5 dark:bg-red-500/10 border border-red-500/10 rounded-2xl p-4 space-y-2.5">
+                <p className="font-bold text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                  ⚠️ Peringatan Shelter-in-Place:
+                </p>
+                <p className="text-xs">
+                  Anda terdeteksi berada sangat dekat dengan pusat gempa. **Navigasi rute otomatis dinonaktifkan** demi keselamatan Anda untuk menghindari risiko reruntuhan gedung, jalan retak, atau tiang listrik roboh di luar.
+                </p>
+                <div className="pt-2 border-t border-red-500/10 space-y-1.5 text-xs font-semibold">
+                  <p className="flex items-start gap-2">
+                    <span className="text-red-500">1.</span>
+                    <span>TETAP BERLINDUNG di bawah meja atau struktur kokoh.</span>
+                  </p>
+                  <p className="flex items-start gap-2">
+                    <span className="text-red-500">2.</span>
+                    <span>JAUHI JENDELA kaca, dinding luar, dan barang pecah belah.</span>
+                  </p>
+                  <p className="flex items-start gap-2">
+                    <span className="text-red-500">3.</span>
+                    <span>LINDUNGI KEPALA dan leher dengan bantal atau tangan Anda.</span>
+                  </p>
+                  <p className="flex items-start gap-2">
+                    <span className="text-red-500">4.</span>
+                    <span>Tunggu guncangan reda sebelum mencoba keluar ke area terbuka.</span>
+                  </p>
+                </div>
+              </DialogDescription>
+            </div>
+
+            <DialogFooter className="mt-6 flex flex-col sm:flex-row gap-2">
+              <Button
+                onClick={() => setRedZoneEmergency(null)}
+                className="w-full rounded-2xl bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white font-bold py-5 border-t border-red-400/20 shadow-lg shadow-red-500/20 hover:shadow-red-600/30 transition-all duration-300 flex items-center justify-center gap-2 group"
+              >
+                <span>Saya Mengerti & Siaga</span>
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

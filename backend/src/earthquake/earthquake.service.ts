@@ -41,6 +41,11 @@ export interface BMKGGempaItem {
 const BANTUL_LAT = -7.886;
 const BANTUL_LON = 110.334;
 
+function isInsideBantul(lat: number, lon: number): boolean {
+  // Bounding box matching frontend's BANTUL_BOUNDS
+  return lat >= -8.15 && lat <= -7.8 && lon >= 110.15 && lon <= 110.5;
+}
+
 function getDistanceFromLatLonInKm(
   lat1: number,
   lon1: number,
@@ -237,26 +242,22 @@ export class EarthquakeService {
 
     // Task 1.2: Check if it's within Bantul threat radius
     if (isNewThreat) {
-      const dstToBantul = getDistanceFromLatLonInKm(
-        eqData.lat,
-        eqData.lon,
-        BANTUL_LAT,
-        BANTUL_LON,
-      );
-      // Base Radius formula: Magnitude^2.5 * constant (e.g. 1.0 km)
-      // Red = 1R, Yellow = 3R, Green = 6R
-      // We broadcast if it's within 6R or arbitrary large buffer
-      const R = Math.pow(eqData.magnitude, 2.5) * 1.5; // const 1.5
-      const maxImpactRadius = R * 6;
-
-      if (dstToBantul <= maxImpactRadius || dstToBantul <= 200) {
+      const eqInBantul = isInsideBantul(eqData.lat, eqData.lon);
+      if (eqInBantul) {
+        const dstToBantul = getDistanceFromLatLonInKm(
+          eqData.lat,
+          eqData.lon,
+          BANTUL_LAT,
+          BANTUL_LON,
+        );
         // Broadcast emergency notification
         this.logger.warn(
-          `EARTHQUAKE ALERT: Mag ${eqData.magnitude} at ${dstToBantul.toFixed(2)}km from Bantul.`,
+          `EARTHQUAKE ALERT: Mag ${eqData.magnitude} inside Bantul region. Epicenter: ${eqData.lat}, ${eqData.lon} (${dstToBantul.toFixed(2)}km from Bantul center).`,
         );
         await this.notifService.broadcastEarthquakeAlert(
-          'Gempa Terdeteksi di Sekitar Bantul',
-          `Magnitudo: ${eqData.magnitude}, Jarak: ${dstToBantul.toFixed(0)}km. Klik untuk evakuasi.`,
+          'Gempa Terdeteksi di Wilayah Bantul',
+          `Magnitudo: ${eqData.magnitude}, Kedalaman: ${eqData.depth}km. Segera periksa keselamatan Anda.`,
+          savedEarthquake.id.toString(),
         );
       }
     }
@@ -479,6 +480,7 @@ export class EarthquakeService {
     await this.notifService.broadcastEarthquakeAlert(
       `SIMULASI GEMPA: ${eq.location}`,
       `Magnitudo: ${eq.magnitude}, Kedalaman: ${eq.depth}km. Ini adalah simulasi evakuasi.`,
+      eq.id.toString(),
     );
 
     return eq;
