@@ -241,10 +241,11 @@ export class RoadService {
     }
 
     // Build query - get roads within bounds if specified
+    // Use geom_simplified if available (pre-computed for performance)
     let roads;
     if (bounds) {
       roads = await this.prisma.$queryRaw<any[]>`
-        SELECT 
+        SELECT
           id,
           name,
           type,
@@ -254,17 +255,20 @@ export class RoadService {
           "bpbdRiskScore",
           "combinedHazard",
           safe_cost,
-          ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, 0.00005), 5)::json as geojson
+          COALESCE(
+            ST_AsGeoJSON(geom_simplified, 6)::json,
+            ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, 0.00005), 6)::json
+          ) as geojson
         FROM "Road"
         WHERE ST_Intersects(
-          geom,
+          COALESCE(geom_simplified, geom),
           ST_MakeEnvelope(${bounds.minLon}, ${bounds.minLat}, ${bounds.maxLon}, ${bounds.maxLat}, 4326)
         )
         ORDER BY type, name
       `;
     } else {
       roads = await this.prisma.$queryRaw<any[]>`
-        SELECT 
+        SELECT
           id,
           name,
           type,
@@ -274,7 +278,10 @@ export class RoadService {
           "bpbdRiskScore",
           "combinedHazard",
           safe_cost,
-          ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, 0.00005), 5)::json as geojson
+          COALESCE(
+            ST_AsGeoJSON(geom_simplified, 6)::json,
+            ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, 0.00005), 6)::json
+          ) as geojson
         FROM "Road"
         ORDER BY type, name
       `;
