@@ -60,7 +60,7 @@ export const EvacuationCluster = memo(function EvacuationCluster({
         <Marker
           key={evacuationLocation.id}
           position={position}
-          icon={createEvacuationIcon(evacuationLocation.category)}
+          icon={createEvacuationIcon(evacuationLocation.category, evacuationLocation.capacity, evacuationLocation.currentOccupancy)}
           eventHandlers={{ click: () => onMarkerClick(evacuationLocation) }}
         />
       ))}

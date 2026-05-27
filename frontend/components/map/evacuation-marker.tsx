@@ -42,8 +42,9 @@ export function createEvacuationMarker(
   item: EvacuationMarkerData,
   onClick: (evacuationLocation: EvacuationLocation) => void,
 ) {
+  const { category, capacity, currentOccupancy } = item.evacuationLocation;
   const marker = L.marker(item.position, {
-    icon: createEvacuationIcon(item.evacuationLocation.category),
+    icon: createEvacuationIcon(category, capacity, currentOccupancy),
     keyboard: false,
     riseOnHover: true,
   });

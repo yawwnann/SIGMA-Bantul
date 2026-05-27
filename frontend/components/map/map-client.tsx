@@ -1396,12 +1396,13 @@ export default function MapClient({
         }
         .evacuation-popup__header {
           padding: 10px 12px 0;
+          border-radius: 0;
         }
         .evacuation-popup__header span {
           display: inline-flex;
           border-radius: 999px;
-          background: #eff6ff;
-          color: #1d4ed8;
+          background: rgba(255,255,255,0.9);
+          color: #0f172a;
           padding: 3px 9px;
           font-size: 11px;
           font-weight: 800;

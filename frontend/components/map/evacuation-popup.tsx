@@ -1,5 +1,5 @@
 import type { EvacuationLocation } from "@/types";
-import { getEvacuationLocationCategoryLabel } from "./marker-icons";
+import { getEvacuationLocationCategoryLabel, getCapacityColor, getCapacityLabel } from "./marker-icons";
 
 function escapeHtml(value: unknown) {
   return String(value ?? "")
@@ -12,11 +12,13 @@ function escapeHtml(value: unknown) {
 
 export function createEvacuationPopupHtml(evacuationLocation: EvacuationLocation) {
   const categoryLabel = getEvacuationLocationCategoryLabel(evacuationLocation.category);
+  const capacityColor = getCapacityColor(evacuationLocation.capacity, evacuationLocation.currentOccupancy);
+  const capacityLabel = getCapacityLabel(evacuationLocation.capacity, evacuationLocation.currentOccupancy);
 
   return `
     <div class="evacuation-popup">
-      <div class="evacuation-popup__header">
-        <span>${escapeHtml(categoryLabel)}</span>
+      <div class="evacuation-popup__header" style="background:${capacityColor}">
+        <span>${escapeHtml(capacityLabel)}</span>
       </div>
       <div class="evacuation-popup__body">
         <h3>${escapeHtml(evacuationLocation.name)}</h3>

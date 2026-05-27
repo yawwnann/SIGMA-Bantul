@@ -37,8 +37,53 @@ export function getEvacuationLocationCategoryColor(category?: string) {
   return "#64748b";
 }
 
-export function createEvacuationIcon(category?: string) {
-  const style =
+function getOccupancyPercentage(
+  capacity: number,
+  currentOccupancy?: number,
+): number | null {
+  if (capacity <= 0) return null;
+  if (currentOccupancy === undefined || currentOccupancy === null) return null;
+  return (currentOccupancy / capacity) * 100;
+}
+
+export function getCapacityColor(
+  capacity: number,
+  currentOccupancy?: number,
+  fallback = "#64748b",
+): string {
+  const pct = getOccupancyPercentage(capacity, currentOccupancy);
+  if (pct === null) return fallback;
+  if (pct >= 90) return "#dc2626";
+  if (pct >= 70) return "#ea580c";
+  if (pct >= 50) return "#ca8a04";
+  return "#16a34a";
+}
+
+export function getCapacityStyles(capacity: number, currentOccupancy?: number) {
+  const color = getCapacityColor(capacity, currentOccupancy);
+  return {
+    color,
+    bgColor: `${color}1A`,
+    borderColor: `${color}33`,
+    label: getCapacityLabel(capacity, currentOccupancy),
+  };
+}
+
+function getCapacityLabel(capacity: number, currentOccupancy?: number) {
+  const pct = getOccupancyPercentage(capacity, currentOccupancy);
+  if (pct === null) return "Lokasi Evakuasi";
+  if (pct >= 90) return "Kritis";
+  if (pct >= 70) return "Waspada";
+  if (pct >= 50) return "Sedang";
+  return "Aman";
+}
+
+export function createEvacuationIcon(
+  category?: string,
+  capacity?: number,
+  currentOccupancy?: number,
+) {
+  const categoryStyle =
     category === "SCHOOL" || category === "FIELD" || category === "GOVERNMENT"
       ? CATEGORY_STYLES[category]
       : {
@@ -47,12 +92,14 @@ export function createEvacuationIcon(category?: string) {
           svgPath: "M12 21s7-5 7-11a7 7 0 1 0-14 0c0 6 7 11 7 11Z",
         };
 
+  const color = getCapacityColor(capacity ?? 0, currentOccupancy, categoryStyle.color);
+
   return L.divIcon({
     className: "evacuation-marker-icon",
     html: `
-      <div class="evacuation-marker-pin" style="--marker-color:${style.color}" title="${style.label}">
+      <div class="evacuation-marker-pin" style="--marker-color:${color}" title="${categoryStyle.label}">
         <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <path d="${style.svgPath}"></path>
+          <path d="${categoryStyle.svgPath}"></path>
         </svg>
       </div>
     `,

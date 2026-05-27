@@ -3,9 +3,6 @@
 import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import {
-  School,
-  TreePine,
-  Building2,
   MapPin,
   Users,
   Navigation,
@@ -13,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { NearbyEvacuationLocation } from "@/services/evacuation.service";
+import { getCapacityColor, getCapacityLabel } from "./marker-icons";
 
 interface NearbyEvacuationMarkersProps {
   evacuationLocations: NearbyEvacuationLocation[];
@@ -20,31 +18,16 @@ interface NearbyEvacuationMarkersProps {
   onRouteClick?: (evacuationLocation: NearbyEvacuationLocation) => void;
 }
 
-// Icon configurations per category
-const getEvacuationLocationIcon = (category: string) => {
-  const iconConfigs = {
-    SCHOOL: {
-      color: "#3b82f6", // blue
-      bgColor: "rgba(59, 130, 246, 0.2)",
-      borderColor: "#3b82f6",
-      icon: "🏫",
-    },
-    FIELD: {
-      color: "#10b981", // green
-      bgColor: "rgba(16, 185, 129, 0.2)",
-      borderColor: "#10b981",
-      icon: "🏟️",
-    },
-    GOVERNMENT: {
-      color: "#ef4444", // red
-      bgColor: "rgba(239, 68, 68, 0.2)",
-      borderColor: "#ef4444",
-      icon: "🏛️",
-    },
-  };
+// Category emoji mapping
+const CATEGORY_ICONS: Record<string, string> = {
+  SCHOOL: "🏫",
+  FIELD: "🏟️",
+  GOVERNMENT: "🏛️",
+};
 
-  const config =
-    iconConfigs[category as keyof typeof iconConfigs] || iconConfigs.GOVERNMENT;
+const getEvacuationLocationIcon = (category: string, capacity: number, currentOccupancy?: number) => {
+  const color = getCapacityColor(capacity, currentOccupancy, "#64748b");
+  const icon = CATEGORY_ICONS[category] || "🏛️";
 
   return L.divIcon({
     className: "custom-evacuationLocation-marker",
@@ -62,7 +45,7 @@ const getEvacuationLocationIcon = (category: string) => {
           width: 32px;
           height: 32px;
           background: white;
-          border: 3px solid ${config.borderColor};
+          border: 3px solid ${color};
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -70,7 +53,7 @@ const getEvacuationLocationIcon = (category: string) => {
           font-size: 16px;
           box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         ">
-          ${config.icon}
+          ${icon}
         </div>
       </div>
     `,
@@ -80,25 +63,15 @@ const getEvacuationLocationIcon = (category: string) => {
   });
 };
 
-const getCategoryLabel = (category: string) => {
-  const labels = {
-    SCHOOL: "Sekolah",
-    FIELD: "Lapangan",
-    GOVERNMENT: "Pemerintahan",
-  };
-  return labels[category as keyof typeof labels] || category;
-};
-
-const getCategoryColor = (category: string) => {
-  const colors = {
-    SCHOOL: "bg-blue-100 text-blue-700 border-blue-300",
-    FIELD: "bg-green-100 text-green-700 border-green-300",
-    GOVERNMENT: "bg-red-100 text-red-700 border-red-300",
-  };
-  return (
-    colors[category as keyof typeof colors] ||
-    "bg-gray-100 text-gray-700 border-gray-300"
-  );
+const getCapacityBadgeClass = (capacity: number, currentOccupancy?: number) => {
+  const pct = capacity > 0 && currentOccupancy !== undefined && currentOccupancy !== null
+    ? (currentOccupancy / capacity) * 100
+    : null;
+  if (pct === null) return "bg-gray-100 text-gray-700 border-gray-300";
+  if (pct >= 90) return "bg-red-100 text-red-700 border-red-300";
+  if (pct >= 70) return "bg-orange-100 text-orange-700 border-orange-300";
+  if (pct >= 50) return "bg-yellow-100 text-yellow-700 border-yellow-300";
+  return "bg-green-100 text-green-700 border-green-300";
 };
 
 export function NearbyEvacuationMarkers({
@@ -119,7 +92,7 @@ export function NearbyEvacuationMarkers({
           <Marker
             key={evacuationLocation.id}
             position={position}
-            icon={getEvacuationLocationIcon(evacuationLocation.category)}
+            icon={getEvacuationLocationIcon(evacuationLocation.category, evacuationLocation.capacity, evacuationLocation.currentOccupancy)}
             eventHandlers={{
               click: () => {
                 if (onEvacuationLocationClick) {
@@ -135,9 +108,9 @@ export function NearbyEvacuationMarkers({
                     {evacuationLocation.name}
                   </h3>
                   <Badge
-                    className={`${getCategoryColor(evacuationLocation.category)} text-xs px-2 py-0.5`}
+                    className={`${getCapacityBadgeClass(evacuationLocation.capacity, evacuationLocation.currentOccupancy)} text-xs px-2 py-0.5`}
                   >
-                    {getCategoryLabel(evacuationLocation.category)}
+                    {getCapacityLabel(evacuationLocation.capacity, evacuationLocation.currentOccupancy)}
                   </Badge>
                 </div>
 
