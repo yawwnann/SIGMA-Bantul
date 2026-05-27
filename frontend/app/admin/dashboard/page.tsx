@@ -97,7 +97,7 @@ export default function AdminDashboardPage() {
     <div className="py-6 w-full px-4 sm:px-6 md:px-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header Area */}
       <div className="flex flex-col gap-2">
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white flex items-center gap-4">
+        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight dark:text-white text-slate-900 flex items-center gap-4">
           <div className="p-3 bg-blue-500/10 rounded-2xl">
             <BarChart3 className="w-10 h-10 text-blue-500" />
           </div>
@@ -124,7 +124,7 @@ export default function AdminDashboardPage() {
               <h3 className="text-base font-medium text-zinc-400">
                 Total Lokasi Evakuasi
               </h3>
-              <div className="text-5xl font-bold tracking-tight text-white">
+              <div className="text-5xl font-bold tracking-tight dark:text-white text-slate-900">
                 {stats?.evacuationLocationCount || 0}
               </div>
             </div>
@@ -152,7 +152,7 @@ export default function AdminDashboardPage() {
               <h3 className="text-base font-medium text-zinc-400">
                 Total Gempa
               </h3>
-              <div className="text-5xl font-bold tracking-tight text-white">
+              <div className="text-5xl font-bold tracking-tight dark:text-white text-slate-900">
                 {stats?.earthquakeCount || 0}
               </div>
             </div>
@@ -180,7 +180,7 @@ export default function AdminDashboardPage() {
               <h3 className="text-base font-medium text-zinc-400">
                 Manajemen Evakuasi
               </h3>
-              <div className="text-5xl font-bold tracking-tight text-white">
+              <div className="text-5xl font-bold tracking-tight dark:text-white text-slate-900">
                 {stats?.routeCount || 0}
               </div>
             </div>
@@ -249,7 +249,7 @@ export default function AdminDashboardPage() {
         {/* Quick Actions Panel */}
         <Card className="md:col-span-1 border border-zinc-800 bg-zinc-900/60 backdrop-blur-md shadow-xl rounded-2xl overflow-hidden">
           <CardHeader className="border-b border-zinc-800/50 bg-zinc-900/50 pb-4">
-            <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
+            <CardTitle className="text-lg font-bold dark:text-white text-slate-900 flex items-center gap-2">
               <Building className="h-5 w-5 text-blue-500" />
               Aksi Cepat
             </CardTitle>
@@ -306,7 +306,7 @@ export default function AdminDashboardPage() {
         {/* Spatial Stats Panel */}
         <Card className="md:col-span-2 border border-zinc-800 bg-zinc-900/60 backdrop-blur-md shadow-xl rounded-2xl overflow-hidden flex flex-col">
           <CardHeader className="border-b border-zinc-800/50 bg-zinc-900/50 pb-4">
-            <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
+            <CardTitle className="text-lg font-bold dark:text-white text-slate-900 flex items-center gap-2">
               <Map className="h-5 w-5 text-emerald-500" />
               Distribusi Pemetaan Spasial
             </CardTitle>

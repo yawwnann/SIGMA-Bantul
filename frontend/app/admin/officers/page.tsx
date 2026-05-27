@@ -108,7 +108,7 @@ export default function AdminOfficersPage() {
     <div className="py-6 w-full px-4 sm:px-6 md:px-8 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          <h2 className="text-2xl font-bold tracking-tight dark:text-white text-slate-900 flex items-center gap-2">
             <Shield className="h-6 w-6 text-blue-500" />
             Manajemen Petugas Evakuasi
           </h2>
@@ -231,7 +231,7 @@ export default function AdminOfficersPage() {
           <div className="relative bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="border-b border-zinc-800 p-6">
-              <h2 className="text-2xl font-bold flex items-center gap-2 text-white">
+              <h2 className="text-2xl font-bold flex items-center gap-2 dark:text-white text-slate-900">
                 <Shield className="w-6 h-6 text-blue-500" />
                 {editingOfficer ? "Edit Petugas" : "Tambah Petugas Baru"}
               </h2>
