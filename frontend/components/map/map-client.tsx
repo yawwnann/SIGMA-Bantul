@@ -377,11 +377,11 @@ export default function MapClient({
     // Use valid [lat, lng] for the outer boundary of the mask.
     // Making it very large to cover the entire map when zoomed out.
     const worldBounds: [number, number][] = [
-      [-90, -360],
-      [90, -360],
-      [90, 360],
-      [-90, 360],
-      [-90, -360],
+      [-90, -180],
+      [90, -180],
+      [90, 180],
+      [-90, 180],
+      [-90, -180],
     ];
 
     const holes: [number, number][][] = [];
