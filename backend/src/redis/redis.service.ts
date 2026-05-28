@@ -1,44 +1,47 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import Redis from 'ioredis';
+import { Redis } from '@upstash/redis';
 
 @Injectable()
-export class RedisService implements OnModuleInit, OnModuleDestroy {
+export class RedisService implements OnModuleDestroy {
   private client: Redis;
 
   constructor(private configService: ConfigService) {
-    const redisConfig: any = {
-      host: this.configService.get<string>('REDIS_HOST', 'localhost'),
-      port: this.configService.get<number>('REDIS_PORT', 6379),
-      maxRetriesPerRequest: 3,
-    };
+    const upstashUrl = this.configService.get<string>('UPSTASH_REDIS_REST_URL');
+    const upstashToken = this.configService.get<string>('UPSTASH_REDIS_REST_TOKEN');
 
-    // Add password if provided (for Redis Cloud)
-    const password = this.configService.get<string>('REDIS_PASSWORD');
-    if (password) {
-      redisConfig.password = password;
+    if (upstashUrl && upstashToken) {
+      // Use Upstash Redis
+      this.client = new Redis({
+        url: upstashUrl,
+        token: upstashToken,
+      });
+      console.log('Redis: Using Upstash');
+    } else {
+      // Fallback to ioredis for local development
+      const { Redis: IORedis } = require('ioredis');
+      const redisConfig: any = {
+        host: this.configService.get<string>('REDIS_HOST', 'localhost'),
+        port: this.configService.get<number>('REDIS_PORT', 6379),
+        maxRetriesPerRequest: 3,
+      };
+      const password = this.configService.get<string>('REDIS_PASSWORD');
+      if (password) {
+        redisConfig.password = password;
+      }
+      const username = this.configService.get<string>('REDIS_USERNAME');
+      if (username) {
+        redisConfig.username = username;
+      }
+      this.client = new IORedis(redisConfig) as any;
+      console.log('Redis: Using ioredis fallback');
     }
-
-    // Add username if provided (for Redis Cloud with ACL)
-    const username = this.configService.get<string>('REDIS_USERNAME');
-    if (username) {
-      redisConfig.username = username;
-    }
-
-    this.client = new Redis(redisConfig);
-  }
-
-  async onModuleInit() {
-    this.client.on('error', (err) => {
-      console.error('Redis connection error:', err);
-    });
-    this.client.on('connect', () => {
-      console.log('Redis connected successfully');
-    });
   }
 
   async onModuleDestroy() {
-    await this.client.quit();
+    if (typeof this.client.quit === 'function') {
+      await this.client.quit();
+    }
   }
 
   async get(key: string): Promise<string | null> {
@@ -47,14 +50,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   async set(key: string, value: string, ttl?: number): Promise<void> {
     if (ttl) {
-      await this.client.setex(key, ttl, value);
+      await this.client.set(key, value, { ex: ttl });
     } else {
       await this.client.set(key, value);
     }
   }
 
   async setex(key: string, ttl: number, value: string): Promise<void> {
-    await this.client.setex(key, ttl, value);
+    await this.client.set(key, value, { ex: ttl });
   }
 
   async del(key: string): Promise<void> {
@@ -62,9 +65,11 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async deletePattern(pattern: string): Promise<void> {
-    const keys = await this.client.keys(pattern);
+    const keys = await this.keys(pattern);
     if (keys.length > 0) {
-      await this.client.del(...keys);
+      for (const key of keys) {
+        await this.client.del(key);
+      }
     }
   }
 
