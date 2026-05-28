@@ -827,6 +827,45 @@ export default function Dashboard() {
 
     socketService.connect();
 
+    // Listen for dashboard stats updates (auto-refresh)
+    const unsubscribeDashboardStats = socketService.onDashboardStats((stats) => {
+      console.log("[Dashboard] Dashboard stats updated via WebSocket:", stats);
+      // Update earthquakes list if there's a new latest earthquake
+      if (stats.latestEarthquake) {
+        setEarthquakes((prev) => {
+          const exists = prev.some((eq) => eq.id === stats.latestEarthquake?.id);
+          if (!exists && stats.latestEarthquake) {
+            return [stats.latestEarthquake, ...prev.slice(0, 99)];
+          }
+          return prev;
+        });
+      }
+    });
+
+    // Listen for evacuation capacity updates (real-time marker updates)
+    const unsubscribeCapacity = socketService.onEvacuationCapacityUpdate((data) => {
+      console.log("[Dashboard] Evacuation capacity updated:", data);
+      // Update the evacuation location in state
+      setEvacuationLocations((prev) =>
+        prev.map((loc) =>
+          loc.id === data.id
+            ? {
+                ...loc,
+                currentOccupancy: data.currentOccupancy,
+                capacity: data.totalCapacity,
+              }
+            : loc,
+        ),
+      );
+      // Show toast notification
+      if (data.availableCapacity === 0) {
+        toast.warning(
+          `${data.name} sudah penuh!`,
+          { description: "Kapasitas tersedia: 0 orang" },
+        );
+      }
+    });
+
     const unsubscribeEarthquake = socketService.onNewEarthquake((newEq) => {
       const eqInBantul = isWithinBantul(newEq.lat, newEq.lon);
       const impactRadius = calculateImpactRadius(newEq.magnitude);
@@ -911,6 +950,8 @@ export default function Dashboard() {
     return () => {
       clearInterval(refreshInterval);
       unsubscribeEarthquake();
+      unsubscribeDashboardStats();
+      unsubscribeCapacity();
       socketService.disconnect();
     };
   }, []);

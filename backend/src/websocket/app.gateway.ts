@@ -7,6 +7,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
+import { DashboardService } from '../dashboard/dashboard.service';
 
 @WebSocketGateway({
   cors: {
@@ -26,9 +27,13 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private readonly logger = new Logger(AppGateway.name);
 
+  constructor(private dashboardService: DashboardService) {}
+
   handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
     this.server.emit('clientCount', this.getConnectedClients());
+    // Send initial dashboard stats on connection
+    this.broadcastDashboardStats();
   }
 
   handleDisconnect(client: Socket) {
@@ -50,6 +55,36 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleUnsubscribe(client: Socket, room: string) {
     void client.leave(room);
     return { event: 'unsubscribed', room };
+  }
+
+  // Broadcast dashboard statistics to all connected clients
+  async broadcastDashboardStats() {
+    try {
+      const stats = await this.dashboardService.getDashboardSummary();
+      this.server.emit('dashboardStats', stats);
+      this.logger.log('Dashboard stats broadcasted to clients');
+    } catch (error) {
+      this.logger.error('Failed to broadcast dashboard stats:', error);
+    }
+  }
+
+  // Broadcast evacuation location capacity update
+  broadcastEvacuationCapacityUpdate(data: {
+    id: number;
+    name: string;
+    currentOccupancy: number;
+    availableCapacity: number;
+    totalCapacity: number;
+  }) {
+    this.server.emit('evacuationCapacityUpdate', data);
+  }
+
+  // Broadcast officer status update
+  broadcastOfficerUpdate(data: {
+    totalOfficers: number;
+    activeToday: number;
+  }) {
+    this.server.emit('officerUpdate', data);
   }
 
   broadcastEarthquakeUpdate(data: any) {
