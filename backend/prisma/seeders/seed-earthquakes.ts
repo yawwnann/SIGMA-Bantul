@@ -34,9 +34,14 @@ function parseTime(tanggalStr: string, timeStr: string): Date {
 async function main() {
   console.log('🌍 Starting earthquake seeding from GeoJSON (Sebaran Gempa)...');
 
-  const filePath = path.join(__dirname, '../../data/GeoJSon/sebaran_gempa.geojson');
+  let filePath = path.join(__dirname, '../../data/GeoJSon/sebaran_gempa.geojson');
   if (!fs.existsSync(filePath)) {
-    console.error(`❌ File not found: ${filePath}`);
+    // Coba path dengan huruf besar "Data" untuk VPS (Linux case-sensitive)
+    filePath = path.join(__dirname, '../../Data/GeoJSon/sebaran_gempa.geojson');
+  }
+
+  if (!fs.existsSync(filePath)) {
+    console.error(`❌ File not found in data or Data: ${filePath}`);
     process.exit(1);
   }
 
