@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { analysisApi, type FrequencyAnalysisResponse } from "@/api/analysis";
 import { earthquakeApi } from "@/api";
 import type { Earthquake } from "@/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import dynamic from "next/dynamic";
 import {
   Activity,
@@ -67,6 +68,8 @@ export default function AnalysisPage() {
   const [minMagnitude, setMinMagnitude] = useState(0);
   const [showBpbdLayer, setShowBpbdLayer] = useState(false);
   const [showEarthquakes, setShowEarthquakes] = useState(false);
+  const [earthquakeLimit, setEarthquakeLimit] = useState(100);
+  const [earthquakeRegion, setEarthquakeRegion] = useState("all");
   const [selectedEarthquakeId, setSelectedEarthquakeId] = useState<number | null>(null);
 
   const fetchAnalysis = async () => {
@@ -90,13 +93,15 @@ export default function AnalysisPage() {
 
   useEffect(() => {
     fetchAnalysis();
-    fetchEarthquakeHistory();
   }, []);
 
   const fetchEarthquakeHistory = async () => {
     setEarthquakesLoading(true);
     try {
-      const response = await earthquakeApi.getAll({ limit: 100 });
+      const response = await earthquakeApi.getAll({ 
+        limit: earthquakeLimit,
+        region: earthquakeRegion === "bantul" ? "bantul" : undefined 
+      });
       setEarthquakes(response.data);
     } catch (err) {
       console.error("Failed to fetch earthquake history:", err);
@@ -104,6 +109,10 @@ export default function AnalysisPage() {
       setEarthquakesLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchEarthquakeHistory();
+  }, [earthquakeLimit, earthquakeRegion]);
 
   const chartData = earthquakes
     .slice(0, 30)
@@ -470,17 +479,52 @@ export default function AnalysisPage() {
                   </span>
                 </label>
 
-                <label className="flex items-center gap-2 cursor-pointer bg-slate-100 dark:bg-zinc-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-600"
-                    checked={showEarthquakes}
-                    onChange={(e) => setShowEarthquakes(e.target.checked)}
-                  />
-                  <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">
-                    Titik Gempa
-                  </span>
-                </label>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer bg-slate-100 dark:bg-zinc-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-600"
+                      checked={showEarthquakes}
+                      onChange={(e) => setShowEarthquakes(e.target.checked)}
+                    />
+                    <span className="text-sm font-medium text-slate-700 dark:text-zinc-300 whitespace-nowrap">
+                      Titik Gempa
+                    </span>
+                  </label>
+
+                  {showEarthquakes && (
+                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                      <Select
+                        value={earthquakeRegion}
+                        onValueChange={setEarthquakeRegion}
+                      >
+                        <SelectTrigger className="h-[34px] w-[160px] text-xs bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-700">
+                          <SelectValue placeholder="Wilayah" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="bantul">Khusus Bantul</SelectItem>
+                          <SelectItem value="all">Beserta Luar Bantul</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Select
+                        value={earthquakeLimit.toString()}
+                        onValueChange={(val) => setEarthquakeLimit(Number(val))}
+                      >
+                        <SelectTrigger className="h-[34px] w-[110px] text-xs bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-700">
+                          <SelectValue placeholder="Jumlah" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="100">100 Data</SelectItem>
+                          <SelectItem value="500">500 Data</SelectItem>
+                          <SelectItem value="1000">1000 Data</SelectItem>
+                          <SelectItem value="5000">5000 Data</SelectItem>
+                          <SelectItem value="10000">10000 Data</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
 
                 {data && (
                   <div className="flex flex-wrap items-center gap-3 mt-2 sm:mt-0">

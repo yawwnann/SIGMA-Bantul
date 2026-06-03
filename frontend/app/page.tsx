@@ -694,10 +694,10 @@ export default function Dashboard() {
           hazardZoneApi.getAll().catch(() => []),
           earthquakeApi
             .getAll({
-              limit: 100,
+              limit: 1000,
               startDate: twentyFourHoursAgo,
             })
-            .catch(() => ({ data: [], total: 0, page: 1, limit: 100 })),
+            .catch(() => ({ data: [], total: 0, page: 1, limit: 1000 })),
           publicFacilityApi.getAll().catch(() => []),
           roadApi
             .getRoadNetwork({

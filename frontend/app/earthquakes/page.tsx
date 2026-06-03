@@ -77,6 +77,7 @@ export default function EarthquakesPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [regionFilter, setRegionFilter] = useState("Bantul");
+  const [limitFilter, setLimitFilter] = useState<number>(100);
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
@@ -84,6 +85,7 @@ export default function EarthquakesPage() {
     start?: string;
     end?: string;
     reg?: string;
+    lim?: number;
   }) => {
     setLoading(true);
     setError(null);
@@ -100,7 +102,7 @@ export default function EarthquakesPage() {
             : overrides?.reg !== undefined
               ? overrides.reg
               : regionFilter,
-        limit: 100,
+        limit: overrides?.lim !== undefined ? overrides.lim : limitFilter,
       });
       setEarthquakes(data.data);
       setCurrentPage(1);
@@ -337,10 +339,27 @@ export default function EarthquakesPage() {
                 className="h-10 w-full border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-slate-700 dark:text-zinc-100 rounded-lg focus:ring-2 focus:ring-blue-500 px-3 cursor-pointer appearance-none pr-8"
               >
                 <option value="Bantul">Khusus Bantul</option>
-                <option value="">Semua Wilayah</option>
+                <option value="">Beserta Luar Bantul</option>
               </select>
               <div className="absolute right-3 pointer-events-none">
-                <Filter className="h-4 w-4 text-slate-400" />
+                <MapPin className="h-4 w-4 text-slate-400" />
+              </div>
+            </div>
+
+            <div className="relative flex-1 w-full flex items-center">
+              <select
+                value={limitFilter}
+                onChange={(e) => setLimitFilter(Number(e.target.value))}
+                className="h-10 w-full border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-slate-700 dark:text-zinc-100 rounded-lg focus:ring-2 focus:ring-blue-500 px-3 cursor-pointer appearance-none pr-8"
+              >
+                <option value={100}>100 Data Terbaru</option>
+                <option value={500}>500 Data Terbaru</option>
+                <option value={1000}>1.000 Data Terbaru</option>
+                <option value={5000}>5.000 Data Terbaru</option>
+                <option value={15000}>Semua Data (9000+)</option>
+              </select>
+              <div className="absolute right-3 pointer-events-none">
+                <Layers className="h-4 w-4 text-slate-400" />
               </div>
             </div>
 
@@ -353,13 +372,14 @@ export default function EarthquakesPage() {
                 <Filter className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Terapkan</span>
               </Button>
-              {(startDate || endDate || regionFilter !== "Bantul") && (
+              {(startDate || endDate || regionFilter !== "Bantul" || limitFilter !== 100) && (
                 <Button
                   onClick={() => {
                     setStartDate("");
                     setEndDate("");
                     setRegionFilter("Bantul");
-                    fetchEarthquakes({ start: "", end: "", reg: "Bantul" });
+                    setLimitFilter(100);
+                    fetchEarthquakes({ start: "", end: "", reg: "Bantul", lim: 100 });
                   }}
                   variant="outline"
                   className="border-slate-200 dark:border-zinc-800 dark:hover:bg-zinc-800 dark:text-zinc-300 hover:bg-slate-50 h-10 w-10 p-0 rounded-lg flex items-center justify-center shrink-0"

@@ -6,29 +6,74 @@ const prisma = new PrismaClient();
 
 function parseTime(tanggalStr: string, timeStr: string): Date {
   try {
-    // tanggalStr: "1/4/2021 0:00" -> split by space -> "1/4/2021"
+    if (!tanggalStr) return new Date();
+    
+    // Parse tanggalStr: "1/4/2021" (M/D/YYYY) or "1/4/2021 0:00"
     const datePart = tanggalStr.split(' ')[0];
     const parts = datePart.split('/');
+    if (parts.length !== 3) return new Date();
     
-    // Asumsi format DD/MM/YYYY atau M/D/YYYY, kita coba parse secara aman
-    // Kalau parts[2] panjangnya 4, itu tahun
-    const year = parts[2];
-    const month = parts[1].padStart(2, '0'); // Asumsi format DD/MM/YYYY atau MM/DD/YYYY tergantung lokal
-    // Jika formatnya M/D/YYYY, parts[0] is month. Untuk aman, kita pakai Date parsing Javascript
-    // "2021-04-01T17:32:28Z"
-    
-    // Tapi kita bisa langsung coba gabungkan karena origin time sudah UTC
-    const combinedStr = `${datePart} ${timeStr} UTC`;
-    const d = new Date(combinedStr);
-    
-    if (isNaN(d.getTime())) {
-      // fallback
-      return new Date();
+    const month = parseInt(parts[0], 10);
+    const day = parseInt(parts[1], 10);
+    const year = parseInt(parts[2], 10);
+
+    // Parse timeStr: "17:32:28.9824" or "06:27:54 AM"
+    let hours = 0;
+    let minutes = 0;
+    let seconds = 0;
+    let ms = 0;
+
+    if (timeStr) {
+      const isPM = timeStr.includes('PM');
+      const isAM = timeStr.includes('AM');
+      const cleanTime = timeStr.replace(/ AM| PM/g, '');
+      const timeParts = cleanTime.split(':');
+      if (timeParts.length >= 2) {
+        hours = parseInt(timeParts[0], 10);
+        minutes = parseInt(timeParts[1], 10);
+        if (timeParts[2]) {
+          const secParts = timeParts[2].split('.');
+          seconds = parseInt(secParts[0], 10) || 0;
+          if (secParts[1]) {
+            ms = parseInt(secParts[1].substring(0, 3).padEnd(3, '0'), 10) || 0;
+          }
+        }
+        if (isPM && hours < 12) hours += 12;
+        if (isAM && hours === 12) hours = 0;
+      }
     }
+
+    const d = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds, ms));
+    if (isNaN(d.getTime())) return new Date();
     return d;
   } catch (e) {
     return new Date();
   }
+}
+
+function pointInPolygon(lng: number, lat: number, polygon: number[][]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [xi, yi] = polygon[i];
+    const [xj, yj] = polygon[j];
+    if (
+      yi > lat !== yj > lat &&
+      lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi
+    ) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function isWithinBantul(lat: number, lng: number, multiPolygonCoords: number[][][][]): boolean {
+  for (const polygon of multiPolygonCoords) {
+    const outerRing = polygon[0];
+    if (outerRing && pointInPolygon(lng, lat, outerRing)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 async function main() {
@@ -55,6 +100,24 @@ async function main() {
 
   const features = geojson.features;
   console.log(`📊 Found ${features.length} earthquakes in GeoJSON`);
+
+  console.log('🗺️ Loading Bantul boundary for clipping...');
+  let bantulCoords: number[][][][] | null = null;
+  let bantulPath = path.join(__dirname, '../../data/GeoJSon/34.02_Bantul.geojson');
+  if (!fs.existsSync(bantulPath)) {
+    bantulPath = path.join(__dirname, '../../Data/GeoJSon/34.02_Bantul.geojson');
+  }
+  if (fs.existsSync(bantulPath)) {
+    try {
+      const bantulGeojson = JSON.parse(fs.readFileSync(bantulPath, 'utf8'));
+      bantulCoords = bantulGeojson.features?.[0]?.geometry?.coordinates;
+      console.log('✅ Bantul boundary loaded successfully.');
+    } catch (e) {
+      console.error('⚠️ Failed to parse Bantul GeoJSON', e);
+    }
+  } else {
+    console.error(`⚠️ Bantul boundary file not found: ${bantulPath}`);
+  }
 
   console.log('🗑️ Clearing existing earthquake data...');
   await prisma.$executeRawUnsafe(
@@ -83,9 +146,14 @@ async function main() {
       const timeStr = props['Origin Time (UTC)'] || '';
       const time = parseTime(tanggal, timeStr);
       
+      let locName = 'Luar Daerah';
+      if (bantulCoords && isWithinBantul(lat, lon, bantulCoords)) {
+        locName = 'Bantul';
+      }
+
       const isLatest = (i === 0 && j === 0) ? 'true' : 'false';
       
-      values.push(`(${magnitude}, ${depth}, ${lat}, ${lon}, ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326), 'Bantul dan Sekitarnya', 'Yogyakarta', '${time.toISOString()}', NULL, NULL, ${isLatest})`);
+      values.push(`(${magnitude}, ${depth}, ${lat}, ${lon}, ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326), '${locName}', 'Yogyakarta', '${time.toISOString()}', NULL, NULL, ${isLatest})`);
     }
 
     if (values.length > 0) {
