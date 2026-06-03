@@ -57,9 +57,7 @@ export default function AnalysisPage() {
 
   // Filter states
   const [startDate, setStartDate] = useState(() => {
-    const date = new Date();
-    date.setFullYear(date.getFullYear() - 1);
-    return date.toISOString().split("T")[0];
+    return "2021-01-01";
   });
   const [endDate, setEndDate] = useState(() => {
     return new Date().toISOString().split("T")[0];
@@ -69,7 +67,8 @@ export default function AnalysisPage() {
   const [showBpbdLayer, setShowBpbdLayer] = useState(false);
   const [showEarthquakes, setShowEarthquakes] = useState(false);
   const [earthquakeLimit, setEarthquakeLimit] = useState(100);
-  const [earthquakeRegion, setEarthquakeRegion] = useState("all");
+  const [earthquakeRegion, setEarthquakeRegion] = useState("Semua Wilayah");
+  const [earthquakeYear, setEarthquakeYear] = useState("Semua Tahun");
   const [selectedEarthquakeId, setSelectedEarthquakeId] = useState<number | null>(null);
 
   const fetchAnalysis = async () => {
@@ -97,10 +96,18 @@ export default function AnalysisPage() {
 
   const fetchEarthquakeHistory = async () => {
     setEarthquakesLoading(true);
+    let start, end;
+    if (earthquakeYear !== "Semua Tahun") {
+      start = `${earthquakeYear}-01-01T00:00:00Z`;
+      end = `${earthquakeYear}-12-31T23:59:59Z`;
+    }
+
     try {
       const response = await earthquakeApi.getAll({ 
         limit: earthquakeLimit,
-        region: earthquakeRegion === "bantul" ? "bantul" : undefined 
+        region: earthquakeRegion === "Khusus Bantul" ? "bantul" : undefined,
+        startDate: start,
+        endDate: end,
       });
       setEarthquakes(response.data);
     } catch (err) {
@@ -112,7 +119,7 @@ export default function AnalysisPage() {
 
   useEffect(() => {
     fetchEarthquakeHistory();
-  }, [earthquakeLimit, earthquakeRegion]);
+  }, [earthquakeLimit, earthquakeRegion, earthquakeYear]);
 
   const chartData = earthquakes
     .slice(0, 30)
@@ -126,9 +133,7 @@ export default function AnalysisPage() {
     }));
 
   const handleReset = () => {
-    const date = new Date();
-    date.setFullYear(date.getFullYear() - 1);
-    setStartDate(date.toISOString().split("T")[0]);
+    setStartDate("2021-01-01");
     setEndDate(new Date().toISOString().split("T")[0]);
     setGridSize(5);
     setMinMagnitude(0);
@@ -460,13 +465,13 @@ export default function AnalysisPage() {
         {/* Map Section */}
         <Card id="map-section" className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-950/80">
           <CardHeader className="pb-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
               <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-zinc-100">
                 <MapPin className="h-5 w-5 text-purple-600" />
                 Peta Frekuensi Gempa
               </CardTitle>
 
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="flex flex-col xl:flex-row items-start xl:items-center gap-4">
                 <label className="flex items-center gap-2 cursor-pointer bg-slate-100 dark:bg-zinc-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700">
                   <input
                     type="checkbox"
@@ -474,12 +479,12 @@ export default function AnalysisPage() {
                     checked={showBpbdLayer}
                     onChange={(e) => setShowBpbdLayer(e.target.checked)}
                   />
-                  <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">
+                  <span className="text-sm font-medium text-slate-700 dark:text-zinc-300 whitespace-nowrap">
                     Data Risiko BPBD
                   </span>
                 </label>
 
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <div className="flex flex-col lg:flex-row items-start lg:items-center gap-2">
                   <label className="flex items-center gap-2 cursor-pointer bg-slate-100 dark:bg-zinc-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700">
                     <input
                       type="checkbox"
@@ -493,17 +498,35 @@ export default function AnalysisPage() {
                   </label>
 
                   {showEarthquakes && (
-                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                    <div className="flex flex-wrap items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                      <Select
+                        value={earthquakeYear}
+                        onValueChange={(val) => setEarthquakeYear(val || "Semua Tahun")}
+                      >
+                        <SelectTrigger className="h-[34px] w-[130px] text-xs bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-700">
+                          <SelectValue placeholder="Tahun" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Semua Tahun">Semua Tahun</SelectItem>
+                          <SelectItem value="2026">2026</SelectItem>
+                          <SelectItem value="2025">2025</SelectItem>
+                          <SelectItem value="2024">2024</SelectItem>
+                          <SelectItem value="2023">2023</SelectItem>
+                          <SelectItem value="2022">2022</SelectItem>
+                          <SelectItem value="2021">2021</SelectItem>
+                        </SelectContent>
+                      </Select>
+
                       <Select
                         value={earthquakeRegion}
-                        onValueChange={setEarthquakeRegion}
+                        onValueChange={(val) => setEarthquakeRegion(val || "Semua Wilayah")}
                       >
                         <SelectTrigger className="h-[34px] w-[160px] text-xs bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-700">
                           <SelectValue placeholder="Wilayah" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="bantul">Khusus Bantul</SelectItem>
-                          <SelectItem value="all">Beserta Luar Bantul</SelectItem>
+                          <SelectItem value="Khusus Bantul">Khusus Bantul</SelectItem>
+                          <SelectItem value="Semua Wilayah">Semua Wilayah</SelectItem>
                         </SelectContent>
                       </Select>
 
@@ -525,29 +548,6 @@ export default function AnalysisPage() {
                     </div>
                   )}
                 </div>
-
-                {data && (
-                  <div className="flex flex-wrap items-center gap-3 mt-2 sm:mt-0">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 bg-green-500 rounded"></div>
-                      <span className="text-xs text-slate-600 dark:text-zinc-400">
-                        Rendah (0-2)
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 bg-amber-500 rounded"></div>
-                      <span className="text-sm text-slate-600 dark:text-zinc-400">
-                        Sedang (3-5)
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 bg-red-500 rounded"></div>
-                      <span className="text-sm text-slate-600 dark:text-zinc-400">
-                        Tinggi (&gt;5)
-                      </span>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </CardHeader>
@@ -596,6 +596,34 @@ export default function AnalysisPage() {
                 </div>
               )}
             </div>
+
+            {data && (
+              <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50 dark:bg-zinc-900/50 p-3 rounded-lg border border-slate-100 dark:border-zinc-800">
+                <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">
+                  Legenda Frekuensi:
+                </span>
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-green-500 rounded shadow-sm"></div>
+                    <span className="text-sm text-slate-600 dark:text-zinc-400">
+                      Rendah (0-2 gempa)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-amber-500 rounded shadow-sm"></div>
+                    <span className="text-sm text-slate-600 dark:text-zinc-400">
+                      Sedang (3-5 gempa)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-500 rounded shadow-sm"></div>
+                    <span className="text-sm text-slate-600 dark:text-zinc-400">
+                      Tinggi (&gt;5 gempa)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

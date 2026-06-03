@@ -92,10 +92,13 @@ export default function EarthquakesPage() {
     try {
       const data = await earthquakeApi.getAll({
         startDate:
-          (overrides?.start !== undefined ? overrides.start : startDate) ||
-          undefined,
+          (overrides?.start !== undefined ? overrides.start : startDate)
+            ? `${overrides?.start !== undefined ? overrides.start : startDate}T00:00:00Z`
+            : undefined,
         endDate:
-          (overrides?.end !== undefined ? overrides.end : endDate) || undefined,
+          (overrides?.end !== undefined ? overrides.end : endDate)
+            ? `${overrides?.end !== undefined ? overrides.end : endDate}T23:59:59Z`
+            : undefined,
         region:
           (overrides?.reg !== undefined ? overrides.reg : regionFilter) === ""
             ? undefined
