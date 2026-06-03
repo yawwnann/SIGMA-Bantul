@@ -775,12 +775,12 @@ export default function Dashboard() {
             `Ditemukan ${nearbyEvacuationLocations.length} lokasi evakuasi terdekat`,
           );
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error(
           "[Dashboard] Error fetching nearby evacuationLocations:",
           error,
         );
-        toast.error("Gagal memuat lokasi evakuasi terdekat");
+        toast.error(error.message || "Gagal memuat lokasi evakuasi terdekat");
         setEvacuationLocations([]); // Set empty if error
       }
     };

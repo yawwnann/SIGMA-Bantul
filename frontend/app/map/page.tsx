@@ -189,11 +189,13 @@ export default function MapPage() {
       toast.success(
         `Rute ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error calculating route:", error);
-      toast.error(
-        "Gagal menghitung rute. Pastikan kedua titik terhubung oleh jalan.",
-      );
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Gagal menghitung rute. Pastikan kedua titik terhubung oleh jalan.";
+      toast.error(errorMessage);
     } finally {
       setCalculatingRoute(false);
     }
@@ -245,9 +247,13 @@ export default function MapPage() {
           toast.success(
             `Rute ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
           );
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error calculating route:", error);
-          toast.error("Gagal menghitung rute. Coba titik lain.");
+          const errorMessage =
+            error.response?.data?.message ||
+            error.message ||
+            "Gagal menghitung rute. Coba titik lain.";
+          toast.error(errorMessage);
           setRouteEnd(null);
         } finally {
           setCalculatingRoute(false);
@@ -298,11 +304,13 @@ export default function MapPage() {
       toast.success(
         `Rute ke ${evacuationLocationName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km, Waktu: ${route.properties.totalTime.toFixed(1)} menit`,
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error calculating route:", error);
-      toast.error(
-        "Gagal menghitung rute. Pastikan lokasi Anda terhubung dengan jalan.",
-      );
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Gagal menghitung rute. Pastikan lokasi Anda terhubung dengan jalan.";
+      toast.error(errorMessage);
     } finally {
       setCalculatingRoute(false);
     }
@@ -348,12 +356,14 @@ export default function MapPage() {
 
         setEvacuationLocations(response);
         setNearestEvacuationLocations(response.slice(0, 3));
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to load nearby evacuation locations:", err);
         setEvacuationLocations([]);
         setNearestEvacuationLocations([]);
-        setNearbyError("Gagal memuat lokasi evakuasi terdekat");
-        toast.error("Gagal memuat lokasi evakuasi terdekat");
+        const errorMessage =
+          err.response?.data?.message || err.message || "Gagal memuat lokasi evakuasi terdekat";
+        setNearbyError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setNearbyLoading(false);
       }

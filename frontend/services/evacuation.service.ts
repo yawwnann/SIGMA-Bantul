@@ -36,7 +36,16 @@ export const evacuationService = {
     );
 
     if (!response.ok) {
-      throw new Error("Failed to fetch nearby evacuationLocations");
+      let errorMessage = "Failed to fetch nearby evacuationLocations";
+      try {
+        const errorData = await response.json();
+        if (errorData && errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } catch (e) {
+        // Ignore JSON parse errors
+      }
+      throw new Error(errorMessage);
     }
 
     return response.json();
@@ -65,7 +74,16 @@ export const evacuationService = {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to calculate route");
+      let errorMessage = "Failed to calculate route";
+      try {
+        const errorData = await response.json();
+        if (errorData && errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } catch (e) {
+        // Ignore JSON parse errors
+      }
+      throw new Error(errorMessage);
     }
 
     return response.json();
