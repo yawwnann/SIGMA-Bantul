@@ -438,10 +438,16 @@ export class EarthquakeService {
     }
 
     if (region) {
-      where.OR = [
-        { location: { contains: region, mode: 'insensitive' } },
-        { region: { contains: region, mode: 'insensitive' } },
-      ];
+      if (region.toLowerCase() === 'bantul') {
+        // Use bounding box for Bantul
+        where.lat = { gte: -8.15, lte: -7.8 };
+        where.lon = { gte: 110.15, lte: 110.5 };
+      } else {
+        where.OR = [
+          { location: { contains: region, mode: 'insensitive' } },
+          { region: { contains: region, mode: 'insensitive' } },
+        ];
+      }
     }
 
     const [earthquakes, total] = await Promise.all([
