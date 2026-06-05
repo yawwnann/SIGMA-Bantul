@@ -75,7 +75,9 @@ export const officerApi = {
     id: number,
     data: { name?: string; password?: string; phone?: string },
   ) => {
+    console.log('[officerApi] Sending PATCH to /officers/' + id + ' with data:', JSON.stringify(data));
     const response = await apiClient.patch<Officer>(`/officers/${id}`, data);
+    console.log('[officerApi] Response:', response.data);
     return response.data;
   },
 

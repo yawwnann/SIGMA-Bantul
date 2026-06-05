@@ -103,11 +103,43 @@ export class OfficerService {
   async updateOfficer(id: number, dto: UpdateOfficerDto) {
     await this.findOfficerById(id);
 
-    const data: Record<string, unknown> = {};
-    if (dto.name) data.name = dto.name;
-    if (dto.password) data.password = await bcrypt.hash(dto.password, 10);
+    console.log('[OfficerService] updateOfficer received dto:', JSON.stringify(dto));
+    console.log('[OfficerService] password value:', dto.password, 'type:', typeof dto.password);
 
-    return this.prisma.user.update({
+    const data: Record<string, unknown> = {};
+    if (dto.name !== undefined) data.name = dto.name;
+
+    // Only hash and update password if it's provided and not empty
+    if (dto.password !== undefined && dto.password !== null && String(dto.password).trim() !== '') {
+      const plainPassword = String(dto.password);
+      console.log('[OfficerService] Plain password received, length:', plainPassword.length);
+
+      // Hash the password
+      const hashedPassword = await bcrypt.hash(plainPassword, 10);
+      console.log('[OfficerService] Hashed password created, starts with:', hashedPassword.substring(0, 10) + '...');
+
+      data.password = hashedPassword;
+    } else {
+      console.log('[OfficerService] Password not updated - empty or undefined');
+    }
+
+    // If no data to update, just return the officer
+    if (Object.keys(data).length === 0) {
+      console.log('[OfficerService] No data to update, returning current officer');
+      return this.prisma.user.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          updatedAt: true,
+        },
+      });
+    }
+
+    console.log('[OfficerService] Updating officer with data:', Object.keys(data));
+    const result = await this.prisma.user.update({
       where: { id },
       data,
       select: {
@@ -118,6 +150,8 @@ export class OfficerService {
         updatedAt: true,
       },
     });
+    console.log('[OfficerService] Update successful, result:', result);
+    return result;
   }
 
   async deleteOfficer(id: number) {
