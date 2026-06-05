@@ -497,7 +497,18 @@ export default function MapClient({
         ));
       }
     });
-  }, [evacuationLocations]);
+
+    // Also update the selected evacuation location detail card if it's open
+    if (selectedEvacuationLocation) {
+      const updatedLocation = evacuationLocations.find(loc => loc.id === selectedEvacuationLocation.id);
+      if (updatedLocation && (
+        updatedLocation.currentOccupancy !== selectedEvacuationLocation.currentOccupancy ||
+        updatedLocation.capacity !== selectedEvacuationLocation.capacity
+      )) {
+        setSelectedEvacuationLocation(updatedLocation);
+      }
+    }
+  }, [evacuationLocations, selectedEvacuationLocation]);
 
   useEffect(() => {
     if (!mapRef.current || !facilityLayerGroupRef.current) return;
