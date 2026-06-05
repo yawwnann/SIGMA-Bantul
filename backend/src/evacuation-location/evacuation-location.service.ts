@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEvacuationLocationDto } from './dto/create-evacuation-location.dto';
+import { UpdateEvacuationLocationDto } from './dto/update-evacuation-location.dto';
 import {
   EvacuationLocationCategory,
   EvacuationLocationCondition,
@@ -58,7 +59,7 @@ export class EvacuationLocationService {
     return evacuationLocation;
   }
 
-  async update(id: number, dto: CreateEvacuationLocationDto) {
+  async update(id: number, dto: UpdateEvacuationLocationDto) {
     await this.findById(id);
     return this.prisma.evacuationLocation.update({
       where: { id },

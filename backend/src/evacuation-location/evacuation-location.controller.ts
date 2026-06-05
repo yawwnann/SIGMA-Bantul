@@ -13,6 +13,7 @@ import {
 import { EvacuationLocationService } from './evacuation-location.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CreateEvacuationLocationDto } from './dto/create-evacuation-location.dto';
+import { UpdateEvacuationLocationDto } from './dto/update-evacuation-location.dto';
 import { BantulBoundaryService } from '../common/services/bantul-boundary.service';
 import {
   EvacuationLocationCategory,
@@ -73,7 +74,7 @@ export class EvacuationLocationController {
   @UseGuards(JwtAuthGuard)
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: CreateEvacuationLocationDto,
+    @Body() dto: UpdateEvacuationLocationDto,
   ) {
     return this.evacuationLocationService.update(id, dto);
   }
