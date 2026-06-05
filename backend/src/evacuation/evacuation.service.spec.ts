@@ -280,19 +280,115 @@ describe('EvacuationService', () => {
     });
   });
 
-  describe('updateWeights', () => {
-    it('should update weights', async () => {
-      const newWeights = {
+  describe('updateWeights - Bug #3 Weight Validation', () => {
+    it('should update weights when sum equals 1.0', () => {
+      const result = service.updateWeights({
         hazard: 0.6,
         roadCondition: 0.25,
         distance: 0.15,
-      };
-
-      const result = await service.updateWeights(newWeights);
+      });
 
       expect(result.hazard).toBe(0.6);
       expect(result.roadCondition).toBe(0.25);
       expect(result.distance).toBe(0.15);
+    });
+
+    it('should reject NaN weight values', () => {
+      expect(() =>
+        service.updateWeights({ hazard: NaN, roadCondition: 0.5, distance: 0.5 }),
+      ).toThrow('must be a number');
+    });
+
+    it('should reject negative weight values', () => {
+      expect(() =>
+        service.updateWeights({ hazard: -0.1, roadCondition: 0.6, distance: 0.5 }),
+      ).toThrow('must be between 0 and 1');
+    });
+
+    it('should reject weight values greater than 1', () => {
+      expect(() =>
+        service.updateWeights({ hazard: 1.5, roadCondition: 0.3, distance: 0.2 }),
+      ).toThrow('must be between 0 and 1');
+    });
+
+    it('should reject weight sum not equal to 1.0', () => {
+      expect(() =>
+        service.updateWeights({ hazard: 0.5, roadCondition: 0.3, distance: 0.1 }),
+      ).toThrow('Weight sum must equal 1.0');
+    });
+
+    it('should accept weight sum within floating point tolerance', () => {
+      const result = service.updateWeights({
+        hazard: 0.3333,
+        roadCondition: 0.3333,
+        distance: 0.3334,
+      });
+      expect(Math.abs(result.hazard + result.roadCondition + result.distance - 1.0)).toBeLessThan(0.0001);
+    });
+
+    it('should keep existing weights for unspecified keys and validate total', () => {
+      expect(() => service.updateWeights({ hazard: 0.7 })).toThrow(
+        'Weight sum must equal 1.0',
+      );
+    });
+
+    it('should use defaults for unspecified keys and update specified ones', () => {
+      const result = service.updateWeights({ hazard: 0.5, roadCondition: 0.3 });
+      expect(result.hazard).toBe(0.5);
+      expect(result.roadCondition).toBe(0.3);
+      expect(result.distance).toBe(0.2);
+    });
+  });
+
+  describe('calculateDistanceScoreSync - Bug #6 Coordinate Swap', () => {
+    const mockEvacuationLocations = [
+      { id: 1, name: 'Lapangan', geometry: { type: 'Point', coordinates: [110.34, -7.89] } },
+    ];
+
+    it('should correctly use GeoJSON [lon, lat] order for road start point', () => {
+      const roadCoords: [number, number][] = [
+        [110.33, -7.888],
+        [110.331, -7.889],
+      ];
+      const result = (service as any).calculateDistanceScoreSync(
+        roadCoords, -7.888, 110.33, -7.889, 110.331, mockEvacuationLocations,
+      );
+      expect(result).toBeGreaterThanOrEqual(1);
+      expect(result).toBeLessThanOrEqual(5);
+    });
+
+    it('should correctly compute haversine with lat/lon not swapped', () => {
+      const roadCoords: [number, number][] = [
+        [110.33, -7.888],
+        [110.331, -7.889],
+      ];
+      const spy = jest.spyOn(service as any, 'haversineDistance');
+      (service as any).calculateDistanceScoreSync(
+        roadCoords, -7.888, 110.33, -7.889, 110.331, mockEvacuationLocations,
+      );
+      const startCall = spy.mock.calls[0];
+      expect(startCall[0]).toBe(-7.888);
+      expect(startCall[1]).toBe(110.33);
+      expect(startCall[2]).toBe(-7.888);
+      expect(startCall[3]).toBe(110.33);
+    });
+
+    it('should return 3 for roads with fewer than 2 coordinates', () => {
+      const result = (service as any).calculateDistanceScoreSync(
+        [[110.33, -7.888]] as any, -7.888, 110.33, -7.889, 110.331, [],
+      );
+      expect(result).toBe(3);
+    });
+
+    it('should find nearest evacuation location using correct [lon, lat] order', () => {
+      const roadCoords: [number, number][] = [
+        [110.33, -7.888],
+        [110.34, -7.89],
+      ];
+      const result = (service as any).calculateDistanceScoreSync(
+        roadCoords, -7.888, 110.33, -7.889, 110.331, mockEvacuationLocations,
+      );
+      expect(result).toBeGreaterThanOrEqual(1);
     });
   });
 });

@@ -299,15 +299,23 @@ export class EvacuationService {
   ): number {
     if (roadCoords.length < 2) return 3;
 
+    // FIX: GeoJSON uses [lon, lat] format, so:
+    // roadCoords[n][0] = longitude
+    // roadCoords[n][1] = latitude
+    const roadStartLon = roadCoords[0][0];
+    const roadStartLat = roadCoords[0][1];
+    const roadEndLon = roadCoords[roadCoords.length - 1][0];
+    const roadEndLat = roadCoords[roadCoords.length - 1][1];
+
     const startDist = this.haversineDistance(
       startLat,
       startLon,
-      roadCoords[0][1],
-      roadCoords[0][0],
+      roadStartLat,
+      roadStartLon,
     );
     const endDist = this.haversineDistance(
-      roadCoords[roadCoords.length - 1][1],
-      roadCoords[roadCoords.length - 1][0],
+      roadEndLat,
+      roadEndLon,
       endLat,
       endLon,
     );
@@ -337,12 +345,21 @@ export class EvacuationService {
       const coords = geom?.coordinates;
       if (!Array.isArray(coords)) continue;
 
-      for (const coord of roadCoords) {
-        const lat2 = coords[1];
-        const lon2 = coords[0];
-        if (typeof lat2 !== 'number' || typeof lon2 !== 'number') continue;
+      // FIX: GeoJSON uses [lon, lat] format
+      // coords[0] = longitude, coords[1] = latitude
+      const evacLon = coords[0];
+      const evacLat = coords[1];
 
-        const dist = this.haversineDistance(coord[1], coord[0], lat2, lon2);
+      if (typeof evacLat !== 'number' || typeof evacLon !== 'number') continue;
+
+      for (const coord of roadCoords) {
+        // FIX: coord[0] = longitude (lon), coord[1] = latitude (lat) in GeoJSON
+        const roadLon = coord[0];
+        const roadLat = coord[1];
+
+        if (typeof roadLon !== 'number' || typeof roadLat !== 'number') continue;
+
+        const dist = this.haversineDistance(roadLat, roadLon, evacLat, evacLon);
         if (dist < minDistance) {
           minDistance = dist;
           nearest = {
@@ -434,20 +451,62 @@ export class EvacuationService {
   }
 
   getWeights() {
-    return this.WEIGHTS;
+    return { ...this.WEIGHTS };
   }
 
+  /**
+   * Update scoring weights with validation
+   * Total weight must equal 1.0 (100%)
+   * @throws BadRequestException if weights don't sum to 1.0 or values are invalid
+   */
   updateWeights(weights: {
     hazard?: number;
     roadCondition?: number;
     distance?: number;
   }) {
-    if (weights.hazard !== undefined) this.WEIGHTS.hazard = weights.hazard;
-    if (weights.roadCondition !== undefined)
-      this.WEIGHTS.roadCondition = weights.roadCondition;
-    if (weights.distance !== undefined)
-      this.WEIGHTS.distance = weights.distance;
-    return this.WEIGHTS;
+    // Calculate new weight values
+    const newWeights = {
+      hazard: weights.hazard ?? this.WEIGHTS.hazard,
+      roadCondition: weights.roadCondition ?? this.WEIGHTS.roadCondition,
+      distance: weights.distance ?? this.WEIGHTS.distance,
+    };
+
+    // Validate each weight is a valid number in range [0, 1]
+    const validateWeight = (name: string, value: number): void => {
+      if (typeof value !== 'number' || isNaN(value)) {
+        throw new Error(`Invalid weight value for ${name}: must be a number`);
+      }
+      if (value < 0 || value > 1) {
+        throw new Error(`Invalid weight value for ${name}: must be between 0 and 1`);
+      }
+    };
+
+    validateWeight('hazard', newWeights.hazard);
+    validateWeight('roadCondition', newWeights.roadCondition);
+    validateWeight('distance', newWeights.distance);
+
+    // Validate sum equals 1.0 (with tolerance for floating point)
+    const sum = newWeights.hazard + newWeights.roadCondition + newWeights.distance;
+    const TOLERANCE = 0.0001; // Allow small floating point variance
+
+    if (Math.abs(sum - 1.0) > TOLERANCE) {
+      throw new Error(
+        `Weight sum must equal 1.0, got ${sum.toFixed(4)}. ` +
+        `Current weights: hazard=${newWeights.hazard}, roadCondition=${newWeights.roadCondition}, distance=${newWeights.distance}`
+      );
+    }
+
+    // All validations passed, update weights
+    this.WEIGHTS.hazard = newWeights.hazard;
+    this.WEIGHTS.roadCondition = newWeights.roadCondition;
+    this.WEIGHTS.distance = newWeights.distance;
+
+    this.logger.log(
+      `Weights updated: hazard=${this.WEIGHTS.hazard}, ` +
+      `roadCondition=${this.WEIGHTS.roadCondition}, distance=${this.WEIGHTS.distance}`
+    );
+
+    return { ...this.WEIGHTS };
   }
 
   calculateDistanceScore(
@@ -460,15 +519,22 @@ export class EvacuationService {
   ): number {
     if (roadCoords.length < 2) return 3;
 
+    // FIX: GeoJSON uses [lon, lat] format
+    // roadCoords[n][0] = longitude, roadCoords[n][1] = latitude
+    const roadStartLon = roadCoords[0][0];
+    const roadStartLat = roadCoords[0][1];
+    const roadEndLon = roadCoords[roadCoords.length - 1][0];
+    const roadEndLat = roadCoords[roadCoords.length - 1][1];
+
     const startDist = this.haversineDistance(
       startLat,
       startLon,
-      roadCoords[0][1],
-      roadCoords[0][0],
+      roadStartLat,
+      roadStartLon,
     );
     const endDist = this.haversineDistance(
-      roadCoords[roadCoords.length - 1][1],
-      roadCoords[roadCoords.length - 1][0],
+      roadEndLat,
+      roadEndLon,
       endLat,
       endLon,
     );

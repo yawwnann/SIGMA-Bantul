@@ -316,28 +316,52 @@ export class BpbdRiskService {
   async recalculateCombinedHazard(): Promise<void> {
     this.logger.log('Recalculating combined hazard scores...');
 
-    // Calculate combined hazard: 50% vulnerability + 50% BPBD risk
+    // FIX: Calculate combined hazard for ALL roads (not just those with bpbdRiskLevel)
+    // Formula: 50% vulnerability + 50% BPBD risk (default to LOW=1 if no bpbd risk)
     await this.prisma.$executeRaw`
       UPDATE "Road"
       SET "combinedHazard" = (
-        (CASE 
+        (CASE
           WHEN vulnerability = 'LOW' THEN 1
           WHEN vulnerability = 'MEDIUM' THEN 2.5
           WHEN vulnerability = 'HIGH' THEN 4
           WHEN vulnerability = 'CRITICAL' THEN 5
           ELSE 2
-        END * 0.5) + 
+        END * 0.5) +
         (COALESCE("bpbdRiskScore", 1) * 0.5)
-      )
-      WHERE "bpbdRiskLevel" IS NOT NULL
+      ),
+      "updatedAt" = NOW()
+      WHERE vulnerability IS NOT NULL
     `;
 
-    // Update safe_cost based on combined hazard
+    // Update safe_cost based on combined hazard for roads with valid geometry
     await this.prisma.$executeRaw`
       UPDATE "Road"
-      SET safe_cost = 
-        COALESCE(length, 1) * (1 + COALESCE("combinedHazard", 2) * 0.5)
+      SET safe_cost =
+        COALESCE(length, 1) * (1 + COALESCE("combinedHazard", 2) * 0.5),
+        "updatedAt" = NOW()
       WHERE geom IS NOT NULL AND "combinedHazard" IS NOT NULL
+    `;
+
+    // Also update roads that have vulnerability data but no bpbdRiskLevel yet
+    // These should get a safe_cost based on vulnerability alone (default risk)
+    await this.prisma.$executeRaw`
+      UPDATE "Road"
+      SET safe_cost =
+        COALESCE(length, 1) * (1 +
+          (CASE
+            WHEN vulnerability = 'LOW' THEN 1
+            WHEN vulnerability = 'MEDIUM' THEN 2.5
+            WHEN vulnerability = 'HIGH' THEN 4
+            WHEN vulnerability = 'CRITICAL' THEN 5
+            ELSE 2
+          END) * 0.5
+        ),
+        "updatedAt" = NOW()
+      WHERE geom IS NOT NULL
+        AND "combinedHazard" IS NULL
+        AND vulnerability IS NOT NULL
+        AND safe_cost IS NULL
     `;
 
     this.logger.log('Combined hazard recalculation completed');

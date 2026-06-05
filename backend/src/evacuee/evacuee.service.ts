@@ -17,70 +17,86 @@ export class EvacueeService {
   ) {}
 
   async create(dto: CreateEvacueeDto, userId: number) {
-    // Check if evacuationLocation exists and has capacity
-    const evacuationLocation = await this.prisma.evacuationLocation.findUnique({
-      where: { id: dto.evacuationLocationId },
-    });
+    // FIX: Use transaction to prevent race condition on capacity check
+    // Serialize the capacity check and update to prevent overbooking
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Lock the evacuation location row for update to prevent concurrent modifications
+      const evacuationLocation = await tx.$queryRaw<{
+        id: number;
+        name: string;
+        capacity: number;
+        currentOccupancy: number;
+      }[]>`
+        SELECT id, name, capacity, "currentOccupancy"
+        FROM "EvacuationLocation"
+        WHERE id = ${dto.evacuationLocationId}
+        FOR UPDATE
+      `;
 
-    if (!evacuationLocation) {
-      throw new NotFoundException('EvacuationLocation tidak ditemukan');
-    }
+      if (!evacuationLocation || evacuationLocation.length === 0) {
+        throw new NotFoundException('EvacuationLocation tidak ditemukan');
+      }
 
-    if (
-      evacuationLocation.currentOccupancy + dto.familySize >
-      evacuationLocation.capacity
-    ) {
-      throw new BadRequestException(
-        `Kapasitas evacuationLocation tidak mencukupi. Tersisa: ${evacuationLocation.capacity - evacuationLocation.currentOccupancy} orang`,
-      );
-    }
+      const location = evacuationLocation[0];
 
-    // Create evacuee
-    const evacuee = await this.prisma.evacuee.create({
-      data: {
-        ...dto,
-        registeredBy: userId,
-      },
-      include: {
-        evacuationLocation: true,
-        registeredByUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+      // Check capacity atomically with the lock held
+      if (location.currentOccupancy + dto.familySize > location.capacity) {
+        throw new BadRequestException(
+          `Kapasitas evacuationLocation tidak mencukupi. Tersisa: ${location.capacity - location.currentOccupancy} orang`,
+        );
+      }
+
+      // Create evacuee
+      const evacuee = await tx.evacuee.create({
+        data: {
+          ...dto,
+          registeredBy: userId,
+        },
+        include: {
+          evacuationLocation: true,
+          registeredByUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    // Update evacuationLocation occupancy
-    const updatedLocation = await this.prisma.evacuationLocation.update({
-      where: { id: dto.evacuationLocationId },
-      data: {
-        currentOccupancy: {
-          increment: dto.familySize,
+      // Update evacuationLocation occupancy within the same transaction
+      const updatedLocation = await tx.evacuationLocation.update({
+        where: { id: dto.evacuationLocationId },
+        data: {
+          currentOccupancy: {
+            increment: dto.familySize,
+          },
         },
-      },
+      });
+
+      return { evacuee, updatedLocation };
+    }, {
+      isolationLevel: 'Serializable', // Highest isolation to prevent phantom reads
     });
 
-    // Broadcast real-time update via WebSocket
+    // Broadcast real-time update via WebSocket (outside transaction)
     this.websocketService.broadcastEvacueeCheckIn({
-      evacueeId: evacuee.id,
-      name: evacuee.name,
+      evacueeId: result.evacuee.id,
+      name: result.evacuee.name,
       evacuationLocationId: dto.evacuationLocationId,
-      evacuationLocationName: evacuee.evacuationLocation.name,
+      evacuationLocationName: result.evacuee.evacuationLocation.name,
       familySize: dto.familySize,
     });
 
     this.websocketService.broadcastEvacuationCapacityUpdate({
-      id: updatedLocation.id,
-      name: updatedLocation.name,
-      currentOccupancy: updatedLocation.currentOccupancy,
-      availableCapacity: updatedLocation.capacity - updatedLocation.currentOccupancy,
-      totalCapacity: updatedLocation.capacity,
+      id: result.updatedLocation.id,
+      name: result.updatedLocation.name,
+      currentOccupancy: result.updatedLocation.currentOccupancy,
+      availableCapacity: result.updatedLocation.capacity - result.updatedLocation.currentOccupancy,
+      totalCapacity: result.updatedLocation.capacity,
     });
 
-    return evacuee;
+    return result.evacuee;
   }
 
   async findAll(evacuationLocationId?: number, status?: EvacueeStatus) {
@@ -143,95 +159,124 @@ export class EvacueeService {
   async update(id: number, dto: UpdateEvacueeDto) {
     const evacuee = await this.findOne(id);
 
-    // If family size changed, update evacuationLocation occupancy
-    if (dto.familySize && dto.familySize !== evacuee.familySize) {
-      const difference = dto.familySize - evacuee.familySize;
+    // FIX: Use transaction to prevent race condition on capacity check
+    const result = await this.prisma.$transaction(async (tx) => {
+      // If family size changed, update evacuationLocation occupancy
+      if (dto.familySize && dto.familySize !== evacuee.familySize) {
+        const difference = dto.familySize - evacuee.familySize;
 
-      const evacuationLocation =
-        await this.prisma.evacuationLocation.findUnique({
+        if (difference > 0) {
+          // Lock the evacuation location row for update
+          const evacuationLocation = await tx.$queryRaw<{
+            id: number;
+            name: string;
+            capacity: number;
+            currentOccupancy: number;
+          }[]>`
+            SELECT id, name, capacity, "currentOccupancy"
+            FROM "EvacuationLocation"
+            WHERE id = ${evacuee.evacuationLocationId}
+            FOR UPDATE
+          `;
+
+          if (evacuationLocation && evacuationLocation.length > 0) {
+            const location = evacuationLocation[0];
+            if (location.currentOccupancy + difference > location.capacity) {
+              throw new BadRequestException(
+                `Kapasitas evacuationLocation tidak mencukupi untuk menambah ${difference} orang`,
+              );
+            }
+          }
+        }
+
+        await tx.evacuationLocation.update({
           where: { id: evacuee.evacuationLocationId },
+          data: {
+            currentOccupancy: {
+              increment: difference,
+            },
+          },
         });
-
-      if (
-        difference > 0 &&
-        evacuationLocation.currentOccupancy + difference >
-          evacuationLocation.capacity
-      ) {
-        throw new BadRequestException(
-          `Kapasitas evacuationLocation tidak mencukupi untuk menambah ${difference} orang`,
-        );
       }
 
-      await this.prisma.evacuationLocation.update({
-        where: { id: evacuee.evacuationLocationId },
-        data: {
-          currentOccupancy: {
-            increment: difference,
+      // If status changed to RETURNED_HOME or RELOCATED, set checkOutDate
+      if (dto.status && dto.status !== 'ACTIVE' && evacuee.status === 'ACTIVE') {
+        dto.checkOutDate = dto.checkOutDate || new Date().toISOString();
+
+        // Decrease evacuationLocation occupancy
+        const updatedLocation = await tx.evacuationLocation.update({
+          where: { id: evacuee.evacuationLocationId },
+          data: {
+            currentOccupancy: {
+              decrement: evacuee.familySize,
+            },
+          },
+        });
+
+        // Broadcast real-time update via WebSocket
+        this.websocketService.broadcastEvacueeCheckOut({
+          evacueeId: evacuee.id,
+          name: evacuee.name,
+          evacuationLocationId: evacuee.evacuationLocationId,
+          evacuationLocationName: evacuee.evacuationLocation.name,
+          familySize: evacuee.familySize,
+        });
+
+        this.websocketService.broadcastEvacuationCapacityUpdate({
+          id: updatedLocation.id,
+          name: updatedLocation.name,
+          currentOccupancy: updatedLocation.currentOccupancy,
+          availableCapacity: updatedLocation.capacity - updatedLocation.currentOccupancy,
+          totalCapacity: updatedLocation.capacity,
+        });
+      }
+
+      return tx.evacuee.update({
+        where: { id },
+        data: dto,
+        include: {
+          evacuationLocation: true,
+          registeredByUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
           },
         },
       });
-    }
-
-    // If status changed to RETURNED_HOME or RELOCATED, set checkOutDate
-    if (dto.status && dto.status !== 'ACTIVE' && evacuee.status === 'ACTIVE') {
-      dto.checkOutDate = dto.checkOutDate || new Date().toISOString();
-
-      // Decrease evacuationLocation occupancy
-      const updatedLocation = await this.prisma.evacuationLocation.update({
-        where: { id: evacuee.evacuationLocationId },
-        data: {
-          currentOccupancy: {
-            decrement: evacuee.familySize,
-          },
-        },
-      });
-
-      // Broadcast real-time update via WebSocket
-      this.websocketService.broadcastEvacueeCheckOut({
-        evacueeId: evacuee.id,
-        name: evacuee.name,
-        evacuationLocationId: evacuee.evacuationLocationId,
-        evacuationLocationName: evacuee.evacuationLocation.name,
-        familySize: evacuee.familySize,
-      });
-
-      this.websocketService.broadcastEvacuationCapacityUpdate({
-        id: updatedLocation.id,
-        name: updatedLocation.name,
-        currentOccupancy: updatedLocation.currentOccupancy,
-        availableCapacity: updatedLocation.capacity - updatedLocation.currentOccupancy,
-        totalCapacity: updatedLocation.capacity,
-      });
-    }
-
-    return this.prisma.evacuee.update({
-      where: { id },
-      data: dto,
-      include: {
-        evacuationLocation: true,
-        registeredByUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
+    }, {
+      isolationLevel: 'Serializable',
     });
+
+    return result;
   }
 
   async delete(id: number) {
     const evacuee = await this.findOne(id);
 
+    // FIX: Use transaction to ensure atomic occupancy decrement and delete
     // If evacuee is still active, decrease evacuationLocation occupancy
     if (evacuee.status === 'ACTIVE') {
-      const updatedLocation = await this.prisma.evacuationLocation.update({
-        where: { id: evacuee.evacuationLocationId },
-        data: {
-          currentOccupancy: {
-            decrement: evacuee.familySize,
+      const result = await this.prisma.$transaction(async (tx) => {
+        // Lock and update evacuation location
+        const updatedLocation = await tx.evacuationLocation.update({
+          where: { id: evacuee.evacuationLocationId },
+          data: {
+            currentOccupancy: {
+              decrement: evacuee.familySize,
+            },
           },
-        },
+        });
+
+        // Delete evacuee
+        await tx.evacuee.delete({
+          where: { id },
+        });
+
+        return updatedLocation;
+      }, {
+        isolationLevel: 'Serializable',
       });
 
       // Broadcast real-time update via WebSocket
@@ -244,17 +289,20 @@ export class EvacueeService {
       });
 
       this.websocketService.broadcastEvacuationCapacityUpdate({
-        id: updatedLocation.id,
-        name: updatedLocation.name,
-        currentOccupancy: updatedLocation.currentOccupancy,
-        availableCapacity: updatedLocation.capacity - updatedLocation.currentOccupancy,
-        totalCapacity: updatedLocation.capacity,
+        id: result.id,
+        name: result.name,
+        currentOccupancy: result.currentOccupancy,
+        availableCapacity: result.capacity - result.currentOccupancy,
+        totalCapacity: result.capacity,
+      });
+    } else {
+      // Just delete without updating occupancy (already checked out)
+      await this.prisma.evacuee.delete({
+        where: { id },
       });
     }
 
-    return this.prisma.evacuee.delete({
-      where: { id },
-    });
+    return { message: 'Evacuee deleted successfully' };
   }
 
   async getStatsByEvacuationLocationId(evacuationLocationId: number) {

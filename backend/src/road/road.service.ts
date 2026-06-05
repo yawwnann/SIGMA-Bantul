@@ -41,7 +41,8 @@ export class RoadService {
         );
       }
 
-      this.simpleDijkstra.clearCache();
+      // FIX: Clear Dijkstra graph cache with reason
+      this.simpleDijkstra.clearCache('Road data modified - cache invalidated');
       return allKeys.length;
     } catch (error) {
       this.logger.warn(`Failed to invalidate road cache: ${error.message}`);
@@ -407,39 +408,73 @@ export class RoadService {
       // Extract edge IDs from the primary route to penalize them
       const primaryEdgeIds = primaryRoute
         .map((segment) => segment.id)
-        .filter((id) => id !== null && id !== undefined);
+        .filter((id): id is number => id !== null && id !== undefined && typeof id === 'number');
 
       // 2. Calculate alternative path using pgr_dijkstra with penalized costs
       let altRoute: any[] = [];
       if (primaryEdgeIds.length > 0) {
         try {
-          const penalizedIdsList = primaryEdgeIds.join(',');
-          const altInnerSql = `SELECT id, source, target, CASE WHEN id IN (${penalizedIdsList}) THEN cost * 10.0 ELSE cost END as cost, CASE WHEN id IN (${penalizedIdsList}) THEN reverse_cost * 10.0 ELSE reverse_cost END as reverse_cost FROM "Road" WHERE source IS NOT NULL AND target IS NOT NULL`;
+          // FIX: Validate all IDs are valid integers to prevent any injection possibility
+          // Defense in depth: even though IDs come from DB, validate them
+          const validatedIds: number[] = [];
+          for (const id of primaryEdgeIds) {
+            // Ensure it's a safe integer
+            if (Number.isInteger(id) && id > 0 && id <= Number.MAX_SAFE_INTEGER) {
+              validatedIds.push(id);
+            }
+          }
 
-          const altQuery = `
-            SELECT 
-              r.id,
-              r.name,
-              r.type,
-              r.condition,
-              r.cost,
-              ST_Length(r.geom::geography)::float as length_m,
-              CASE 
-                WHEN route.node = r.source THEN ST_AsGeoJSON(r.geom)::json
-                WHEN route.node = r.target THEN ST_AsGeoJSON(ST_Reverse(r.geom))::json
-                ELSE ST_AsGeoJSON(r.geom)::json
-              END as geometry
-            FROM pgr_dijkstra(
-              '${altInnerSql}',
-              ${startNodeId},
-              ${endNodeId},
-              directed := true
-            ) AS route
-            JOIN "Road" r ON route.edge = r.id
-            ORDER BY route.seq
-          `;
+          if (validatedIds.length > 0) {
+            // Escape IDs for SQL: remove any non-numeric characters
+            const escapedIds = validatedIds
+              .map(id => String(id).replace(/[^0-9]/g, ''))
+              .filter(id => id.length > 0 && id.length <= 20)
+              .map(id => parseInt(id, 10));
 
-          altRoute = await this.prisma.$queryRawUnsafe<any[]>(altQuery);
+            if (escapedIds.length === validatedIds.length) {
+              // Use the escaped IDs list for the query
+              const penalizedIdsList = escapedIds.join(',');
+
+              // Build the penalized inner SQL safely
+              const altInnerSql = `
+                SELECT id, source, target,
+                  CASE WHEN id IN (${penalizedIdsList}) THEN cost * 10.0 ELSE cost END as cost,
+                  CASE WHEN id IN (${penalizedIdsList}) THEN reverse_cost * 10.0 ELSE reverse_cost END as reverse_cost
+                FROM "Road"
+                WHERE source IS NOT NULL AND target IS NOT NULL
+              `;
+
+              const altQuery = `
+                SELECT
+                  r.id,
+                  r.name,
+                  r.type,
+                  r.condition,
+                  r.cost,
+                  ST_Length(r.geom::geography)::float as length_m,
+                  CASE
+                    WHEN route.node = r.source THEN ST_AsGeoJSON(r.geom)::json
+                    WHEN route.node = r.target THEN ST_AsGeoJSON(ST_Reverse(r.geom))::json
+                    ELSE ST_AsGeoJSON(r.geom)::json
+                  END as geometry
+                FROM pgr_dijkstra(
+                  $1,
+                  $2,
+                  $3,
+                  directed := true
+                ) AS route
+                JOIN "Road" r ON route.edge = r.id
+                ORDER BY route.seq
+              `;
+
+              altRoute = await this.prisma.$queryRawUnsafe<any[]>(
+                altQuery,
+                altInnerSql,
+                startNodeId,
+                endNodeId,
+              );
+            }
+          }
         } catch (altError) {
           console.warn('Failed to calculate alternative route with pgRouting:', altError.message);
         }

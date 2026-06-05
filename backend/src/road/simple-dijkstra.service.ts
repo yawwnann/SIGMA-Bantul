@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   getConditionFactorFromRoadCondition,
@@ -46,18 +46,58 @@ interface Graph {
 
 @Injectable()
 export class SimpleDijkstraService {
+  private readonly logger = new Logger(SimpleDijkstraService.name);
   private cachedGraph: Graph | null = null;
+  private cacheTimestamp: number | null = null;
+  private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache TTL
 
   constructor(private prisma: PrismaService) {}
 
-  public clearCache() {
+  /**
+   * Clear the cached graph.
+   * Should be called when road data is modified (create/update/delete).
+   */
+  public clearCache(reason?: string) {
+    const wasCached = this.cachedGraph !== null;
     this.cachedGraph = null;
+    this.cacheTimestamp = null;
+
+    if (wasCached) {
+      console.log(
+        `SimpleDijkstra graph cache cleared. ${reason ? `Reason: ${reason}` : ''}`
+      );
+    }
+  }
+
+  /**
+   * Check if cache is stale based on TTL
+   */
+  public isCacheStale(): boolean {
+    if (!this.cachedGraph || this.cacheTimestamp === null) {
+      return true;
+    }
+    return Date.now() - this.cacheTimestamp > this.CACHE_TTL_MS;
+  }
+
+  /**
+   * Get cache statistics
+   */
+  public getCacheStats() {
+    return {
+      isCached: this.cachedGraph !== null,
+      cacheAge: this.cacheTimestamp ? Date.now() - this.cacheTimestamp : null,
+      isStale: this.isCacheStale(),
+      nodeCount: this.cachedGraph?.nodes.size ?? 0,
+      edgeCount: this.cachedGraph?.edges.size ?? 0,
+    };
   }
 
   private async getGraph(): Promise<Graph> {
-    if (!this.cachedGraph) {
+    // Force refresh if cache is stale
+    if (!this.cachedGraph || this.isCacheStale()) {
       console.log('Building in-memory road graph for routing...');
       this.cachedGraph = await this.buildGraph();
+      this.cacheTimestamp = Date.now();
     }
     return this.cachedGraph;
   }
@@ -287,17 +327,54 @@ export class SimpleDijkstraService {
     // Reconstruct path
     const path: string[] = [];
     let current: string | null = endNode.id;
-    while (current !== null) {
+    let iterations = 0;
+    const maxIterations = graph.nodes.size + 1; // Prevent infinite loop
+
+    while (current !== null && iterations < maxIterations) {
+      iterations++;
       path.unshift(current);
-      const prev = previous.get(current);
-      if (prev === null || prev === undefined) {
+
+      // Check if we've reached the start node
+      if (current === startNode.id) {
         break;
       }
+
+      const prev = previous.get(current);
+
+      // If there's no previous node, the path is disconnected
+      if (prev === null || prev === undefined) {
+        this.logger.warn(
+          `Path reconstruction failed: No path from ${startNode.id} to ${endNode.id}. ` +
+          `Last reachable node: ${current}`
+        );
+        return null; // No valid path exists
+      }
+
       current = prev;
     }
 
+    // Safety check: prevent infinite loop
+    if (iterations >= maxIterations) {
+      this.logger.error('Path reconstruction exceeded max iterations - possible cycle detected');
+      return null;
+    }
+
+    // Validate path starts at the start node
     if (path.length === 0 || path[0] !== startNode.id) {
-      return null; // No path found
+      this.logger.warn(
+        `Invalid path reconstruction: path doesn't start at ${startNode.id}. ` +
+        `Path: ${path.join(' -> ')}`
+      );
+      return null; // No valid path found
+    }
+
+    // Validate path ends at the end node
+    if (path[path.length - 1] !== endNode.id) {
+      this.logger.warn(
+        `Invalid path reconstruction: path doesn't end at ${endNode.id}. ` +
+        `Path: ${path.join(' -> ')}`
+      );
+      return null;
     }
 
     // Calculate total distance
