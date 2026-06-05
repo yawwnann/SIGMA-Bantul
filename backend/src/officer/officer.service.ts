@@ -3,6 +3,8 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOfficerDto } from './dto/create-officer.dto';
@@ -13,10 +15,14 @@ import {
   EvacuationLocationStatus,
   EvacuationLocationCondition,
 } from '@prisma/client';
+import { WebsocketService } from '../websocket/websocket.service';
 
 @Injectable()
 export class OfficerService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private websocketService: WebsocketService,
+  ) {}
 
   async createOfficer(dto: CreateOfficerDto) {
     const existing = await this.prisma.user.findUnique({
@@ -243,6 +249,15 @@ export class OfficerService {
           action: 'UPDATE_OCCUPANCY',
           changes: { old: evacuationLocation.currentOccupancy, new: occupancy },
         },
+      });
+
+      // Broadcast real-time update via WebSocket
+      this.websocketService.broadcastEvacuationCapacityUpdate({
+        id: updated.id,
+        name: updated.name,
+        currentOccupancy: updated.currentOccupancy,
+        availableCapacity: updated.capacity - updated.currentOccupancy,
+        totalCapacity: updated.capacity,
       });
 
       return updated;

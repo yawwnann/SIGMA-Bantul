@@ -7,10 +7,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateEvacueeDto } from './dto/create-evacuee.dto';
 import { UpdateEvacueeDto } from './dto/update-evacuee.dto';
 import { EvacueeStatus } from '@prisma/client';
+import { WebsocketService } from '../websocket/websocket.service';
 
 @Injectable()
 export class EvacueeService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private websocketService: WebsocketService,
+  ) {}
 
   async create(dto: CreateEvacueeDto, userId: number) {
     // Check if evacuationLocation exists and has capacity
@@ -50,13 +54,30 @@ export class EvacueeService {
     });
 
     // Update evacuationLocation occupancy
-    await this.prisma.evacuationLocation.update({
+    const updatedLocation = await this.prisma.evacuationLocation.update({
       where: { id: dto.evacuationLocationId },
       data: {
         currentOccupancy: {
           increment: dto.familySize,
         },
       },
+    });
+
+    // Broadcast real-time update via WebSocket
+    this.websocketService.broadcastEvacueeCheckIn({
+      evacueeId: evacuee.id,
+      name: evacuee.name,
+      evacuationLocationId: dto.evacuationLocationId,
+      evacuationLocationName: evacuee.evacuationLocation.name,
+      familySize: dto.familySize,
+    });
+
+    this.websocketService.broadcastEvacuationCapacityUpdate({
+      id: updatedLocation.id,
+      name: updatedLocation.name,
+      currentOccupancy: updatedLocation.currentOccupancy,
+      availableCapacity: updatedLocation.capacity - updatedLocation.currentOccupancy,
+      totalCapacity: updatedLocation.capacity,
     });
 
     return evacuee;
@@ -156,13 +177,30 @@ export class EvacueeService {
       dto.checkOutDate = dto.checkOutDate || new Date().toISOString();
 
       // Decrease evacuationLocation occupancy
-      await this.prisma.evacuationLocation.update({
+      const updatedLocation = await this.prisma.evacuationLocation.update({
         where: { id: evacuee.evacuationLocationId },
         data: {
           currentOccupancy: {
             decrement: evacuee.familySize,
           },
         },
+      });
+
+      // Broadcast real-time update via WebSocket
+      this.websocketService.broadcastEvacueeCheckOut({
+        evacueeId: evacuee.id,
+        name: evacuee.name,
+        evacuationLocationId: evacuee.evacuationLocationId,
+        evacuationLocationName: evacuee.evacuationLocation.name,
+        familySize: evacuee.familySize,
+      });
+
+      this.websocketService.broadcastEvacuationCapacityUpdate({
+        id: updatedLocation.id,
+        name: updatedLocation.name,
+        currentOccupancy: updatedLocation.currentOccupancy,
+        availableCapacity: updatedLocation.capacity - updatedLocation.currentOccupancy,
+        totalCapacity: updatedLocation.capacity,
       });
     }
 
@@ -187,13 +225,30 @@ export class EvacueeService {
 
     // If evacuee is still active, decrease evacuationLocation occupancy
     if (evacuee.status === 'ACTIVE') {
-      await this.prisma.evacuationLocation.update({
+      const updatedLocation = await this.prisma.evacuationLocation.update({
         where: { id: evacuee.evacuationLocationId },
         data: {
           currentOccupancy: {
             decrement: evacuee.familySize,
           },
         },
+      });
+
+      // Broadcast real-time update via WebSocket
+      this.websocketService.broadcastEvacueeCheckOut({
+        evacueeId: evacuee.id,
+        name: evacuee.name,
+        evacuationLocationId: evacuee.evacuationLocationId,
+        evacuationLocationName: evacuee.evacuationLocation.name,
+        familySize: evacuee.familySize,
+      });
+
+      this.websocketService.broadcastEvacuationCapacityUpdate({
+        id: updatedLocation.id,
+        name: updatedLocation.name,
+        currentOccupancy: updatedLocation.currentOccupancy,
+        availableCapacity: updatedLocation.capacity - updatedLocation.currentOccupancy,
+        totalCapacity: updatedLocation.capacity,
       });
     }
 

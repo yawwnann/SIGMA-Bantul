@@ -8,6 +8,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { DashboardService } from '../dashboard/dashboard.service';
+import { WebsocketService } from './websocket.service';
 
 @WebSocketGateway({
   cors: {
@@ -27,7 +28,13 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private readonly logger = new Logger(AppGateway.name);
 
-  constructor(private dashboardService: DashboardService) {}
+  constructor(
+    private dashboardService: DashboardService,
+    private websocketService: WebsocketService,
+  ) {
+    // Set the server instance in the websocket service so it can emit events
+    this.websocketService.setServer(this.server);
+  }
 
   handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
@@ -39,6 +46,12 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
     this.server.emit('clientCount', this.getConnectedClients());
+  }
+
+  afterInit() {
+    // Set the server instance after initialization
+    this.websocketService.setServer(this.server);
+    this.logger.log('WebSocket Gateway initialized');
   }
 
   private getConnectedClients(): number {
@@ -66,25 +79,6 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (error) {
       this.logger.error('Failed to broadcast dashboard stats:', error);
     }
-  }
-
-  // Broadcast evacuation location capacity update
-  broadcastEvacuationCapacityUpdate(data: {
-    id: number;
-    name: string;
-    currentOccupancy: number;
-    availableCapacity: number;
-    totalCapacity: number;
-  }) {
-    this.server.emit('evacuationCapacityUpdate', data);
-  }
-
-  // Broadcast officer status update
-  broadcastOfficerUpdate(data: {
-    totalOfficers: number;
-    activeToday: number;
-  }) {
-    this.server.emit('officerUpdate', data);
   }
 
   broadcastEarthquakeUpdate(data: any) {

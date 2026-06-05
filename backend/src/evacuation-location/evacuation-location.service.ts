@@ -10,13 +10,13 @@ import {
   EvacuationLocationCondition,
   UserRole,
 } from '@prisma/client';
-import { AppGateway } from '../websocket/app.gateway';
+import { WebsocketService } from '../websocket/websocket.service';
 
 @Injectable()
 export class EvacuationLocationService {
   constructor(
     private prisma: PrismaService,
-    private appGateway: AppGateway,
+    private websocketService: WebsocketService,
   ) {}
 
   async create(dto: CreateEvacuationLocationDto) {
@@ -107,16 +107,13 @@ export class EvacuationLocationService {
     });
 
     // Broadcast capacity update via WebSocket
-    this.appGateway.broadcastEvacuationCapacityUpdate({
+    this.websocketService.broadcastEvacuationCapacityUpdate({
       id: updated.id,
       name: updated.name,
       currentOccupancy: updated.currentOccupancy,
       availableCapacity: updated.capacity - updated.currentOccupancy,
       totalCapacity: updated.capacity,
     });
-
-    // Also broadcast dashboard stats update
-    this.appGateway.broadcastDashboardStats();
 
     return updated;
   }
