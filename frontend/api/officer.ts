@@ -94,13 +94,13 @@ export const officerApi = {
   },
 
   getMyEvacuationLocations: async () => {
-    const response = await apiClient.get("/officer/evacuation-locations");
+    const response = await apiClient.get("/officer/evacuationLocations");
     return response.data;
   },
 
   updateOccupancy: async (evacuationLocationId: number, occupancy: number) => {
     const response = await apiClient.patch(
-      `/officer/evacuation-locations/${evacuationLocationId}/occupancy`,
+      `/officer/evacuationLocations/${evacuationLocationId}/occupancy`,
       {
         occupancy,
       },
@@ -110,7 +110,7 @@ export const officerApi = {
 
   updateCondition: async (evacuationLocationId: number, condition: string) => {
     const response = await apiClient.patch(
-      `/officer/evacuation-locations/${evacuationLocationId}/condition`,
+      `/officer/evacuationLocations/${evacuationLocationId}/condition`,
       {
         condition,
       },
@@ -120,7 +120,7 @@ export const officerApi = {
 
   updateStatus: async (evacuationLocationId: number, status: string) => {
     const response = await apiClient.patch(
-      `/officer/evacuation-locations/${evacuationLocationId}/status`,
+      `/officer/evacuationLocations/${evacuationLocationId}/status`,
       {
         status,
       },
