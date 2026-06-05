@@ -147,6 +147,8 @@ export default function AdminOfficersPage() {
           />
         </div>
       </div>
+
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-md">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader className="bg-zinc-950/50">
