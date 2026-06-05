@@ -29,8 +29,9 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Home, Plus, MapPin, Users, UserCheck, UserX } from "lucide-react";
+import { Home, Plus, MapPin, Users, UserCheck, UserX, Search } from "lucide-react";
 import type { EvacuationLocation, EvacuationLocationCondition } from "@/types";
 
 const LocationPickerMap = dynamic(
@@ -68,6 +69,7 @@ export default function AdminEvacuationLocationsPage() {
     null,
   );
   const [selectedOfficerId, setSelectedOfficerId] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     address: "",
@@ -193,6 +195,16 @@ export default function AdminEvacuationLocationsPage() {
     setIsDialogOpen(true);
   };
 
+  // Filter evacuation locations based on search query
+  const filteredLocations = evacuationLocations.filter((location) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      location.name.toLowerCase().includes(query) ||
+      (location.address && location.address.toLowerCase().includes(query)) ||
+      (location.officer && location.officer.name.toLowerCase().includes(query))
+    );
+  });
+
   return (
     <div className="py-6 w-full px-4 sm:px-6 md:px-8 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -202,8 +214,7 @@ export default function AdminEvacuationLocationsPage() {
             Manajemen Lokasi Evakuasi
           </h2>
           <p className="text-zinc-400 mt-1 text-sm">
-            Total {evacuationLocations.length} titik pengungsian terdaftar dalam pangkalan
-            data.
+            Menampilkan {filteredLocations.length} dari {evacuationLocations.length} lokasi evakuasi.
           </p>
         </div>
         <Button
@@ -281,6 +292,20 @@ export default function AdminEvacuationLocationsPage() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-sm">
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <Input
+            type="text"
+            placeholder="Cari lokasi evakuasi berdasarkan nama, alamat, atau petugas..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 h-10 bg-zinc-950 border-zinc-800 text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+      </div>
+
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-md">
         <div className="overflow-x-auto">
           <Table>
@@ -319,18 +344,18 @@ export default function AdminEvacuationLocationsPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : evacuationLocations.length === 0 ? (
+              ) : filteredLocations.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={6}
                     className="text-center py-12 text-zinc-500"
                   >
                     <Home className="w-8 h-8 opacity-20 mx-auto mb-3" />
-                    Tidak ada data lokasi evakuasi yang dikelola.
+                    {searchQuery ? "Tidak ada lokasi evakuasi yang cocok dengan pencarian." : "Tidak ada data lokasi evakuasi yang dikelola."}
                   </TableCell>
                 </TableRow>
               ) : (
-                evacuationLocations.map((evacuationLocation) => (
+                filteredLocations.map((evacuationLocation) => (
                   <TableRow
                     key={evacuationLocation.id}
                     className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors"

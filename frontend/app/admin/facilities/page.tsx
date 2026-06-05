@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Building, Plus, Filter, MapPin, MapIcon } from "lucide-react";
+import { Building, Plus, Filter, MapPin, MapIcon, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import type { PublicFacility } from "@/types";
 
 const facilityTypeLabels: Record<string, string> = {
@@ -41,6 +42,7 @@ export default function AdminFacilitiesPage() {
     null,
   );
   const [filterType, setFilterType] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     type: "HOSPITAL",
@@ -135,6 +137,16 @@ export default function AdminFacilitiesPage() {
     setIsDialogOpen(true);
   };
 
+  // Filter facilities based on search query
+  const filteredFacilities = facilities.filter((facility) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      facility.name.toLowerCase().includes(query) ||
+      (facility.address && facility.address.toLowerCase().includes(query)) ||
+      facilityTypeLabels[facility.type].toLowerCase().includes(query)
+    );
+  });
+
   return (
     <div className="py-6 w-full px-4 sm:px-6 md:px-8 space-y-6">
       {/* Header Section */}
@@ -145,7 +157,7 @@ export default function AdminFacilitiesPage() {
             Manajemen Fasilitas Umum
           </h2>
           <p className="text-zinc-400 mt-1 text-sm">
-            Total {facilities.length} fasilitas terdaftar dalam pangkalan data.
+            Menampilkan {filteredFacilities.length} dari {facilities.length} fasilitas.
           </p>
         </div>
         <Button
@@ -158,6 +170,18 @@ export default function AdminFacilitiesPage() {
 
       {/* Toolbar / Layout Spacing */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-center justify-between shadow-sm">
+        {/* Search Bar */}
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <Input
+            type="text"
+            placeholder="Cari fasilitas umum..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 h-10 bg-zinc-950 border-zinc-800 text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          />
+        </div>
+        {/* Filter Type */}
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shrink-0">
             <Filter className="w-5 h-5 text-emerald-400" />
@@ -181,7 +205,6 @@ export default function AdminFacilitiesPage() {
             </SelectContent>
           </Select>
         </div>
-
         {loading && (
           <div className="text-sm text-zinc-500 animate-pulse">
             Memuat data...
@@ -221,18 +244,18 @@ export default function AdminFacilitiesPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : facilities.length === 0 ? (
+              ) : filteredFacilities.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={4}
                     className="text-center py-12 text-zinc-500"
                   >
                     <MapIcon className="w-8 h-8 opacity-20 mx-auto mb-3" />
-                    Tidak ada data fasilitas yang dikelola.
+                    {searchQuery ? "Tidak ada fasilitas yang cocok dengan pencarian." : "Tidak ada data fasilitas yang dikelola."}
                   </TableCell>
                 </TableRow>
               ) : (
-                facilities.map((facility) => (
+                filteredFacilities.map((facility) => (
                   <TableRow
                     key={facility.id}
                     className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors"

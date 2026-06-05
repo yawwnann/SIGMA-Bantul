@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { UserPlus, Shield, Mail } from "lucide-react";
+import { UserPlus, Shield, Mail, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 export default function AdminOfficersPage() {
   const [officers, setOfficers] = useState<Officer[]>([]);
@@ -26,6 +27,7 @@ export default function AdminOfficersPage() {
     name: "",
     phone: "",
   });
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchOfficers = async () => {
     try {
@@ -104,6 +106,15 @@ export default function AdminOfficersPage() {
     setIsDialogOpen(true);
   };
 
+  // Filter officers based on search query
+  const filteredOfficers = officers.filter((officer) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      officer.name.toLowerCase().includes(query) ||
+      officer.email.toLowerCase().includes(query)
+    );
+  });
+
   return (
     <div className="py-6 w-full px-4 sm:px-6 md:px-8 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -113,7 +124,7 @@ export default function AdminOfficersPage() {
             Manajemen Petugas Evakuasi
           </h2>
           <p className="text-zinc-400 mt-1 text-sm">
-            Total {officers.length} petugas terdaftar dalam sistem.
+            Menampilkan {filteredOfficers.length} dari {officers.length} petugas.
           </p>
         </div>
         <Button
@@ -124,7 +135,18 @@ export default function AdminOfficersPage() {
         </Button>
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-md">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-sm">
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <Input
+            type="text"
+            placeholder="Cari petugas berdasarkan nama atau email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 h-10 bg-zinc-950 border-zinc-800 text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+      </div>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader className="bg-zinc-950/50">
@@ -156,18 +178,18 @@ export default function AdminOfficersPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : officers.length === 0 ? (
+              ) : filteredOfficers.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={4}
                     className="text-center py-12 text-zinc-500"
                   >
                     <Shield className="w-8 h-8 opacity-20 mx-auto mb-3" />
-                    Belum ada petugas terdaftar.
+                    {searchQuery ? "Tidak ada petugas yang cocok dengan pencarian." : "Belum ada petugas terdaftar."}
                   </TableCell>
                 </TableRow>
               ) : (
-                officers.map((officer) => (
+                filteredOfficers.map((officer) => (
                   <TableRow
                     key={officer.id}
                     className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors"

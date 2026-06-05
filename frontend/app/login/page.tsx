@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("admin@bantul.go.id");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
