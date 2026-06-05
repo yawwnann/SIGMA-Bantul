@@ -36,6 +36,32 @@ export function createEvacuationClusterLayer(
   return clusterLayer;
 }
 
+// Version with marker refs for real-time updates
+export function createEvacuationClusterLayerWithRefs(
+  items: EvacuationMarkerData[],
+  onMarkerClick: (evacuationLocation: EvacuationLocation) => void,
+  markerRefs: React.MutableRefObject<Map<number, L.Marker>>,
+) {
+  const clusterLayer = L.markerClusterGroup({
+    chunkedLoading: true,
+    chunkInterval: 80,
+    chunkDelay: 30,
+    showCoverageOnHover: false,
+    spiderfyOnMaxZoom: true,
+    disableClusteringAtZoom: DETAIL_MARKER_ZOOM,
+    maxClusterRadius: (zoom) => (zoom < 11 ? 80 : zoom < 13 ? 56 : 32),
+    iconCreateFunction: createEvacuationClusterIcon,
+  });
+
+  items.forEach((item) => {
+    const marker = createEvacuationMarker(item, onMarkerClick);
+    markerRefs.current.set(item.evacuationLocation.id, marker);
+    clusterLayer.addLayer(marker);
+  });
+
+  return clusterLayer;
+}
+
 type EvacuationClusterProps = {
   items: EvacuationMarkerData[];
   onMarkerClick: (evacuationLocation: EvacuationLocation) => void;

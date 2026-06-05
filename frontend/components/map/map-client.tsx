@@ -11,9 +11,9 @@ import { useTheme } from "next-themes";
 import "leaflet-providers";
 import { BpbdRiskLayer } from "./bpbd-risk-layer";
 import { debounce } from "@/lib/utils";
-import { createEvacuationClusterLayer } from "./evacuation-cluster";
-import { toEvacuationMarkerData } from "./evacuation-marker";
-import { getEvacuationLocationCategoryLabel } from "./marker-icons";
+import { createEvacuationClusterLayer, createEvacuationClusterLayerWithRefs } from "./evacuation-cluster";
+import { toEvacuationMarkerData, EvacuationMarkersManager } from "./evacuation-marker";
+import { getEvacuationLocationCategoryLabel, createEvacuationIcon } from "./marker-icons";
 
 interface MapClientProps {
   evacuationLocations: EvacuationLocation[];
@@ -135,6 +135,10 @@ export default function MapClient({
     [evacuationLocations],
   );
 
+  // Manager for real-time marker updates
+  const evacuationMarkersManagerRef = useRef<EvacuationMarkersManager | null>(null);
+  const evacuationMarkerRefs = useRef<Map<number, L.Marker>>(new Map());
+
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -156,6 +160,37 @@ export default function MapClient({
   useEffect(() => {
     setIsDarkMode(resolvedTheme === "dark");
   }, [resolvedTheme]);
+
+  // Handle real-time evacuation capacity updates
+  useEffect(() => {
+    if (!mapRef.current || !evacuationLocationLayerGroupRef.current) return;
+
+    const clusterLayer = evacuationLocationLayerGroupRef.current;
+
+    // Get all markers inside the cluster layer
+    const updateMarkerIcon = (markerId: number, currentOccupancy: number, totalCapacity: number, category?: string) => {
+      // Find the marker by iterating through all layers
+      clusterLayer.getLayers().forEach((layer: L.Layer) => {
+        // Check if it's a regular marker (not a cluster)
+        if (layer instanceof L.Marker) {
+          const marker = layer as L.Marker;
+          const icon = marker.getElement();
+          if (icon) {
+            // We can't easily get the evacuation location ID from the marker
+            // So we need to find it by position matching
+            // For now, we'll trigger a re-render by updating the parent state
+          }
+        }
+      });
+    };
+
+    // Since we can't directly access markers in MarkerClusterGroup,
+    // we'll update via the parent component's state
+    // The parent page.tsx handles the socket updates and passes new evacuationLocations
+    // This effect will detect when evacuationLocations prop changes and re-render markers
+
+    console.log("[MapClient] Evacuation locations updated, count:", evacuationLocations.length);
+  }, [evacuationLocations]);
 
   useEffect(() => {
     const fetchBoundary = async () => {
@@ -431,13 +466,38 @@ export default function MapClient({
       evacuationLocationLayerGroupRef.current = null;
     }
 
+    // Clear marker refs
+    evacuationMarkerRefs.current.clear();
+
     if (!visibleLayers.evacuationLocations || evacuationMarkerData.length === 0) return;
 
-    evacuationLocationLayerGroupRef.current = createEvacuationClusterLayer(
+    // Use the function that captures marker references
+    const clusterLayer = createEvacuationClusterLayerWithRefs(
       evacuationMarkerData,
       (evacuationLocation) => onEvacuationLocationClickRef.current?.(evacuationLocation),
+      evacuationMarkerRefs,
     ).addTo(mapRef.current);
+
+    evacuationLocationLayerGroupRef.current = clusterLayer;
   }, [evacuationMarkerData, visibleLayers.evacuationLocations]);
+
+  // Handle real-time evacuation capacity updates - update marker icons directly
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    // This effect runs when evacuationLocations prop changes (from real-time updates)
+    // Update the marker icons for locations that have changed
+    evacuationMarkerRefs.current.forEach((marker, id) => {
+      const location = evacuationLocations.find(loc => loc.id === id);
+      if (location) {
+        marker.setIcon(createEvacuationIcon(
+          location.category,
+          location.capacity,
+          location.currentOccupancy
+        ));
+      }
+    });
+  }, [evacuationLocations]);
 
   useEffect(() => {
     if (!mapRef.current || !facilityLayerGroupRef.current) return;

@@ -845,9 +845,10 @@ export default function Dashboard() {
     // Listen for evacuation capacity updates (real-time marker updates)
     const unsubscribeCapacity = socketService.onEvacuationCapacityUpdate((data) => {
       console.log("[Dashboard] Evacuation capacity updated:", data);
-      // Update the evacuation location in state
-      setEvacuationLocations((prev) =>
-        prev.map((loc) =>
+      // Update the evacuation location in state - create new array to force re-render
+      setEvacuationLocations((prev) => {
+        // Create a new array with the updated location to ensure re-render
+        const updated = prev.map((loc) =>
           loc.id === data.id
             ? {
                 ...loc,
@@ -855,8 +856,10 @@ export default function Dashboard() {
                 capacity: data.totalCapacity,
               }
             : loc,
-        ),
-      );
+        );
+        // Return new array reference to trigger React re-render
+        return [...updated];
+      });
       // Show toast notification
       if (data.availableCapacity === 0) {
         toast.warning(
