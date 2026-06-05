@@ -29,7 +29,7 @@ const menuItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/evacuation-locations", label: "Lokasi Evakuasi", icon: Home },
   { href: "/admin/officers", label: "Petugas Evakuasi", icon: ShieldAlert },
-  { href: "/admin/routes", label: "Manajemen Evakuasi", icon: MapIcon },
+  { href: "/admin/routes", label: "Manajemen Rute", icon: MapIcon },
   { href: "/admin/simulation", label: "Simulasi Gempa", icon: Settings },
 ];
 

@@ -517,8 +517,8 @@ function DrawModal({ open, onClose, editingRoute, onSaved }: DrawModalProps) {
           <div className="flex-1 min-w-0">
             <h2 className="text-base font-bold text-zinc-100">
               {editingRoute
-                ? "Edit Manajemen Evakuasi"
-                : "Tambah Manajemen Evakuasi Baru"}
+                ? "Edit Manajemen Rute"
+                : "Tambah Manajemen Rute Baru"}
             </h2>
             <p className="text-xs text-zinc-500 mt-0.5">
               {editingRoute
@@ -839,7 +839,7 @@ export default function AdminRoutesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-zinc-100 flex items-center gap-2">
-            <Route className="h-6 w-6 text-blue-500" /> Manajemen Evakuasi
+            <Route className="h-6 w-6 text-blue-500" /> Manajemen Rute
           </h2>
           <p className="text-zinc-400 mt-1 text-sm">
             Total {totalItems} ruas jalan terdaftar dalam sistem.
@@ -849,7 +849,7 @@ export default function AdminRoutesPage() {
           onClick={openAdd}
           className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/20 gap-2"
         >
-          <Pencil className="w-4 h-4" /> Tambah Manajemen Evakuasi
+          <Pencil className="w-4 h-4" /> Tambah Manajemen Rute
         </Button>
       </div>
 
