@@ -121,6 +121,7 @@ export default function MapClient({
     bpbdRisk: false,
   });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isLegendOpen, setIsLegendOpen] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const { resolvedTheme } = useTheme();
@@ -1055,17 +1056,17 @@ export default function MapClient({
                <span class="font-bold text-[10px] uppercase text-slate-400 dark:text-slate-500 tracking-wider mb-2 block">Estimasi Waktu Tempuh</span>
                <div class="grid grid-cols-3 gap-2">
                  <div class="flex flex-col items-center justify-center bg-green-50/50 dark:bg-green-900/10 rounded-lg p-2.5 border border-green-100 dark:border-green-900/50 text-green-600 dark:text-green-500">
-                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1.5"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1.5"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/></svg>
                    <span class="font-bold text-sm leading-none">${Math.ceil(walkTime)}<span class="text-[10px] font-normal">'</span></span>
                    <span class="text-[10px] font-medium mt-1">Jalan</span>
                  </div>
                  <div class="flex flex-col items-center justify-center bg-orange-50/50 dark:bg-orange-900/10 rounded-lg p-2.5 border border-orange-100 dark:border-orange-900/50 text-orange-600 dark:text-orange-500">
-                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1.5"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1.5"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
                    <span class="font-bold text-sm leading-none">${Math.ceil(bikeTime)}<span class="text-[10px] font-normal">'</span></span>
                    <span class="text-[10px] font-medium mt-1">Motor</span>
                  </div>
                  <div class="flex flex-col items-center justify-center bg-blue-50/50 dark:bg-blue-900/10 rounded-lg p-2.5 border border-blue-100 dark:border-blue-900/50 text-blue-600 dark:text-blue-400">
-                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1.5"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1.5"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
                    <span class="font-bold text-sm leading-none">${Math.ceil(carTime)}<span class="text-[10px] font-normal">'</span></span>
                    <span class="text-[10px] font-medium mt-1">Mobil</span>
                  </div>
@@ -1185,22 +1186,39 @@ export default function MapClient({
       )}
 
       <div className="absolute top-4 left-4 md:left-4 z-[60] md:z-[500] flex flex-col items-start gap-2">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsFilterOpen(!isFilterOpen);
-          }}
-          className="bg-white/95 dark:bg-zinc-950/90 backdrop-blur-md rounded-lg shadow-lg border border-slate-200 dark:border-zinc-800/60 p-2.5 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2"
-        >
-          {isFilterOpen ? (
-            <X className="w-4 h-4" />
-          ) : (
-            <Filter className="w-4 h-4" />
-          )}
-          <span className="text-xs font-bold uppercase tracking-wider">
-            {isFilterOpen ? "Tutup Filter" : "Filter Map"}
-          </span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsFilterOpen(!isFilterOpen);
+              if (!isFilterOpen) setIsLegendOpen(false);
+            }}
+            className="bg-white/95 dark:bg-zinc-950/90 backdrop-blur-md rounded-lg shadow-lg border border-slate-200 dark:border-zinc-800/60 p-2.5 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2"
+          >
+            {isFilterOpen ? (
+              <X className="w-4 h-4" />
+            ) : (
+              <Filter className="w-4 h-4" />
+            )}
+            <span className="text-xs font-bold uppercase tracking-wider">
+              {isFilterOpen ? "Tutup Filter" : "Filter Map"}
+            </span>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsLegendOpen(!isLegendOpen);
+              if (!isLegendOpen) setIsFilterOpen(false);
+            }}
+            className="bg-white/95 dark:bg-zinc-950/90 backdrop-blur-md rounded-lg shadow-lg border border-slate-200 dark:border-zinc-800/60 p-2.5 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2"
+            title="Legenda Peta"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span className="text-xs font-bold uppercase tracking-wider">
+              {isLegendOpen ? "Tutup" : "Legenda"}
+            </span>
+          </button>
+        </div>
 
         {isFilterOpen && (
           <div className="bg-white/95 dark:bg-zinc-950/90 backdrop-blur-md rounded-xl shadow-2xl border border-slate-200 dark:border-zinc-800/60 p-4 w-45 transition-all animate-in fade-in slide-in-from-top-2">
@@ -1292,6 +1310,147 @@ export default function MapClient({
                     Validasi pakai Bounding Box
                   </p>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isLegendOpen && (
+          <div className="bg-white/95 dark:bg-zinc-950/90 backdrop-blur-md rounded-xl shadow-2xl border border-slate-200 dark:border-zinc-800/60 p-4 w-56 transition-all animate-in fade-in slide-in-from-top-2 max-h-[70vh] overflow-y-auto">
+            <h3 className="font-bold text-[11px] uppercase tracking-wider mb-3 text-slate-800 dark:text-zinc-200 border-b border-slate-100 dark:border-zinc-800/50 pb-2">
+              Legenda Peta
+            </h3>
+            <div className="space-y-4">
+              {/* Evacuation Locations */}
+              <div>
+                <h4 className="text-[10px] uppercase font-bold text-slate-600 dark:text-zinc-400 mb-2 tracking-wider flex items-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s7-5 7-11a7 7 0 1 0-14 0c0 6 7 11 7 11Z"/></svg>
+                  Lokasi Evakuasi
+                </h4>
+                <div className="space-y-1.5 text-xs text-slate-600 dark:text-zinc-300">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex items-center justify-center w-[18px] h-[18px] bg-[#2563eb] border-2 border-white rounded-[50%_50%_50%_0] shadow-sm flex-shrink-0" style={{transform:"rotate(-45deg)"}}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{width:"10px",height:"10px",transform:"rotate(45deg)"}}>
+                        <path d="M22 10 12 4 2 10l10 6 10-6ZM6 12v5c2 2 10 2 12 0v-5"/>
+                      </svg>
+                    </div>
+                    <span>Sekolah</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex items-center justify-center w-[18px] h-[18px] bg-[#16a34a] border-2 border-white rounded-[50%_50%_50%_0] shadow-sm flex-shrink-0" style={{transform:"rotate(-45deg)"}}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{width:"10px",height:"10px",transform:"rotate(45deg)"}}>
+                        <path d="M4 6h16v12H4z M12 6v12 M4 12h16"/>
+                      </svg>
+                    </div>
+                    <span>Lapangan</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex items-center justify-center w-[18px] h-[18px] bg-[#dc2626] border-2 border-white rounded-[50%_50%_50%_0] shadow-sm flex-shrink-0" style={{transform:"rotate(-45deg)"}}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{width:"10px",height:"10px",transform:"rotate(45deg)"}}>
+                        <path d="M3 21h18 M5 21V9l7-4 7 4v12 M9 21v-6h6v6"/>
+                      </svg>
+                    </div>
+                    <span>Kantor Pemerintah</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-[10px] text-slate-400 dark:text-zinc-500 mt-1">
+                    <div className="flex items-center gap-0.5">
+                      <div className="w-3 h-2 bg-[#dc2626] rounded-sm"></div>
+                      <div className="w-3 h-2 bg-[#ea580c] rounded-sm"></div>
+                      <div className="w-3 h-2 bg-[#ca8a04] rounded-sm"></div>
+                      <div className="w-3 h-2 bg-[#16a34a] rounded-sm"></div>
+                    </div>
+                    <span>Warna kapasitas (Kritis–Aman)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Hazard Zones */}
+              <div>
+                <h4 className="text-[10px] uppercase font-bold text-slate-600 dark:text-zinc-400 mb-2 tracking-wider flex items-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  Zona Bahaya
+                </h4>
+                <div className="space-y-1.5 text-xs text-slate-600 dark:text-zinc-300">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-4 h-3 rounded-sm bg-[#dc2626]/70 border border-[#dc2626] flex-shrink-0"></div>
+                    <span>CRITICAL</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-4 h-3 rounded-sm bg-[#f97316]/70 border border-[#f97316] flex-shrink-0"></div>
+                    <span>HIGH</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-4 h-3 rounded-sm bg-[#eab308]/70 border border-[#eab308] flex-shrink-0"></div>
+                    <span>MEDIUM</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-4 h-3 rounded-sm bg-[#22c55e]/70 border border-[#22c55e] flex-shrink-0"></div>
+                    <span>LOW</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Earthquake */}
+              <div>
+                <h4 className="text-[10px] uppercase font-bold text-slate-600 dark:text-zinc-400 mb-2 tracking-wider flex items-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/></svg>
+                  Gempa Bumi
+                </h4>
+                <div className="space-y-1.5 text-xs text-slate-600 dark:text-zinc-300">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-3.5 h-3.5 rounded-full bg-[#ef4444] border-2 border-white shadow-sm flex-shrink-0 ring-1 ring-red-400"></div>
+                    <span>Pusat gempa (M)</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-0.5">
+                      <div className="w-3 h-3 rounded-full border-2 border-[#dc2626] bg-red-500/20"></div>
+                      <div className="w-4 h-3 rounded-full border-2 border-[#eab308] bg-yellow-500/15"></div>
+                      <div className="w-5 h-3 rounded-full border-2 border-[#22c55e] bg-green-500/10"></div>
+                    </div>
+                    <span>Radius dampak</span>
+                  </div>
+                </div>
+              </div>
+
+
+              {/* Route */}
+              <div>
+                <h4 className="text-[10px] uppercase font-bold text-slate-600 dark:text-zinc-400 mb-2 tracking-wider flex items-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6l-3-3-3 3"/><path d="M9 9l3 3 3-3"/></svg>
+                  Rute Evakuasi
+                </h4>
+                <div className="space-y-1.5 text-xs text-slate-600 dark:text-zinc-300">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-0.5 bg-[#1d4ed8] flex-shrink-0"></div>
+                    <span>Jalur utama</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-[2px] bg-[#94a3b8] flex-shrink-0" style={{ backgroundImage: 'linear-gradient(to right, #94a3b8 4px, transparent 4px)', backgroundSize: '8px 100%' }}></div>
+                    <span>Jalur alternatif</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-0 border-t-2 border-dashed border-[#94a3b8] flex-shrink-0"></div>
+                    <span>Snapping line</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Other elements */}
+              <div>
+                <h4 className="text-[10px] uppercase font-bold text-slate-600 dark:text-zinc-400 mb-2 tracking-wider flex items-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                  Lainnya
+                </h4>
+                <div className="space-y-1.5 text-xs text-slate-600 dark:text-zinc-300">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-3.5 h-3.5 rounded-full bg-[#3b82f6] border-2 border-white shadow-sm flex-shrink-0"></div>
+                    <span>Lokasi pengguna</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 border-t-2 border-dashed border-[#2563eb] flex-shrink-0"></div>
+                    <span>Batas wilayah Bantul</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

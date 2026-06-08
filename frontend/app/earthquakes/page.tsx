@@ -70,12 +70,30 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+const getLocalISODate = (d: Date) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getInitialDates = () => {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - 30);
+  return {
+    start: getLocalISODate(start),
+    end: getLocalISODate(end),
+  };
+};
+
 export default function EarthquakesPage() {
+  const defaultDates = getInitialDates();
   const [earthquakes, setEarthquakes] = useState<Earthquake[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState(defaultDates.start);
+  const [endDate, setEndDate] = useState(defaultDates.end);
   const [regionFilter, setRegionFilter] = useState("Bantul");
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
@@ -154,14 +172,17 @@ export default function EarthquakesPage() {
       <div className="container mx-auto px-4 ">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-zinc-50">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-zinc-50 flex items-center flex-wrap gap-3">
               Data Gempa Bumi
+              <Badge variant="secondary" className="text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200">
+                30 Hari Terakhir
+              </Badge>
             </h1>
           </div>
           <p className="text-slate-600 dark:text-zinc-400">
             Histori dan data gempa bumi dari BMKG untuk wilayah Bantul dan
-            sekitarnya
+            sekitarnya dalam 30 hari terakhir.
           </p>
           <div className="mt-3 text-xs italic text-slate-500 dark:text-slate-400">
             *Sumber data gempa pada sistem ini berasal dari BMKG (Badan
@@ -356,13 +377,13 @@ export default function EarthquakesPage() {
                 <Filter className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Terapkan</span>
               </Button>
-              {(startDate || endDate || regionFilter !== "Bantul") && (
+              {(startDate !== defaultDates.start || endDate !== defaultDates.end || regionFilter !== "Bantul") && (
                 <Button
                   onClick={() => {
-                    setStartDate("");
-                    setEndDate("");
+                    setStartDate(defaultDates.start);
+                    setEndDate(defaultDates.end);
                     setRegionFilter("Bantul");
-                    fetchEarthquakes({ start: "", end: "", reg: "Bantul" });
+                    fetchEarthquakes({ start: defaultDates.start, end: defaultDates.end, reg: "Bantul" });
                   }}
                   variant="outline"
                   className="border-slate-200 dark:border-zinc-800 dark:hover:bg-zinc-800 dark:text-zinc-300 hover:bg-slate-50 h-10 w-10 p-0 rounded-lg flex items-center justify-center shrink-0"

@@ -92,7 +92,7 @@ export function createEvacuationIcon(
           svgPath: "M12 21s7-5 7-11a7 7 0 1 0-14 0c0 6 7 11 7 11Z",
         };
 
-  const color = getCapacityColor(capacity ?? 0, currentOccupancy, categoryStyle.color);
+  const color = getCapacityColor(capacity ?? 0, currentOccupancy, "#16a34a");
 
   return L.divIcon({
     className: "evacuation-marker-icon",
