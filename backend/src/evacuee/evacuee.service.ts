@@ -64,16 +64,20 @@ export class EvacueeService {
         },
       });
 
-      const newOccupancy = location.currentOccupancy + dto.familySize;
+      const namedSum = await tx.evacuee.aggregate({
+        _sum: { familySize: true },
+        where: { evacuationLocationId: dto.evacuationLocationId, status: 'ACTIVE' }
+      });
+      const currentNamed = namedSum._sum.familySize || 0;
+      
+      const newOccupancy = Math.max(location.currentOccupancy, currentNamed);
       const newStatus = newOccupancy >= location.capacity ? 'UNAVAILABLE' : location.status;
 
       // Update evacuationLocation occupancy within the same transaction
       const updatedLocation = await tx.evacuationLocation.update({
         where: { id: dto.evacuationLocationId },
         data: {
-          currentOccupancy: {
-            increment: dto.familySize,
-          },
+          currentOccupancy: newOccupancy,
           status: newStatus,
         },
       });
@@ -203,15 +207,26 @@ export class EvacueeService {
             FOR UPDATE
           `;
           const location = evacuationLocation[0];
-          const newOccupancy = location.currentOccupancy + difference;
+          
+          const namedSum = await tx.evacuee.aggregate({
+            _sum: { familySize: true },
+            where: { evacuationLocationId: evacuee.evacuationLocationId, status: 'ACTIVE' }
+          });
+          const currentNamed = (namedSum._sum.familySize || 0) + difference;
+          
+          let newOccupancy = location.currentOccupancy;
+          if (difference > 0) {
+            newOccupancy = Math.max(location.currentOccupancy, currentNamed);
+          } else {
+            newOccupancy = Math.max(0, location.currentOccupancy + difference);
+          }
+          
           const newStatus = newOccupancy >= location.capacity ? 'UNAVAILABLE' : (location.status === 'UNAVAILABLE' ? 'ACTIVE' : location.status);
 
           await tx.evacuationLocation.update({
             where: { id: evacuee.evacuationLocationId },
             data: {
-              currentOccupancy: {
-                increment: difference,
-              },
+              currentOccupancy: newOccupancy,
               status: newStatus,
             },
           });
@@ -234,15 +249,13 @@ export class EvacueeService {
           FOR UPDATE
         `;
         const location = evacuationLocation[0];
-        const newOccupancy = location.currentOccupancy - evacuee.familySize;
+        const newOccupancy = Math.max(0, location.currentOccupancy - evacuee.familySize);
         const newStatus = location.status === 'UNAVAILABLE' && newOccupancy < location.capacity ? 'ACTIVE' : location.status;
 
         const updatedLocation = await tx.evacuationLocation.update({
           where: { id: evacuee.evacuationLocationId },
           data: {
-            currentOccupancy: {
-              decrement: evacuee.familySize,
-            },
+            currentOccupancy: newOccupancy,
             status: newStatus,
           },
         });
@@ -305,15 +318,13 @@ export class EvacueeService {
           FOR UPDATE
         `;
         const location = evacuationLocation[0];
-        const newOccupancy = location.currentOccupancy - evacuee.familySize;
+        const newOccupancy = Math.max(0, location.currentOccupancy - evacuee.familySize);
         const newStatus = location.status === 'UNAVAILABLE' && newOccupancy < location.capacity ? 'ACTIVE' : location.status;
 
         const updatedLocation = await tx.evacuationLocation.update({
           where: { id: evacuee.evacuationLocationId },
           data: {
-            currentOccupancy: {
-              decrement: evacuee.familySize,
-            },
+            currentOccupancy: newOccupancy,
             status: newStatus,
           },
         });
