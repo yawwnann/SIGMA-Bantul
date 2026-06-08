@@ -105,7 +105,7 @@ export default function AnalysisPage() {
     try {
       const response = await earthquakeApi.getAll({ 
         limit: earthquakeLimit,
-        region: earthquakeRegion === "Khusus Bantul" ? "bantul" : undefined,
+        region: earthquakeRegion === "Bantul dan sekitarnya" ? "bantul" : undefined,
         startDate: start,
         endDate: end,
       });
@@ -525,7 +525,7 @@ export default function AnalysisPage() {
                           <SelectValue placeholder="Wilayah" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Khusus Bantul">Khusus Bantul</SelectItem>
+                          <SelectItem value="Bantul dan sekitarnya">Bantul dan sekitarnya</SelectItem>
                           <SelectItem value="Semua Wilayah">Semua Wilayah</SelectItem>
                         </SelectContent>
                       </Select>

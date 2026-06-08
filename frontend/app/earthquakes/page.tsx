@@ -339,7 +339,7 @@ export default function EarthquakesPage() {
                 onChange={(e) => setRegionFilter(e.target.value)}
                 className="h-10 w-full border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-slate-700 dark:text-zinc-100 rounded-lg focus:ring-2 focus:ring-blue-500 px-3 cursor-pointer appearance-none pr-8"
               >
-                <option value="Bantul">Khusus Bantul</option>
+                <option value="Bantul">Bantul dan sekitarnya</option>
                 <option value="">Beserta Luar Bantul</option>
               </select>
               <div className="absolute right-3 pointer-events-none">
