@@ -237,9 +237,11 @@ export class OfficerService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      const newStatus = occupancy >= evacuationLocation.capacity ? 'UNAVAILABLE' : (evacuationLocation.status === 'UNAVAILABLE' ? 'ACTIVE' : evacuationLocation.status);
+
       const updated = await tx.evacuationLocation.update({
         where: { id: evacuationLocationId },
-        data: { currentOccupancy: occupancy },
+        data: { currentOccupancy: occupancy, status: newStatus },
       });
 
       await tx.evacuationLocationLog.create({

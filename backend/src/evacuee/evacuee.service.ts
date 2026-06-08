@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEvacueeDto } from './dto/create-evacuee.dto';
 import { UpdateEvacueeDto } from './dto/update-evacuee.dto';
-import { EvacueeStatus } from '@prisma/client';
+import { EvacueeStatus, EvacuationLocationStatus } from '@prisma/client';
 import { WebsocketService } from '../websocket/websocket.service';
 
 @Injectable()
@@ -26,8 +26,9 @@ export class EvacueeService {
         name: string;
         capacity: number;
         currentOccupancy: number;
+        status: EvacuationLocationStatus;
       }[]>`
-        SELECT id, name, capacity, "currentOccupancy"
+        SELECT id, name, capacity, "currentOccupancy", status
         FROM "EvacuationLocation"
         WHERE id = ${dto.evacuationLocationId}
         FOR UPDATE
@@ -64,6 +65,9 @@ export class EvacueeService {
         },
       });
 
+      const newOccupancy = location.currentOccupancy + dto.familySize;
+      const newStatus = newOccupancy >= location.capacity ? 'UNAVAILABLE' : location.status;
+
       // Update evacuationLocation occupancy within the same transaction
       const updatedLocation = await tx.evacuationLocation.update({
         where: { id: dto.evacuationLocationId },
@@ -71,6 +75,7 @@ export class EvacueeService {
           currentOccupancy: {
             increment: dto.familySize,
           },
+          status: newStatus,
         },
       });
 
@@ -172,8 +177,9 @@ export class EvacueeService {
             name: string;
             capacity: number;
             currentOccupancy: number;
+            status: EvacuationLocationStatus;
           }[]>`
-            SELECT id, name, capacity, "currentOccupancy"
+            SELECT id, name, capacity, "currentOccupancy", status
             FROM "EvacuationLocation"
             WHERE id = ${evacuee.evacuationLocationId}
             FOR UPDATE
@@ -189,14 +195,31 @@ export class EvacueeService {
           }
         }
 
-        await tx.evacuationLocation.update({
-          where: { id: evacuee.evacuationLocationId },
-          data: {
-            currentOccupancy: {
-              increment: difference,
+          const evacuationLocation = await tx.$queryRaw<{
+            id: number;
+            name: string;
+            capacity: number;
+            currentOccupancy: number;
+            status: EvacuationLocationStatus;
+          }[]>`
+            SELECT id, name, capacity, "currentOccupancy", status
+            FROM "EvacuationLocation"
+            WHERE id = ${evacuee.evacuationLocationId}
+            FOR UPDATE
+          `;
+          const location = evacuationLocation[0];
+          const newOccupancy = location.currentOccupancy + difference;
+          const newStatus = newOccupancy >= location.capacity ? 'UNAVAILABLE' : (location.status === 'UNAVAILABLE' ? 'ACTIVE' : location.status);
+
+          await tx.evacuationLocation.update({
+            where: { id: evacuee.evacuationLocationId },
+            data: {
+              currentOccupancy: {
+                increment: difference,
+              },
+              status: newStatus,
             },
-          },
-        });
+          });
       }
 
       // If status changed to RETURNED_HOME or RELOCATED, set checkOutDate
@@ -204,12 +227,28 @@ export class EvacueeService {
         dto.checkOutDate = dto.checkOutDate || new Date().toISOString();
 
         // Decrease evacuationLocation occupancy
+        // Need to get the current capacity and occupancy first
+        const evacuationLocation = await tx.$queryRaw<{
+          capacity: number;
+          currentOccupancy: number;
+          status: EvacuationLocationStatus;
+        }[]>`
+          SELECT capacity, "currentOccupancy", status
+          FROM "EvacuationLocation"
+          WHERE id = ${evacuee.evacuationLocationId}
+          FOR UPDATE
+        `;
+        const location = evacuationLocation[0];
+        const newOccupancy = location.currentOccupancy - evacuee.familySize;
+        const newStatus = location.status === 'UNAVAILABLE' && newOccupancy < location.capacity ? 'ACTIVE' : location.status;
+
         const updatedLocation = await tx.evacuationLocation.update({
           where: { id: evacuee.evacuationLocationId },
           data: {
             currentOccupancy: {
               decrement: evacuee.familySize,
             },
+            status: newStatus,
           },
         });
 
@@ -260,12 +299,27 @@ export class EvacueeService {
     if (evacuee.status === 'ACTIVE') {
       const result = await this.prisma.$transaction(async (tx) => {
         // Lock and update evacuation location
+        const evacuationLocation = await tx.$queryRaw<{
+          capacity: number;
+          currentOccupancy: number;
+          status: EvacuationLocationStatus;
+        }[]>`
+          SELECT capacity, "currentOccupancy", status
+          FROM "EvacuationLocation"
+          WHERE id = ${evacuee.evacuationLocationId}
+          FOR UPDATE
+        `;
+        const location = evacuationLocation[0];
+        const newOccupancy = location.currentOccupancy - evacuee.familySize;
+        const newStatus = location.status === 'UNAVAILABLE' && newOccupancy < location.capacity ? 'ACTIVE' : location.status;
+
         const updatedLocation = await tx.evacuationLocation.update({
           where: { id: evacuee.evacuationLocationId },
           data: {
             currentOccupancy: {
               decrement: evacuee.familySize,
             },
+            status: newStatus,
           },
         });
 
