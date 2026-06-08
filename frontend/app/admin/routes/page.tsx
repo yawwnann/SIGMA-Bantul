@@ -290,14 +290,21 @@ function RoadDrawingEditor({
       // Fetch and display existing roads as background layer
       roadApi.getRoadNetwork().then((geojson) => {
         if (cancelled || !mapInstanceRef.current || !geojson) return;
-        L.geoJSON(geojson, {
+
+        const getZoomWeight = (z: number) => {
+          if (z <= 12) return 1;
+          if (z === 13) return 2;
+          if (z === 14) return 3;
+          return 4;
+        };
+
+        const bgLayer = L.geoJSON(geojson, {
           style: (feature: any) => {
             const cond = feature.properties?.condition;
             return {
               color: conditionStrokeColor[cond] || "#94a3b8",
-              weight: 4,
-              opacity: 0.35, // Transparent so it doesn't distract from drawing
-              dashArray: "4 4", // Dashed to distinguish from the active drawing
+              weight: getZoomWeight(mapInstanceRef.current.getZoom()),
+              opacity: 0.45, // Solid line, no dash
             };
           },
           onEachFeature: (feature: any, layer: any) => {
@@ -306,6 +313,12 @@ function RoadDrawingEditor({
             }
           }
         }).addTo(mapInstanceRef.current);
+
+        mapInstanceRef.current.on('zoomend', () => {
+          if (!cancelled && bgLayer) {
+            bgLayer.setStyle({ weight: getZoomWeight(mapInstanceRef.current.getZoom()) });
+          }
+        });
       }).catch((err) => console.error("Failed to load existing roads:", err));
 
       (map.getContainer() as HTMLElement).style.cursor = "crosshair";
