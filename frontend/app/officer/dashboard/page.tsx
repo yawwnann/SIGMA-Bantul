@@ -26,6 +26,8 @@ import {
   Building2,
   Loader2,
   UserPlus,
+  Plus,
+  Minus,
 } from "lucide-react";
 
 const conditionColors: Record<string, string> = {
@@ -391,11 +393,26 @@ function EvacuationLocationCard({
         </div>
 
         {/* Update Form */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <Label className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-500 mb-2 block font-bold">
-              Penghuni Saat Ini
-            </Label>
+        <div className="bg-slate-50 dark:bg-zinc-900/50 p-6 rounded-2xl border border-slate-100 dark:border-zinc-800 mb-4 shadow-sm">
+          <Label className="text-sm uppercase tracking-widest text-slate-500 dark:text-zinc-400 mb-4 block font-bold text-center">
+            Penghitung Manual (Hand Tally Counter)
+          </Label>
+          <div className="flex items-center justify-center gap-6">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                const newOcc = Math.max(0, (typeof occupancy === 'number' ? occupancy : 0) - 1);
+                setOccupancy(newOcc);
+                if (newOcc >= evacuationLocation.capacity) setStatus("UNAVAILABLE");
+                else if (status === "UNAVAILABLE") setStatus("ACTIVE");
+              }}
+              disabled={updating || (typeof occupancy === 'number' && occupancy <= 0) || occupancy === ""}
+              className="h-20 w-20 rounded-full border-2 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 shadow-[0_0_15px_rgba(239,68,68,0.1)] transition-all active:scale-95 flex-shrink-0"
+            >
+              <Minus className="w-10 h-10" />
+            </Button>
+            
             <Input
               type="number"
               value={occupancy}
@@ -403,22 +420,37 @@ function EvacuationLocationCard({
                 const val = e.target.value;
                 const newOcc = val === "" ? "" : parseInt(val, 10);
                 setOccupancy(newOcc);
-                
-                // Auto-update status in UI based on capacity
                 if (typeof newOcc === 'number') {
-                  if (newOcc >= evacuationLocation.capacity) {
-                    setStatus("UNAVAILABLE");
-                  } else if (newOcc < evacuationLocation.capacity && status === "UNAVAILABLE") {
-                    setStatus("ACTIVE");
-                  }
+                  if (newOcc >= evacuationLocation.capacity) setStatus("UNAVAILABLE");
+                  else if (status === "UNAVAILABLE") setStatus("ACTIVE");
                 }
               }}
-              className="bg-white dark:bg-zinc-950/50 border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 focus:border-emerald-500/50 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 h-10 text-sm font-medium transition-all rounded-lg shadow-inner text-slate-800 dark:text-white"
+              className="w-40 h-24 text-center text-6xl font-black bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 rounded-[2rem] shadow-inner text-slate-800 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               min={0}
-              max={evacuationLocation.capacity}
               disabled={updating}
             />
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                const newOcc = (typeof occupancy === 'number' ? occupancy : 0) + 1;
+                setOccupancy(newOcc);
+                if (newOcc >= evacuationLocation.capacity) setStatus("UNAVAILABLE");
+                else if (status === "UNAVAILABLE") setStatus("ACTIVE");
+              }}
+              disabled={updating}
+              className="h-20 w-20 rounded-full border-2 border-emerald-200 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 shadow-[0_0_15px_rgba(16,185,129,0.1)] transition-all active:scale-95 flex-shrink-0"
+            >
+              <Plus className="w-10 h-10" />
+            </Button>
           </div>
+          <p className="text-center text-xs text-slate-400 dark:text-zinc-500 mt-4">
+            Ketuk tombol (+ / -) untuk menghitung langsung saat pengungsi masuk, atau ketik manual angkanya.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-zinc-500 mb-2 block font-bold">
               Kondisi Lokasi Evakuasi
