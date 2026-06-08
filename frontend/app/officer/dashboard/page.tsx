@@ -304,6 +304,16 @@ function EvacuationLocationCard({
   const [condition, setCondition] = useState(evacuationLocation.condition);
   const [status, setStatus] = useState(evacuationLocation.status || "ACTIVE");
 
+  useEffect(() => {
+    setOccupancy(evacuationLocation.currentOccupancy);
+    setCondition(evacuationLocation.condition);
+    setStatus(evacuationLocation.status || "ACTIVE");
+  }, [
+    evacuationLocation.currentOccupancy,
+    evacuationLocation.condition,
+    evacuationLocation.status,
+  ]);
+
   const parsedOccupancy = typeof occupancy === "number" ? occupancy : 0;
   const occupancyPercentage = (parsedOccupancy / evacuationLocation.capacity) * 100;
   const hasChanges =
@@ -391,7 +401,17 @@ function EvacuationLocationCard({
               value={occupancy}
               onChange={(e) => {
                 const val = e.target.value;
-                setOccupancy(val === "" ? "" : parseInt(val, 10));
+                const newOcc = val === "" ? "" : parseInt(val, 10);
+                setOccupancy(newOcc);
+                
+                // Auto-update status in UI based on capacity
+                if (typeof newOcc === 'number') {
+                  if (newOcc >= evacuationLocation.capacity) {
+                    setStatus("UNAVAILABLE");
+                  } else if (newOcc < evacuationLocation.capacity && status === "UNAVAILABLE") {
+                    setStatus("ACTIVE");
+                  }
+                }
               }}
               className="bg-white dark:bg-zinc-950/50 border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 focus:border-emerald-500/50 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 h-10 text-sm font-medium transition-all rounded-lg shadow-inner text-slate-800 dark:text-white"
               min={0}
