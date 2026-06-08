@@ -412,7 +412,7 @@ function EvacuationLocationCard({
           <Label className="text-sm uppercase tracking-widest text-slate-500 dark:text-zinc-400 mb-4 block font-bold text-center">
             Penghitung Manual (Hand Tally Counter)
           </Label>
-          <div className="flex items-center justify-center gap-6">
+          <div className="flex items-center justify-center gap-3 sm:gap-6">
             <Button
               type="button"
               variant="outline"
@@ -421,9 +421,9 @@ function EvacuationLocationCard({
                 handleTallyChange(newOcc);
               }}
               disabled={updating || (typeof occupancy === 'number' && occupancy <= 0) || occupancy === ""}
-              className="h-20 w-20 rounded-full border-2 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 shadow-[0_0_15px_rgba(239,68,68,0.1)] transition-all active:scale-95 flex-shrink-0"
+              className="h-14 w-14 sm:h-20 sm:w-20 rounded-full border-2 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 shadow-[0_0_15px_rgba(239,68,68,0.1)] transition-all active:scale-95 flex-shrink-0"
             >
-              <Minus className="w-10 h-10" />
+              <Minus className="w-6 h-6 sm:w-10 sm:h-10" />
             </Button>
             
             <Input
@@ -433,7 +433,7 @@ function EvacuationLocationCard({
                 const val = e.target.value;
                 handleTallyChange(val === "" ? "" : parseInt(val, 10));
               }}
-              className="w-40 h-24 text-center text-6xl font-black bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 rounded-[2rem] shadow-inner text-slate-800 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-24 sm:w-40 h-16 sm:h-24 text-center text-4xl sm:text-6xl font-black bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 rounded-2xl sm:rounded-[2rem] shadow-inner text-slate-800 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               min={0}
               disabled={updating}
             />
@@ -446,9 +446,9 @@ function EvacuationLocationCard({
                 handleTallyChange(newOcc);
               }}
               disabled={updating || (typeof occupancy === 'number' && occupancy >= evacuationLocation.capacity)}
-              className="h-20 w-20 rounded-full border-2 border-emerald-200 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 shadow-[0_0_15px_rgba(16,185,129,0.1)] transition-all active:scale-95 flex-shrink-0"
+              className="h-14 w-14 sm:h-20 sm:w-20 rounded-full border-2 border-emerald-200 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 shadow-[0_0_15px_rgba(16,185,129,0.1)] transition-all active:scale-95 flex-shrink-0"
             >
-              <Plus className="w-10 h-10" />
+              <Plus className="w-6 h-6 sm:w-10 sm:h-10" />
             </Button>
           </div>
           <p className="text-center text-xs text-slate-400 dark:text-zinc-500 mt-4">
