@@ -285,6 +285,27 @@ function RoadDrawingEditor({
         dashArray: "8 5",
       }).addTo(map);
 
+      // Fetch and display existing roads as background layer
+      roadApi.getRoadNetwork().then((geojson) => {
+        if (cancelled || !mapInstanceRef.current || !geojson) return;
+        L.geoJSON(geojson, {
+          style: (feature: any) => {
+            const cond = feature.properties?.condition;
+            return {
+              color: conditionStrokeColor[cond] || "#94a3b8",
+              weight: 4,
+              opacity: 0.35, // Transparent so it doesn't distract from drawing
+              dashArray: "4 4", // Dashed to distinguish from the active drawing
+            };
+          },
+          onEachFeature: (feature: any, layer: any) => {
+            if (feature.properties?.name) {
+              layer.bindTooltip(feature.properties.name, { sticky: true, opacity: 0.8 });
+            }
+          }
+        }).addTo(mapInstanceRef.current);
+      }).catch((err) => console.error("Failed to load existing roads:", err));
+
       (map.getContainer() as HTMLElement).style.cursor = "crosshair";
 
       map.on("click", (e: any) => {
