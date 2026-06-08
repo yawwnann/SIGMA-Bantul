@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { officerApi, type DashboardResponse } from "@/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -316,6 +316,21 @@ function EvacuationLocationCard({
     evacuationLocation.status,
   ]);
 
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleTallyChange = (newOcc: number | "") => {
+    setOccupancy(newOcc);
+    if (typeof newOcc === 'number') {
+      if (newOcc >= evacuationLocation.capacity) setStatus("UNAVAILABLE");
+      else if (status === "UNAVAILABLE") setStatus("ACTIVE");
+
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => {
+        onUpdateOccupancy(evacuationLocation.id, newOcc);
+      }, 500);
+    }
+  };
+
   const parsedOccupancy = typeof occupancy === "number" ? occupancy : 0;
   const occupancyPercentage = (parsedOccupancy / evacuationLocation.capacity) * 100;
   const hasChanges =
@@ -403,9 +418,7 @@ function EvacuationLocationCard({
               variant="outline"
               onClick={() => {
                 const newOcc = Math.max(0, (typeof occupancy === 'number' ? occupancy : 0) - 1);
-                setOccupancy(newOcc);
-                if (newOcc >= evacuationLocation.capacity) setStatus("UNAVAILABLE");
-                else if (status === "UNAVAILABLE") setStatus("ACTIVE");
+                handleTallyChange(newOcc);
               }}
               disabled={updating || (typeof occupancy === 'number' && occupancy <= 0) || occupancy === ""}
               className="h-20 w-20 rounded-full border-2 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 shadow-[0_0_15px_rgba(239,68,68,0.1)] transition-all active:scale-95 flex-shrink-0"
@@ -418,12 +431,7 @@ function EvacuationLocationCard({
               value={occupancy}
               onChange={(e) => {
                 const val = e.target.value;
-                const newOcc = val === "" ? "" : parseInt(val, 10);
-                setOccupancy(newOcc);
-                if (typeof newOcc === 'number') {
-                  if (newOcc >= evacuationLocation.capacity) setStatus("UNAVAILABLE");
-                  else if (status === "UNAVAILABLE") setStatus("ACTIVE");
-                }
+                handleTallyChange(val === "" ? "" : parseInt(val, 10));
               }}
               className="w-40 h-24 text-center text-6xl font-black bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 rounded-[2rem] shadow-inner text-slate-800 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               min={0}
@@ -435,11 +443,9 @@ function EvacuationLocationCard({
               variant="outline"
               onClick={() => {
                 const newOcc = (typeof occupancy === 'number' ? occupancy : 0) + 1;
-                setOccupancy(newOcc);
-                if (newOcc >= evacuationLocation.capacity) setStatus("UNAVAILABLE");
-                else if (status === "UNAVAILABLE") setStatus("ACTIVE");
+                handleTallyChange(newOcc);
               }}
-              disabled={updating}
+              disabled={updating || (typeof occupancy === 'number' && occupancy >= evacuationLocation.capacity)}
               className="h-20 w-20 rounded-full border-2 border-emerald-200 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 shadow-[0_0_15px_rgba(16,185,129,0.1)] transition-all active:scale-95 flex-shrink-0"
             >
               <Plus className="w-10 h-10" />
