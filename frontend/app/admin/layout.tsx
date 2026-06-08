@@ -7,6 +7,14 @@ import { ThemedLogo } from "@/components/ui/themed-logo";
 import { authApi } from "@/api";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import {
   LayoutDashboard,
@@ -45,6 +53,7 @@ export default function AdminLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -186,12 +195,40 @@ export default function AdminLayout({
           <Button
             variant="outline"
             size="sm"
-            onClick={handleLogout}
+            onClick={() => setLogoutOpen(true)}
             className="w-full bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-colors justify-start px-3"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Logout Account
           </Button>
+
+          <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+            <DialogContent className="sm:max-w-md bg-white dark:bg-zinc-950 border-slate-200 dark:border-zinc-800">
+              <DialogHeader>
+                <DialogTitle className="text-slate-900 dark:text-zinc-100">
+                  Konfirmasi Logout
+                </DialogTitle>
+                <DialogDescription className="text-slate-500 dark:text-zinc-400">
+                  Apakah Anda yakin ingin keluar dari sesi ini? Anda harus login kembali untuk masuk ke Panel Admin.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="mt-4 gap-2 sm:gap-0">
+                <Button
+                  variant="outline"
+                  onClick={() => setLogoutOpen(false)}
+                  className="border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800"
+                >
+                  Batal
+                </Button>
+                <Button
+                  onClick={handleLogout}
+                  className="bg-red-500 hover:bg-red-600 text-white border-0 shadow-md shadow-red-900/20"
+                >
+                  Ya, Logout
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </aside>
 
