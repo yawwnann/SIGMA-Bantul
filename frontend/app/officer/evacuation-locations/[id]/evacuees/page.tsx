@@ -237,9 +237,9 @@ export default function EvacueesPage() {
             </div>
             <div>
               <div className="text-2xl font-bold text-slate-800 dark:text-white">
-                {activeEvacuees.length}
+                {activeEvacuees.reduce((sum, e) => sum + e.familySize, 0)}
               </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-500">Pengungsi Aktif</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-500">Total Individu Aktif ({activeEvacuees.length} Keluarga)</p>
             </div>
           </div>
         </div>
@@ -254,10 +254,10 @@ export default function EvacueesPage() {
                 {
                   evacuees.filter(
                     (e) => e.status === EvacueeStatus.RETURNED_HOME,
-                  ).length
+                  ).reduce((sum, e) => sum + e.familySize, 0)
                 }
               </div>
-              <p className="text-xs text-slate-500 dark:text-zinc-500">Sudah Pulang</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-500">Individu Pulang ({evacuees.filter((e) => e.status === EvacueeStatus.RETURNED_HOME).length} Keluarga)</p>
             </div>
           </div>
         </div>

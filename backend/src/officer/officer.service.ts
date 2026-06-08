@@ -230,11 +230,22 @@ export class OfficerService {
     if (occupancy < 0) {
       throw new BadRequestException('Jumlah penghuni tidak boleh negatif');
     }
-    if (occupancy > evacuationLocation.capacity) {
+
+    // NEW LOGIC: Prevent reducing dashboard total below the total of registered named evacuees
+    const namedSum = await this.prisma.evacuee.aggregate({
+      _sum: { familySize: true },
+      where: { evacuationLocationId, status: 'ACTIVE' }
+    });
+    const currentNamed = namedSum._sum.familySize || 0;
+
+    if (occupancy < currentNamed) {
       throw new BadRequestException(
-        'Jumlah penghuni melebihi kapasitas evacuationLocation',
+        `Terdapat ${currentNamed} pengungsi terdata. Anda tidak dapat mengurangi total penghuni di bawah ${currentNamed} melalui Dashboard. Silakan pulangkan/hapus pengungsi di menu Kelola Pengungsi.`
       );
     }
+
+    // (REMOVED: capacity block. Memungkinkan overcapacity di Dashboard untuk darurat bencana)
+    // if (occupancy > evacuationLocation.capacity) { ... }
 
     return this.prisma.$transaction(async (tx) => {
       const newStatus = occupancy >= evacuationLocation.capacity ? 'UNAVAILABLE' : (evacuationLocation.status === 'UNAVAILABLE' ? 'ACTIVE' : evacuationLocation.status);
