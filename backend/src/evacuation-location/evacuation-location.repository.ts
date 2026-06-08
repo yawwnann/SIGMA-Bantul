@@ -60,6 +60,7 @@ export class EvacuationLocationRepository {
       WHERE
         s.geom IS NOT NULL
         AND s.status = 'ACTIVE'::"EvacuationLocationStatus"
+        AND s.capacity > s."currentOccupancy"
         AND ST_DWithin(s.geom::geography, user_point.geom::geography, ${radiusMeters})
       ORDER BY s.geom <-> user_point.geom
       LIMIT ${limit}
