@@ -327,17 +327,9 @@ export default function AdminDashboardPage() {
                     bg: "bg-blue-500/10",
                     border: "border-blue-500/20",
                   },
-                  {
-                    label: "Rute Evakuasi",
-                    value: ev?.totalRoutes ?? 0,
-                    sub: `Skor rata-rata ${ev?.averageScore ?? 0}`,
-                    color: "text-emerald-400",
-                    bg: "bg-emerald-500/10",
-                    border: "border-emerald-500/20",
-                  },
                 ];
                 return (
-                  <div className="grid grid-cols-2 gap-4 h-full">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
                     {items.map((item) => (
                       <div
                         key={item.label}
