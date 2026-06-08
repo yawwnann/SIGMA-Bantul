@@ -41,11 +41,10 @@ export class EvacueeService {
       const location = evacuationLocation[0];
 
       // Check capacity atomically with the lock held
-      if (location.currentOccupancy + dto.familySize > location.capacity) {
-        throw new BadRequestException(
-          `Kapasitas evacuationLocation tidak mencukupi. Tersisa: ${location.capacity - location.currentOccupancy} orang`,
-        );
-      }
+      // (REMOVED: Dalam kondisi bencana, overcapacity sangat wajar dan tidak boleh diblokir oleh sistem)
+      // if (location.currentOccupancy + dto.familySize > location.capacity) {
+      //   throw new BadRequestException(...);
+      // }
 
       // Create evacuee
       const evacuee = await tx.evacuee.create({
@@ -186,12 +185,8 @@ export class EvacueeService {
           `;
 
           if (evacuationLocation && evacuationLocation.length > 0) {
-            const location = evacuationLocation[0];
-            if (location.currentOccupancy + difference > location.capacity) {
-              throw new BadRequestException(
-                `Kapasitas evacuationLocation tidak mencukupi untuk menambah ${difference} orang`,
-              );
-            }
+            // const location = evacuationLocation[0];
+            // (REMOVED: Hard capacity check. Allow overbooking during emergencies)
           }
         }
 

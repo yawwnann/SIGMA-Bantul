@@ -115,6 +115,25 @@ export default function EvacueesPage() {
     }
   };
 
+  const handleEdit = (evacuee: Evacuee) => {
+    setEditingEvacuee(evacuee);
+    setFormData({
+      evacuationLocationId: evacuee.evacuationLocationId,
+      name: evacuee.name,
+      gender: evacuee.gender,
+      age: evacuee.age,
+      familySize: evacuee.familySize,
+      nik: evacuee.nik,
+      phone: evacuee.phone,
+      address: evacuee.address,
+      specialNeeds: evacuee.specialNeeds,
+      medicalCondition: evacuee.medicalCondition,
+      notes: evacuee.notes,
+    });
+    setIsQuickMode(false);
+    setIsDialogOpen(true);
+  };
+
   const resetForm = () => {
     setEditingEvacuee(null);
     setFormData({
@@ -261,31 +280,17 @@ export default function EvacueesPage() {
       {/* Actions */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-xl font-bold text-slate-800 dark:text-white">Daftar Pengungsi</h2>
-        <div className="flex gap-2">
-          <Button
-            onClick={() => {
-              resetForm();
-              setIsQuickMode(true);
-              setIsDialogOpen(true);
-            }}
-            variant="outline"
-            className="bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400"
-          >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Daftar Cepat
-          </Button>
-          <Button
-            onClick={() => {
-              resetForm();
-              setIsQuickMode(false);
-              setIsDialogOpen(true);
-            }}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Daftar Lengkap
-          </Button>
-        </div>
+        <Button
+          onClick={() => {
+            resetForm();
+            setIsQuickMode(true);
+            setIsDialogOpen(true);
+          }}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold tracking-wide"
+        >
+          <UserPlus className="w-4 h-4 mr-2" />
+          Tambah Pengungsi (Cepat)
+        </Button>
       </div>
 
       {/* Table */}
@@ -354,6 +359,14 @@ export default function EvacueesPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(evacuee)}
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                    >
+                      Lengkapi Data
+                    </Button>
                     {evacuee.status === EvacueeStatus.ACTIVE && (
                       <Button
                         variant="ghost"
@@ -390,22 +403,22 @@ export default function EvacueesPage() {
           <div className="relative bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="border-b border-slate-100 dark:border-zinc-800 p-6">
               <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                {isQuickMode ? (
+                {editingEvacuee ? (
                   <>
-                    <UserPlus className="w-6 h-6 text-amber-500" />
-                    Daftar Cepat (Emergency Mode)
+                    <UserPlus className="w-6 h-6 text-blue-500" />
+                    Lengkapi Data Pengungsi
                   </>
                 ) : (
                   <>
-                    <UserPlus className="w-6 h-6 text-blue-500" />
-                    Daftar Lengkap
+                    <UserPlus className="w-6 h-6 text-emerald-500" />
+                    Pendaftaran Cepat
                   </>
                 )}
               </h2>
               <p className="text-slate-500 dark:text-zinc-400 text-sm mt-2">
-                {isQuickMode
-                  ? "Pendaftaran cepat untuk situasi darurat - data bisa dilengkapi nanti"
-                  : "Masukkan data lengkap pengungsi untuk administrasi"}
+                {editingEvacuee
+                  ? "Lengkapi profil pengungsi untuk keperluan distribusi logistik dan administrasi."
+                  : "Pendaftaran cepat untuk situasi darurat - data bisa dilengkapi di hari berikutnya."}
               </p>
               {isQuickMode && (
                 <div className="mt-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg p-3">
@@ -606,15 +619,14 @@ export default function EvacueesPage() {
               )}
 
               {/* Info Box */}
-              {isQuickMode ? (
-                <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg p-4">
-                  <p className="text-sm text-amber-800 dark:text-amber-300 mb-2 font-medium">
+              {!editingEvacuee ? (
+                <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-lg p-4">
+                  <p className="text-sm text-emerald-800 dark:text-emerald-300 mb-2 font-medium">
                     💡 Tips Pendaftaran Cepat:
                   </p>
-                  <ul className="text-xs text-amber-700 dark:text-amber-400 space-y-1 list-disc list-inside">
+                  <ul className="text-xs text-emerald-700 dark:text-emerald-400 space-y-1 list-disc list-inside">
                     <li>Cukup catat nama kepala keluarga dan jumlah anggota</li>
-                    <li>Data detail bisa dilengkapi setelah situasi aman</li>
-                    <li>Fokus pada evakuasi dan keselamatan terlebih dahulu</li>
+                    <li>Data detail bisa dilengkapi setelah situasi aman dengan klik tombol <b>Lengkapi Data</b></li>
                   </ul>
                 </div>
               ) : (
@@ -651,7 +663,7 @@ export default function EvacueesPage() {
                 }`}
               >
                 <UserPlus className="w-4 h-4" />
-                {isQuickMode ? "Daftar Cepat" : "Daftar Lengkap"}
+                {editingEvacuee ? "Simpan Perubahan" : "Daftar Cepat"}
               </button>
             </div>
           </div>
