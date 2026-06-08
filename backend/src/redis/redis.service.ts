@@ -1,24 +1,30 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
+import { Redis as UpstashRedis } from '@upstash/redis';
 
 @Injectable()
 export class RedisService implements OnModuleDestroy {
-  private client: Redis | null = null;
+  private ioClient: Redis | null = null;
+  private upstashClient: UpstashRedis | null = null;
   private useFallback = false;
 
   constructor(private configService: ConfigService) {
-    // Check Upstash credentials first
     const upstashUrl = this.configService.get<string>('UPSTASH_REDIS_REST_URL');
     const upstashToken = this.configService.get<string>('UPSTASH_REDIS_REST_TOKEN');
 
     if (upstashUrl && upstashToken) {
-      // Try Upstash REST API via HTTP client
-      this.useFallback = false;
-      // Note: For production, install @upstash/redis
-      console.log('Redis: Config found, using fallback mode (no cache)');
+      try {
+        this.upstashClient = new UpstashRedis({
+          url: upstashUrl,
+          token: upstashToken,
+        });
+        console.log('Redis: Connected to Upstash REST API');
+      } catch (err) {
+        console.warn('Redis: Failed to initialize Upstash:', err);
+        this.useFallback = true;
+      }
     } else {
-      // Try local/ioredis connection
       const redisConfig: any = {
         host: this.configService.get<string>('REDIS_HOST', 'localhost'),
         port: this.configService.get<number>('REDIS_PORT', 6379),
@@ -32,46 +38,62 @@ export class RedisService implements OnModuleDestroy {
       }
 
       try {
-        this.client = new Redis(redisConfig);
-        this.client.on('connect', () => {
-          console.log('Redis: Connected');
+        this.ioClient = new Redis(redisConfig);
+        this.ioClient.on('connect', () => {
+          console.log('Redis: Connected to standard Redis');
         });
-        this.client.on('error', (err) => {
+        this.ioClient.on('error', (err) => {
           console.warn('Redis: Connection error (caching disabled):', err.message);
         });
       } catch {
-        console.warn('Redis: Failed to initialize, caching disabled');
+        console.warn('Redis: Failed to initialize ioredis, caching disabled');
         this.useFallback = true;
       }
     }
   }
 
   async onModuleDestroy() {
-    if (this.client) {
-      await this.client.quit().catch(() => {});
+    if (this.ioClient) {
+      await this.ioClient.quit().catch(() => {});
     }
+    // Upstash REST client does not require explicitly closing connections
   }
 
-  // Fallback methods when Redis unavailable
   async get(key: string): Promise<string | null> {
-    if (this.useFallback || !this.client) return null;
+    if (this.useFallback) return null;
     try {
-      return await this.client.get(key);
+      if (this.upstashClient) {
+        const data = await this.upstashClient.get<any>(key);
+        if (data === null || data === undefined) return null;
+        // Upstash auto-parses JSON, so we convert back to string if needed to match interface
+        return typeof data === 'object' ? JSON.stringify(data) : String(data);
+      } else if (this.ioClient) {
+        return await this.ioClient.get(key);
+      }
     } catch {
       return null;
     }
+    return null;
   }
 
   async set(key: string, value: string, ttl?: number): Promise<void> {
-    if (this.useFallback || !this.client) return;
+    if (this.useFallback) return;
     try {
-      if (ttl) {
-        await this.client.setex(key, ttl, value);
-      } else {
-        await this.client.set(key, value);
+      if (this.upstashClient) {
+        if (ttl) {
+          await this.upstashClient.setex(key, ttl, value);
+        } else {
+          await this.upstashClient.set(key, value);
+        }
+      } else if (this.ioClient) {
+        if (ttl) {
+          await this.ioClient.setex(key, ttl, value);
+        } else {
+          await this.ioClient.set(key, value);
+        }
       }
     } catch {
-      // Silently fail - caching is optional
+      // Silently fail
     }
   }
 
@@ -80,21 +102,32 @@ export class RedisService implements OnModuleDestroy {
   }
 
   async del(key: string): Promise<void> {
-    if (this.useFallback || !this.client) return;
+    if (this.useFallback) return;
     try {
-      await this.client.del(key);
+      if (this.upstashClient) {
+        await this.upstashClient.del(key);
+      } else if (this.ioClient) {
+        await this.ioClient.del(key);
+      }
     } catch {
       // Silently fail
     }
   }
 
   async deletePattern(pattern: string): Promise<void> {
-    if (this.useFallback || !this.client) return;
+    if (this.useFallback) return;
     try {
-      const keys = await this.client.keys(pattern);
-      if (keys.length > 0) {
-        for (const key of keys) {
-          await this.client.del(key);
+      if (this.upstashClient) {
+        const keys = await this.upstashClient.keys(pattern);
+        if (keys && keys.length > 0) {
+          await this.upstashClient.del(...keys);
+        }
+      } else if (this.ioClient) {
+        const keys = await this.ioClient.keys(pattern);
+        if (keys && keys.length > 0) {
+          for (const key of keys) {
+            await this.ioClient.del(key);
+          }
         }
       }
     } catch {
@@ -103,25 +136,50 @@ export class RedisService implements OnModuleDestroy {
   }
 
   async keys(pattern: string): Promise<string[]> {
-    if (this.useFallback || !this.client) return [];
+    if (this.useFallback) return [];
     try {
-      return await this.client.keys(pattern);
+      if (this.upstashClient) {
+        return await this.upstashClient.keys(pattern);
+      } else if (this.ioClient) {
+        return await this.ioClient.keys(pattern);
+      }
     } catch {
       return [];
     }
+    return [];
   }
 
   async getJson<T>(key: string): Promise<T | null> {
-    const data = await this.get(key);
-    if (!data) return null;
+    if (this.useFallback) return null;
     try {
-      return JSON.parse(data) as T;
+      if (this.upstashClient) {
+        // Upstash auto parses, so we can directly return it
+        return await this.upstashClient.get<T>(key);
+      } else if (this.ioClient) {
+        const data = await this.ioClient.get(key);
+        if (!data) return null;
+        return JSON.parse(data) as T;
+      }
     } catch {
       return null;
     }
+    return null;
   }
 
   async setJson<T>(key: string, value: T, ttl?: number): Promise<void> {
-    await this.set(key, JSON.stringify(value), ttl);
+    if (this.useFallback) return;
+    try {
+      if (this.upstashClient) {
+        if (ttl) {
+          await this.upstashClient.setex(key, ttl, value);
+        } else {
+          await this.upstashClient.set(key, value);
+        }
+      } else if (this.ioClient) {
+        await this.set(key, JSON.stringify(value), ttl);
+      }
+    } catch {
+      // Silently fail
+    }
   }
 }
