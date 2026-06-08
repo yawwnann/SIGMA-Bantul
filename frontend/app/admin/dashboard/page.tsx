@@ -110,7 +110,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {/* EvacuationLocation Card */}
         <Card className="border border-zinc-800 bg-zinc-900/40 relative overflow-hidden group hover:bg-zinc-900/80 transition-all duration-300 hover:border-blue-500/30">
           <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-transform duration-500">
@@ -167,33 +167,6 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Routes Card */}
-        <Card className="border border-zinc-800 bg-zinc-900/40 relative overflow-hidden group hover:bg-zinc-900/80 transition-all duration-300 hover:border-purple-500/30">
-          <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-transform duration-500">
-            <Compass className="w-40 h-40" />
-          </div>
-          <CardContent className="p-8">
-            <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center mb-6 border border-purple-500/20 shadow-inner">
-              <Compass className="h-8 w-8 text-purple-500" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-base font-medium text-zinc-400">
-                Manajemen Evakuasi
-              </h3>
-              <div className="text-5xl font-bold tracking-tight dark:text-white text-slate-900">
-                {stats?.routeCount || 0}
-              </div>
-            </div>
-            <div className="mt-6 flex items-center text-sm">
-              <Badge
-                variant="outline"
-                className="bg-purple-500/10 text-purple-400 border-purple-500/20 px-3 py-1 text-sm font-medium"
-              >
-                Rute Tersedia
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Latest Earthquake Card */}
         <Card className="border border-zinc-800 bg-gradient-to-br from-zinc-900/80 to-zinc-900 relative overflow-hidden group hover:border-red-500/30 transition-all duration-300">
