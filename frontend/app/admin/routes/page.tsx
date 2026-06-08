@@ -133,6 +133,7 @@ function RoadMapViewer({ road }: { road: Road }) {
       const map = L.map(mapRef.current!, {
         center: coords[Math.floor(coords.length / 2)],
         zoom: 16,
+        preferCanvas: true,
       });
       mapInstanceRef.current = map;
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -268,6 +269,7 @@ function RoadDrawingEditor({
         center: [-7.888, 110.329],
         zoom: 13,
         zoomControl: true,
+        preferCanvas: true,
       });
       mapInstanceRef.current = map;
 
