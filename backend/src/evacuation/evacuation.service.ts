@@ -61,12 +61,21 @@ export class EvacuationService {
     if (cached) return cached;
 
     const roads = await this.prisma.road.findMany();
-    // Load all evacuationLocations and filter out full ones
-    const allEvacuationLocations =
-      await this.prisma.evacuationLocation.findMany();
-    const evacuationLocations = allEvacuationLocations.filter(
-      (s) => s.currentOccupancy < s.capacity,
-    );
+    // Load all evacuationLocations and filter out full ones considering inbound users
+    const allEvacuationLocations = await this.prisma.evacuationLocation.findMany();
+    const evacuationLocations = [];
+    const now = Date.now();
+    const timeoutMs = 45 * 60 * 1000;
+
+    for (const loc of allEvacuationLocations) {
+      const cacheKey = `evacuation-location:${loc.id}:inbound`;
+      const inboundUsers = await this.redis.getJson<{deviceId: string, timestamp: number}[]>(cacheKey) || [];
+      const validUsers = inboundUsers.filter(u => now - u.timestamp < timeoutMs);
+      
+      if (loc.currentOccupancy + validUsers.length < loc.capacity) {
+        evacuationLocations.push(loc);
+      }
+    }
 
     if (evacuationLocations.length === 0) {
       this.logger.warn('No available evacuationLocations found!');

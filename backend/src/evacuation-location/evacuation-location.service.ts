@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEvacuationLocationDto } from './dto/create-evacuation-location.dto';
 import { UpdateEvacuationLocationDto } from './dto/update-evacuation-location.dto';
+import { RedisService } from '../redis/redis.service';
 import {
   EvacuationLocationCategory,
   EvacuationLocationCondition,
@@ -18,6 +19,7 @@ export class EvacuationLocationService {
   constructor(
     private prisma: PrismaService,
     private websocketService: WebsocketService,
+    private redisService: RedisService,
   ) {}
 
   async create(dto: CreateEvacuationLocationDto) {
@@ -107,16 +109,89 @@ export class EvacuationLocationService {
       data: { currentOccupancy },
     });
 
+    const inboundCount = await this.getInboundCount(id);
+
     // Broadcast capacity update via WebSocket
     this.websocketService.broadcastEvacuationCapacityUpdate({
       id: updated.id,
       name: updated.name,
       currentOccupancy: updated.currentOccupancy,
-      availableCapacity: updated.capacity - updated.currentOccupancy,
+      availableCapacity: updated.capacity - updated.currentOccupancy - inboundCount,
       totalCapacity: updated.capacity,
     });
 
     return updated;
+  }
+
+  async getInboundCount(id: number): Promise<number> {
+    const cacheKey = `evacuation-location:${id}:inbound`;
+    let inboundUsers = await this.redisService.getJson<{deviceId: string, timestamp: number}[]>(cacheKey) || [];
+    
+    // Clean up old ones (45 mins timeout)
+    const now = Date.now();
+    const timeoutMs = 45 * 60 * 1000;
+    const validUsers = inboundUsers.filter(u => now - u.timestamp < timeoutMs);
+    
+    if (validUsers.length !== inboundUsers.length) {
+      await this.redisService.setJson(cacheKey, validUsers);
+    }
+    
+    return validUsers.length;
+  }
+
+  async startNavigation(id: number, deviceId: string) {
+    const shelter = await this.findById(id);
+    const cacheKey = `evacuation-location:${id}:inbound`;
+    let inboundUsers = await this.redisService.getJson<{deviceId: string, timestamp: number}[]>(cacheKey) || [];
+    
+    const now = Date.now();
+    const timeoutMs = 45 * 60 * 1000;
+    inboundUsers = inboundUsers.filter(u => now - u.timestamp < timeoutMs);
+
+    const existingIdx = inboundUsers.findIndex(u => u.deviceId === deviceId);
+    if (existingIdx >= 0) {
+      inboundUsers[existingIdx].timestamp = now;
+    } else {
+      const inboundCount = inboundUsers.length;
+      if (shelter.currentOccupancy + inboundCount >= shelter.capacity) {
+        throw new BadRequestException('Kapasitas shelter penuh oleh pengungsi lain yang sedang menuju ke sana');
+      }
+      inboundUsers.push({ deviceId, timestamp: now });
+    }
+
+    await this.redisService.setJson(cacheKey, inboundUsers);
+
+    this.websocketService.broadcastEvacuationCapacityUpdate({
+      id: shelter.id,
+      name: shelter.name,
+      currentOccupancy: shelter.currentOccupancy,
+      availableCapacity: shelter.capacity - shelter.currentOccupancy - inboundUsers.length,
+      totalCapacity: shelter.capacity,
+    });
+
+    return { success: true, inboundCount: inboundUsers.length };
+  }
+
+  async stopNavigation(id: number, deviceId: string) {
+    const cacheKey = `evacuation-location:${id}:inbound`;
+    let inboundUsers = await this.redisService.getJson<{deviceId: string, timestamp: number}[]>(cacheKey) || [];
+    
+    const initialLength = inboundUsers.length;
+    inboundUsers = inboundUsers.filter(u => u.deviceId !== deviceId);
+    
+    if (inboundUsers.length !== initialLength) {
+      await this.redisService.setJson(cacheKey, inboundUsers);
+      
+      const shelter = await this.findById(id);
+      this.websocketService.broadcastEvacuationCapacityUpdate({
+        id: shelter.id,
+        name: shelter.name,
+        currentOccupancy: shelter.currentOccupancy,
+        availableCapacity: shelter.capacity - shelter.currentOccupancy - inboundUsers.length,
+        totalCapacity: shelter.capacity,
+      });
+    }
+    return { success: true };
   }
 
   async getNearby(
@@ -169,13 +244,20 @@ export class EvacuationLocationService {
       LIMIT ${limit}
     `;
 
-    return evacuationLocations.map((evacuationLocation) => ({
-      ...evacuationLocation,
-      distanceKm: Math.round((evacuationLocation.distance / 1000) * 100) / 100,
-      availableCapacity:
-        evacuationLocation.capacity -
-        (evacuationLocation.currentOccupancy || 0),
+    const results = await Promise.all(evacuationLocations.map(async (evacuationLocation) => {
+      const inboundCount = await this.getInboundCount(evacuationLocation.id);
+      return {
+        ...evacuationLocation,
+        distanceKm: Math.round((evacuationLocation.distance / 1000) * 100) / 100,
+        inboundCount,
+        availableCapacity:
+          evacuationLocation.capacity -
+          (evacuationLocation.currentOccupancy || 0) - inboundCount,
+      };
     }));
+    
+    // Filter out full locations
+    return results.filter(loc => loc.availableCapacity > 0);
   }
 
   private calculateDistance(

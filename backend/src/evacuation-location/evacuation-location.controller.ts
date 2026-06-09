@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   ParseIntPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { EvacuationLocationService } from './evacuation-location.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -57,6 +58,24 @@ export class EvacuationLocationController {
   @Get('statistics')
   async getStatistics() {
     return this.evacuationLocationService.getStatistics();
+  }
+
+  @Post(':id/navigate')
+  async startNavigation(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('deviceId') deviceId: string,
+  ) {
+    if (!deviceId) throw new BadRequestException('deviceId is required');
+    return this.evacuationLocationService.startNavigation(id, deviceId);
+  }
+
+  @Delete(':id/navigate')
+  async stopNavigation(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('deviceId') deviceId: string,
+  ) {
+    if (!deviceId) throw new BadRequestException('deviceId is required');
+    return this.evacuationLocationService.stopNavigation(id, deviceId);
   }
 
   @Get(':id')

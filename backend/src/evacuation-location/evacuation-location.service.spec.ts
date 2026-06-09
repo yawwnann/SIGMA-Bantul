@@ -8,10 +8,21 @@ import {
   EvacuationLocationStatus,
 } from '@prisma/client';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { RedisService } from '../redis/redis.service';
+import { WebsocketService } from '../websocket/websocket.service';
 
 describe('EvacuationLocationService', () => {
   let service: EvacuationLocationService;
   let prisma: PrismaService;
+  
+  const mockRedisService = {
+    getJson: jest.fn(),
+    setJson: jest.fn(),
+  };
+
+  const mockWebsocketService = {
+    broadcastEvacuationCapacityUpdate: jest.fn(),
+  };
 
   const mockPrismaService = {
     evacuationLocation: {
@@ -37,6 +48,14 @@ describe('EvacuationLocationService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: RedisService,
+          useValue: mockRedisService,
+        },
+        {
+          provide: WebsocketService,
+          useValue: mockWebsocketService,
         },
       ],
     }).compile();
@@ -196,6 +215,60 @@ describe('EvacuationLocationService', () => {
       expect(stats.total).toBe(5);
       expect(stats.totalCapacity).toBe(1000);
       expect(stats.byCondition.length).toBe(2);
+    });
+  });
+
+  describe('Navigation Tracking', () => {
+    it('should calculate inbound count and clean up old entries', async () => {
+      const now = Date.now();
+      mockRedisService.getJson.mockResolvedValue([
+        { deviceId: '1', timestamp: now },
+        { deviceId: '2', timestamp: now - 50 * 60 * 1000 }, // expired
+      ]);
+
+      const count = await service.getInboundCount(1);
+      expect(count).toBe(1);
+      expect(mockRedisService.setJson).toHaveBeenCalledWith(
+        'evacuation-location:1:inbound',
+        [{ deviceId: '1', timestamp: now }]
+      );
+    });
+
+    it('should allow startNavigation if capacity is available', async () => {
+      mockPrismaService.evacuationLocation.findUnique.mockResolvedValue({
+        id: 1, capacity: 10, currentOccupancy: 8
+      });
+      mockRedisService.getJson.mockResolvedValue([{ deviceId: '1', timestamp: Date.now() }]);
+
+      const result = await service.startNavigation(1, '2');
+      expect(result.success).toBe(true);
+      expect(result.inboundCount).toBe(2);
+    });
+
+    it('should throw if startNavigation exceeds capacity', async () => {
+      mockPrismaService.evacuationLocation.findUnique.mockResolvedValue({
+        id: 1, capacity: 10, currentOccupancy: 8
+      });
+      mockRedisService.getJson.mockResolvedValue([
+        { deviceId: '1', timestamp: Date.now() },
+        { deviceId: '2', timestamp: Date.now() },
+      ]);
+
+      await expect(service.startNavigation(1, '3')).rejects.toThrow(BadRequestException);
+    });
+
+    it('should remove deviceId on stopNavigation', async () => {
+      const now = Date.now();
+      mockRedisService.getJson.mockResolvedValue([
+        { deviceId: '1', timestamp: now },
+        { deviceId: '2', timestamp: now },
+      ]);
+
+      await service.stopNavigation(1, '1');
+      expect(mockRedisService.setJson).toHaveBeenCalledWith(
+        'evacuation-location:1:inbound',
+        [{ deviceId: '2', timestamp: now }]
+      );
     });
   });
 });
