@@ -4,9 +4,10 @@ import { EarthquakeController } from './earthquake.controller';
 import { EarthquakeService } from './earthquake.service';
 import { EarthquakeGateway } from './earthquake.gateway';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { CommonModule } from '../common/common.module';
 
 @Module({
-  imports: [HttpModule, NotificationsModule],
+  imports: [HttpModule, NotificationsModule, CommonModule],
   controllers: [EarthquakeController],
   providers: [EarthquakeService, EarthquakeGateway],
   exports: [EarthquakeService],

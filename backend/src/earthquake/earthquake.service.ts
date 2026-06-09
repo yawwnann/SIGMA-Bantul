@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { EarthquakeGateway } from './earthquake.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
+import { BantulBoundaryService } from '../common/services/bantul-boundary.service';
 import { Earthquake } from '@prisma/client';
 import { CreateEarthquakeDto } from './dto/create-earthquake.dto';
 
@@ -81,6 +82,7 @@ export class EarthquakeService {
     private earthquakeGateway: EarthquakeGateway,
     private configService: ConfigService,
     private notifService: NotificationsService,
+    private bantulBoundaryService: BantulBoundaryService,
   ) {}
 
   private getBMKGUrl(endpoint: string): string {
@@ -439,16 +441,18 @@ export class EarthquakeService {
 
     if (region) {
       if (region.toLowerCase() === 'bantul') {
-        // Fallback bounding box for Bantul (in case string search fails)
+        // Use polygon-based check via BantulBoundaryService
+        // First fetch all earthquakes within approximate bounding box
         where.lat = {
-          gte: -8.05,
-          lte: -7.75,
+          gte: -8.15,
+          lte: -7.8,
         };
         where.lon = {
           gte: 110.15,
-          lte: 110.6,
+          lte: 110.5,
         };
       } else {
+        // For non-bantul regions, use string matching
         where.OR = [
           { location: { contains: region, mode: 'insensitive' } },
           { region: { contains: region, mode: 'insensitive' } },
@@ -456,23 +460,42 @@ export class EarthquakeService {
       }
     }
 
+    // Fetch earthquakes with initial filter
     const [earthquakes, total] = await Promise.all([
       this.prisma.earthquake.findMany({
         where,
         orderBy: { time: 'desc' },
         skip,
-        take: limit,
+        take: limit * 3, // Fetch more to account for polygon filtering
       }),
       this.prisma.earthquake.count({ where }),
     ]);
 
+    // For Bantul region, apply precise polygon-based filtering
+    let filteredEarthquakes = earthquakes;
+    if (region?.toLowerCase() === 'bantul') {
+      try {
+        const boundary = await this.bantulBoundaryService.getBoundary();
+        filteredEarthquakes = earthquakes.filter(eq =>
+          this.bantulBoundaryService.checkMultiPolygon(eq.lat, eq.lon, boundary)
+        );
+      } catch (error) {
+        // If polygon check fails, fall back to bounding box
+        this.logger.warn('Polygon check failed, using bounding box fallback');
+      }
+    }
+
+    // Apply pagination to filtered results
+    const paginatedResults = filteredEarthquakes.slice(skip, skip + limit);
+    const filteredTotal = filteredEarthquakes.length;
+
     return {
-      data: earthquakes,
+      data: paginatedResults,
       meta: {
-        total,
+        total: filteredTotal,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(filteredTotal / limit),
       },
     };
   }

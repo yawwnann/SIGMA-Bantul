@@ -89,7 +89,7 @@ export class BantulBoundaryService {
   /**
    * Check if point is inside any polygon (supports MultiPolygon)
    */
-  private checkMultiPolygon(lat: number, lng: number, multiPolygonCoords: number[][][][]): boolean {
+  checkMultiPolygon(lat: number, lng: number, multiPolygonCoords: number[][][][]): boolean {
     for (const polygon of multiPolygonCoords) {
       const outerRing = polygon[0];
       if (outerRing && this.pointInPolygon(lat, lng, outerRing)) {
