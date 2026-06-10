@@ -460,42 +460,59 @@ export class EarthquakeService {
       }
     }
 
-    // Fetch earthquakes with initial filter
+    // For Bantul region, apply precise polygon-based filtering
+    if (region?.toLowerCase() === 'bantul') {
+      try {
+        // Fetch more data to account for polygon filtering
+        // We need to fetch enough to ensure we have 'limit' items after filtering
+        const allMatching = await this.prisma.earthquake.findMany({
+          where,
+          orderBy: { time: 'desc' },
+          take: 5000, // Fetch large batch for polygon filtering
+        });
+
+        const boundary = await this.bantulBoundaryService.getBoundary();
+        const filteredEarthquakes = allMatching.filter(eq =>
+          this.bantulBoundaryService.checkMultiPolygon(eq.lat, eq.lon, boundary)
+        );
+
+        const total = filteredEarthquakes.length;
+        const paginatedResults = filteredEarthquakes.slice(skip, skip + limit);
+
+        return {
+          data: paginatedResults,
+          meta: {
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+          },
+        };
+      } catch (error) {
+        // If polygon check fails, fall back to bounding box
+        this.logger.warn('Polygon check failed, using bounding box fallback');
+        // Continue with default query below
+      }
+    }
+
+    // Default query for non-bantul or when polygon check fails
     const [earthquakes, total] = await Promise.all([
       this.prisma.earthquake.findMany({
         where,
         orderBy: { time: 'desc' },
         skip,
-        take: limit * 3, // Fetch more to account for polygon filtering
+        take: limit,
       }),
       this.prisma.earthquake.count({ where }),
     ]);
 
-    // For Bantul region, apply precise polygon-based filtering
-    let filteredEarthquakes = earthquakes;
-    if (region?.toLowerCase() === 'bantul') {
-      try {
-        const boundary = await this.bantulBoundaryService.getBoundary();
-        filteredEarthquakes = earthquakes.filter(eq =>
-          this.bantulBoundaryService.checkMultiPolygon(eq.lat, eq.lon, boundary)
-        );
-      } catch (error) {
-        // If polygon check fails, fall back to bounding box
-        this.logger.warn('Polygon check failed, using bounding box fallback');
-      }
-    }
-
-    // Apply pagination to filtered results
-    const paginatedResults = filteredEarthquakes.slice(skip, skip + limit);
-    const filteredTotal = filteredEarthquakes.length;
-
     return {
-      data: paginatedResults,
+      data: earthquakes,
       meta: {
-        total: filteredTotal,
+        total,
         page,
         limit,
-        totalPages: Math.ceil(filteredTotal / limit),
+        totalPages: Math.ceil(total / limit),
       },
     };
   }
