@@ -17,7 +17,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex-1 flex flex-col min-h-screen">
       {/* Mobile Top Bar */}
-      <div className="md:hidden flex flex-none items-center justify-between p-4 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 sticky top-0 z-30">
+      <div className="md:hidden flex items-center justify-between p-4 border-b border-slate-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur fixed top-0 left-0 right-0 z-50">
         <div className="flex items-center gap-3">
           <button
             onClick={toggleMobile}
@@ -38,9 +38,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      {/* Page Content with proper margin for sidebar */}
+      {/* Page Content with proper margin for sidebar and mobile header */}
       <main
-        className={`flex-1 transition-all duration-300 ${
+        className={`flex-1 transition-all duration-300 pt-[73px] md:pt-0 ${
           collapsed ? "md:ml-[80px]" : "md:ml-64"
         }`}
       >

@@ -17,6 +17,7 @@ async function bootstrap() {
       'http://localhost:5173',
       'https://sigma-bantul.duckdns.org',
       'https://sigma-bantul.vercel.app',
+      'https://sigmabantul.netlify.app',
       'https://sigma-bantul.my.id',
       'https://www.sigma-bantul.my.id',
     ],
