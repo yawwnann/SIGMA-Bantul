@@ -427,36 +427,68 @@ export class EvacuationService {
   ) {
     const evacuationLocations = await this.prisma.evacuationLocation.findMany();
 
-    const evacuationLocationsWithDistance = evacuationLocations.map(
-      (evacuationLocation) => {
-        const geom =
-          evacuationLocation.geometry as unknown as RoadGeometry | null;
-        const coords = geom?.coordinates;
-        const evacuationLocationLat =
-          coords && Array.isArray(coords) && typeof coords[1] === 'number'
-            ? coords[1]
-            : 0;
-        const evacuationLocationLon =
-          coords && Array.isArray(coords) && typeof coords[0] === 'number'
-            ? coords[0]
-            : 0;
-        const distance = this.haversineDistance(
-          lat,
-          lon,
-          evacuationLocationLat,
-          evacuationLocationLon,
-        );
+    // 1. Calculate distance and occupancy rate for all locations
+    const locationsProcessed = evacuationLocations.map((loc) => {
+      const geom = loc.geometry as unknown as RoadGeometry | null;
+      const coords = geom?.coordinates;
+      const locLat =
+        coords && Array.isArray(coords) && typeof coords[1] === 'number' ? coords[1] : 0;
+      const locLon =
+        coords && Array.isArray(coords) && typeof coords[0] === 'number' ? coords[0] : 0;
+      
+      const distance = this.haversineDistance(lat, lon, locLat, locLon);
+      const occupancyRate = loc.capacity > 0 ? loc.currentOccupancy / loc.capacity : 1;
+      
+      return {
+        ...loc,
+        distanceKm: Math.round(distance * 100) / 100,
+        occupancyRate,
+      };
+    });
 
-        return {
-          ...evacuationLocation,
-          distanceKm: Math.round(distance * 100) / 100,
-        };
-      },
+    // Sort all by distance first
+    locationsProcessed.sort((a, b) => a.distanceKm - b.distanceKm);
+
+    // 2. Dynamic Radius Expansion with 15% Buffer (Max 85% occupancy)
+    const searchRadii = [5, 10, 20, 50]; // Radii in km
+    const MAX_OCCUPANCY_RATE = 0.85; // 15% Buffer
+
+    for (const radius of searchRadii) {
+      const validLocations = locationsProcessed.filter(
+        (loc) => loc.distanceKm <= radius && loc.occupancyRate <= MAX_OCCUPANCY_RATE
+      );
+
+      if (validLocations.length >= limit || (validLocations.length > 0 && radius === 50)) {
+        // Return if we hit the limit, OR if we're at max radius and found at least one
+        return validLocations.slice(0, limit);
+      }
+      // Wait, if it finds 1 location at 5km, but limit is 5, should it return 1 or expand to 10km to find more?
+      // For routing, finding 1 good location is often enough, but since limit is usually 5,
+      // it's better to return whatever we found if it's > 0, to avoid sending people 10km away just to fill the "limit".
+      if (validLocations.length > 0) {
+         return validLocations.slice(0, limit);
+      }
+    }
+
+    // 3. Fallback 1: Open Space (FIELD) regardless of capacity buffer
+    const openSpaces = locationsProcessed.filter(
+      (loc) => loc.category === 'FIELD'
     );
+    
+    if (openSpaces.length > 0) {
+      return openSpaces.slice(0, limit);
+    }
 
-    return evacuationLocationsWithDistance
-      .sort((a, b) => a.distanceKm - b.distanceKm)
-      .slice(0, limit);
+    // 4. Fallback 2: Least Overcapacity
+    // Sort by occupancy rate ascending, then distance
+    locationsProcessed.sort((a, b) => {
+      if (a.occupancyRate === b.occupancyRate) {
+        return a.distanceKm - b.distanceKm;
+      }
+      return a.occupancyRate - b.occupancyRate;
+    });
+
+    return locationsProcessed.slice(0, limit);
   }
 
   getWeights() {

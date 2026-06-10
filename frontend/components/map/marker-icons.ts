@@ -82,6 +82,7 @@ export function createEvacuationIcon(
   category?: string,
   capacity?: number,
   currentOccupancy?: number,
+  isSelected: boolean = false
 ) {
   const categoryStyle =
     category === "SCHOOL" || category === "FIELD" || category === "GOVERNMENT"
@@ -95,7 +96,7 @@ export function createEvacuationIcon(
   const color = getCapacityColor(capacity ?? 0, currentOccupancy, "#16a34a");
 
   return L.divIcon({
-    className: "evacuation-marker-icon",
+    className: `evacuation-marker-icon ${isSelected ? 'selected' : ''}`,
     html: `
       <div class="evacuation-marker-pin" style="--marker-color:${color}" title="${categoryStyle.label}">
         <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">

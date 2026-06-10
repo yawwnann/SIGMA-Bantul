@@ -26,6 +26,31 @@ interface FrequencyMapProps {
   selectedEarthquakeId?: number | null;
 }
 
+// Helper to check if point is inside polygon (ray-casting)
+const isPointInPolygon = (point: [number, number], vs: number[][]) => {
+  const x = point[0], y = point[1];
+  let inside = false;
+  for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+    const xi = vs[i][0], yi = vs[i][1];
+    const xj = vs[j][0], yj = vs[j][1];
+    const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+};
+
+const isPointInMultiPolygon = (point: [number, number], geometry: any) => {
+  if (!geometry || !geometry.type) return true;
+  if (geometry.type === 'Polygon') {
+    return isPointInPolygon(point, geometry.coordinates[0]);
+  } else if (geometry.type === 'MultiPolygon') {
+    for (const polygon of geometry.coordinates) {
+      if (isPointInPolygon(point, polygon[0])) return true;
+    }
+  }
+  return false;
+};
+
 export default function FrequencyMap({
   grids,
   showBpbdLayer = false,
@@ -84,7 +109,7 @@ export default function FrequencyMap({
         center: [-7.88, 110.38],
         zoom: 11,
         zoomControl: false,
-        preferCanvas: true,
+        preferCanvas: false, // Disabled to prevent canvas race conditions with leaflet.heat
       });
 
       L.control
@@ -190,39 +215,61 @@ export default function FrequencyMap({
       if (!mapRef.current) return;
 
       // Only include grids with actual earthquakes (count > 0)
-      const activeGrids = grids.filter((grid) => grid.count > 0);
+      let activeGrids = grids.filter((grid) => grid.count > 0);
+
+      // Filter grids to only those that intersect the Bantul boundary (check center and corners)
+      if (bantulBoundary && bantulBoundary.features && bantulBoundary.features.length > 0) {
+        const geometry = bantulBoundary.features[0].geometry;
+        activeGrids = activeGrids.filter(grid => 
+          isPointInMultiPolygon([grid.center.lon, grid.center.lat], geometry)
+        );
+      }
 
       if (activeGrids.length === 0) return;
 
       // Extract points for heat map: [lat, lon, intensity]
+      // Use log scale to compress wide range of earthquake counts
       const heatPoints: [number, number, number][] = activeGrids.map((grid) => [
         grid.center.lat,
         grid.center.lon,
-        grid.count * 10,
+        Math.log2(grid.count + 1),
       ]);
 
       const maxIntensity = Math.max(
-        ...activeGrids.map((g) => g.count * 10),
-        10,
+        ...activeGrids.map((g) => Math.log2(g.count + 1)),
+        1,
       );
 
-      // Cast L to any because leaflet.heat adds heatLayer to L namespace
-      const heatLayer = (L as any).heatLayer(heatPoints, {
-        radius: 35,
-        blur: 25,
-        maxZoom: 14,
-        max: maxIntensity,
-        gradient: {
-          0.0: "rgba(255,255,0,0)", // transparent
-          0.3: "#fef08a", // yellow-200
-          0.6: "#f97316", // orange-500
-          0.85: "#ef4444", // red-500
-          1.0: "#991b1b", // red-800
-        },
-      });
+      // Wait for map to be ready (ensure canvas is initialized)
+      const addHeatLayer = () => {
+        if (!mapRef.current) return;
 
-      heatLayer.addTo(mapRef.current);
-      layersRef.current.push(heatLayer);
+        try {
+          // Cast L to any because leaflet.heat adds heatLayer to L namespace
+          const heatLayer = (L as any).heatLayer(heatPoints, {
+            radius: 30,
+            blur: 30,
+            maxZoom: 11,
+            max: maxIntensity,
+            minOpacity: 0.6,
+            gradient: {
+              0.33: "lime",
+              0.66: "yellow",
+              1.0: "red"
+            },
+          });
+
+          heatLayer.addTo(mapRef.current);
+          layersRef.current.push(heatLayer);
+        } catch (error) {
+          console.warn("Failed to add heat layer:", error);
+        }
+      };
+
+      // Wait for map to be ready before adding heat layer
+      mapRef.current.whenReady(() => {
+        setTimeout(addHeatLayer, 100);
+      });
 
       // Fit bounds to show all grids with padding
       const bounds = grids.map(
@@ -481,47 +528,61 @@ export default function FrequencyMap({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (mapRef.current) {
-        // Remove all layers
-        layersRef.current.forEach((layer: any) => {
-          if (mapRef.current && mapRef.current.hasLayer(layer)) {
-            mapRef.current.removeLayer(layer);
+      // Defer cleanup to next frame to avoid canvas errors
+      const cleanupMap = () => {
+        if (mapRef.current) {
+          try {
+            // Remove all layers
+            layersRef.current.forEach((layer: any) => {
+              try {
+                if (mapRef.current && mapRef.current.hasLayer(layer)) {
+                  mapRef.current.removeLayer(layer);
+                }
+              } catch (e) {
+                // Ignore layer removal errors
+              }
+            });
+            layersRef.current = [];
+
+            try {
+              if (boundaryLayerRef.current && mapRef.current.hasLayer(boundaryLayerRef.current)) {
+                mapRef.current.removeLayer(boundaryLayerRef.current);
+              }
+            } catch (e) {}
+
+            try {
+              if (maskLayerRef.current && mapRef.current.hasLayer(maskLayerRef.current)) {
+                mapRef.current.removeLayer(maskLayerRef.current);
+              }
+            } catch (e) {}
+
+            try {
+              if (bpbdLayerRef.current && mapRef.current.hasLayer(bpbdLayerRef.current)) {
+                mapRef.current.removeLayer(bpbdLayerRef.current);
+              }
+            } catch (e) {}
+
+            try {
+              if (earthquakeLayerRef.current && mapRef.current.hasLayer(earthquakeLayerRef.current)) {
+                mapRef.current.removeLayer(earthquakeLayerRef.current);
+              }
+            } catch (e) {}
+
+            // Remove map
+            try {
+              mapRef.current.remove();
+            } catch (e) {}
+          } catch (error) {
+            console.warn("Map cleanup error:", error);
           }
-        });
-        layersRef.current = [];
-
-        if (
-          boundaryLayerRef.current &&
-          mapRef.current.hasLayer(boundaryLayerRef.current)
-        ) {
-          mapRef.current.removeLayer(boundaryLayerRef.current);
+          mapRef.current = null;
         }
+      };
 
-        if (
-          maskLayerRef.current &&
-          mapRef.current.hasLayer(maskLayerRef.current)
-        ) {
-          mapRef.current.removeLayer(maskLayerRef.current);
-        }
-
-        if (
-          bpbdLayerRef.current &&
-          mapRef.current.hasLayer(bpbdLayerRef.current)
-        ) {
-          mapRef.current.removeLayer(bpbdLayerRef.current);
-        }
-
-        if (
-          earthquakeLayerRef.current &&
-          mapRef.current.hasLayer(earthquakeLayerRef.current)
-        ) {
-          mapRef.current.removeLayer(earthquakeLayerRef.current);
-        }
-
-        // Remove map
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
+      // Use requestAnimationFrame to defer cleanup
+      requestAnimationFrame(() => {
+        setTimeout(cleanupMap, 0);
+      });
     };
   }, []);
 

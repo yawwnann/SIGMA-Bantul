@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { earthquakeApi, hazardZoneApi, roadApi } from "@/api";
+import { earthquakeApi, hazardZoneApi, roadApi, evacuationLocationApi } from "@/api";
 import { useUserLocation } from "@/hooks/use-user-location";
 import { evacuationService } from "@/services/evacuation.service";
 import { socketService } from "@/lib/socket";
@@ -134,7 +134,17 @@ export default function MapPage() {
     null,
   );
   const [calculatingRoute, setCalculatingRoute] = useState(false);
+  const [navigatingToId, setNavigatingToId] = useState<number | null>(null);
   const [nearbyRadius, setNearbyRadius] = useState(3);
+
+  const getDeviceId = () => {
+    let id = localStorage.getItem("deviceId");
+    if (!id) {
+      id = Math.random().toString(36).substring(2, 15);
+      localStorage.setItem("deviceId", id);
+    }
+    return id;
+  };
 
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -273,6 +283,7 @@ export default function MapPage() {
     evacuationLocationLat: number,
     evacuationLocationLng: number,
     evacuationLocationName: string,
+    evacuationLocationId: number,
   ) => {
     const origin = selectedLocation || userLocation;
 
@@ -290,6 +301,19 @@ export default function MapPage() {
     try {
       setCalculatingRoute(true);
       toast.info("Menghitung rute terpendek...");
+      
+      // If already navigating to somewhere else, stop it first
+      if (navigatingToId && navigatingToId !== evacuationLocationId) {
+        try {
+          await evacuationLocationApi.stopNavigation(navigatingToId, getDeviceId());
+        } catch (e) {
+          console.error("Failed to stop previous navigation", e);
+        }
+      }
+
+      // Start navigation tracking
+      await evacuationLocationApi.startNavigation(evacuationLocationId, getDeviceId());
+
       const route = await roadApi.calculateRoute(
         origin.lat,
         origin.lng,
@@ -300,6 +324,7 @@ export default function MapPage() {
       setCalculatedRoute(route);
       setRouteStart({ lat: origin.lat, lng: origin.lng });
       setRouteEnd({ lat: evacuationLocationLat, lng: evacuationLocationLng });
+      setNavigatingToId(evacuationLocationId);
 
       toast.success(
         `Rute ke ${evacuationLocationName} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km, Waktu: ${route.properties.totalTime.toFixed(1)} menit`,
@@ -382,7 +407,10 @@ export default function MapPage() {
           .catch(() => ({ data: [], total: 0, page: 1, limit: 100 })),
       ]);
       setHazardZones(hazardData as HazardZone[]);
-      setEarthquakes(earthquakesResponse.data as Earthquake[]);
+      const filteredEarthquakes = (earthquakesResponse.data as Earthquake[]).filter(
+        (eq) => eq.lat != null && eq.lon != null && isWithinBantul(eq.lat, eq.lon)
+      );
+      setEarthquakes(filteredEarthquakes);
       setFacilities([]);
       setRoadNetwork(null);
 
@@ -508,11 +536,49 @@ export default function MapPage() {
     
     lastFetchedLocRef.current = { lat: userLocation.lat, lng: userLocation.lng };
     setSelectedLocation(userLocation);
-    setRouteStart(null);
-    setRouteEnd(null);
-    setCalculatedRoute(null);
+    
+    // Only reset route if not currently navigating
+    if (!navigatingToId) {
+      setRouteStart(null);
+      setRouteEnd(null);
+      setCalculatedRoute(null);
+    }
     fetchNearbyEvacuationLocations(userLocation.lat, userLocation.lng);
-  }, [fetchNearbyEvacuationLocations, userLocation?.lat, userLocation?.lng]);
+  }, [fetchNearbyEvacuationLocations, userLocation?.lat, userLocation?.lng, navigatingToId]);
+
+  // Geo-fencing Auto-Arrive Check
+  useEffect(() => {
+    if (!userLocation || !routeEnd || !navigatingToId) return;
+
+    const distanceToDestination = calculateDistance(
+      userLocation.lat,
+      userLocation.lng,
+      routeEnd.lat,
+      routeEnd.lng
+    );
+
+    // If within 50 meters (0.05 km)
+    if (distanceToDestination <= 0.05) {
+      toast.success("Anda telah tiba di lokasi evakuasi. Silakan melapor ke petugas.", {
+        duration: 10000,
+        icon: <MapPin className="w-5 h-5 text-green-600" />
+      });
+      
+      // Auto-arrive stop navigation
+      evacuationLocationApi.stopNavigation(navigatingToId, getDeviceId()).catch(e => {
+        console.error("Auto-arrive stop navigation failed", e);
+      });
+
+      // Reset routing state
+      setNavigatingToId(null);
+      setRouteStart(null);
+      setRouteEnd(null);
+      setCalculatedRoute(null);
+      
+      // Fetch nearby locations again since we arrived
+      fetchNearbyEvacuationLocations(userLocation.lat, userLocation.lng);
+    }
+  }, [userLocation, routeEnd, navigatingToId, fetchNearbyEvacuationLocations]);
 
   useEffect(() => {
     if (userLocationError) {
@@ -734,6 +800,10 @@ export default function MapPage() {
                   size="icon"
                   className="h-6 w-6"
                   onClick={() => {
+                    if (navigatingToId) {
+                      evacuationLocationApi.stopNavigation(navigatingToId, getDeviceId()).catch((e: any) => console.error(e));
+                      setNavigatingToId(null);
+                    }
                     setCalculatedRoute(null);
                     setRouteStart(null);
                     setRouteEnd(null);
@@ -763,6 +833,21 @@ export default function MapPage() {
                   {calculatedRoute.properties.segments} jalan
                 </span>
               </div>
+              {navigatingToId && (
+                <Button 
+                  variant="destructive" 
+                  className="w-full mt-2 font-semibold"
+                  onClick={() => {
+                    evacuationLocationApi.stopNavigation(navigatingToId, getDeviceId()).catch((e: any) => console.error(e));
+                    setNavigatingToId(null);
+                    setCalculatedRoute(null);
+                    setRouteStart(null);
+                    setRouteEnd(null);
+                  }}
+                >
+                  Batalkan Navigasi
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
@@ -1069,6 +1154,7 @@ export default function MapPage() {
                                   coords.coordinates[1],
                                   coords.coordinates[0],
                                   evacuationLocation.name,
+                                  evacuationLocation.id
                                 );
                               }}
                               className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm"

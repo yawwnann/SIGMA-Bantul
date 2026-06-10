@@ -191,7 +191,10 @@ export default function DashboardPage() {
 
       setEvacuationLocations(evacuationLocationsData as EvacuationLocation[]);
       setHazardZones(hazardData as HazardZone[]);
-      setEarthquakes(earthquakesResponse.data as Earthquake[]);
+      const filteredEarthquakes = (earthquakesResponse.data as Earthquake[]).filter(
+        (eq) => eq.lat != null && eq.lon != null && isWithinBantul(eq.lat, eq.lon)
+      );
+      setEarthquakes(filteredEarthquakes);
       setRoutes(routesData as EvacuationRoute[]);
       setFacilities(facilitiesData as PublicFacility[]);
       setRoadNetwork(roadNetworkData);

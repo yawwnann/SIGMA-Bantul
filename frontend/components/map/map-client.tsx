@@ -490,11 +490,13 @@ export default function MapClient({
     // Update the marker icons for locations that have changed
     evacuationMarkerRefs.current.forEach((marker, id) => {
       const location = evacuationLocations.find(loc => loc.id === id);
+      const isSelected = selectedEvacuationLocation?.id === id;
       if (location) {
         marker.setIcon(createEvacuationIcon(
           location.category,
           location.capacity,
-          location.currentOccupancy
+          location.currentOccupancy,
+          isSelected
         ));
       }
     });
@@ -1213,7 +1215,7 @@ export default function MapClient({
             className="bg-white/95 dark:bg-zinc-950/90 backdrop-blur-md rounded-lg shadow-lg border border-slate-200 dark:border-zinc-800/60 p-2.5 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2"
             title="Legenda Peta"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
             <span className="text-xs font-bold uppercase tracking-wider">
               {isLegendOpen ? "Tutup" : "Legenda"}
             </span>
@@ -1324,68 +1326,42 @@ export default function MapClient({
               {/* Evacuation Locations */}
               <div>
                 <h4 className="text-[10px] uppercase font-bold text-slate-600 dark:text-zinc-400 mb-2 tracking-wider flex items-center gap-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s7-5 7-11a7 7 0 1 0-14 0c0 6 7 11 7 11Z"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s7-5 7-11a7 7 0 1 0-14 0c0 6 7 11 7 11Z" /></svg>
                   Lokasi Evakuasi
                 </h4>
                 <div className="space-y-1.5 text-xs text-slate-600 dark:text-zinc-300">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex items-center justify-center w-[18px] h-[18px] bg-[#2563eb] border-2 border-white rounded-[50%_50%_50%_0] shadow-sm flex-shrink-0" style={{transform:"rotate(-45deg)"}}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{width:"10px",height:"10px",transform:"rotate(45deg)"}}>
-                        <path d="M22 10 12 4 2 10l10 6 10-6ZM6 12v5c2 2 10 2 12 0v-5"/>
+                    <div className="flex items-center justify-center w-[22px] h-[22px] bg-[#16a34a] border-2 border-white rounded-[50%_50%_50%_0] shadow-sm flex-shrink-0" style={{ transform: "rotate(-45deg)" }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: "10px", height: "10px", transform: "rotate(45deg)" }}>
+                        <path d="M22 10 12 4 2 10l10 6 10-6ZM6 12v5c2 2 10 2 12 0v-5" />
                       </svg>
                     </div>
                     <span>Sekolah</span>
                   </div>
                   <div className="flex items-center gap-2.5">
-                    <div className="flex items-center justify-center w-[18px] h-[18px] bg-[#16a34a] border-2 border-white rounded-[50%_50%_50%_0] shadow-sm flex-shrink-0" style={{transform:"rotate(-45deg)"}}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{width:"10px",height:"10px",transform:"rotate(45deg)"}}>
-                        <path d="M4 6h16v12H4z M12 6v12 M4 12h16"/>
+                    <div className="flex items-center justify-center w-[22px] h-[22px] bg-[#16a34a] border-2 border-white rounded-[50%_50%_50%_0] shadow-sm flex-shrink-0" style={{ transform: "rotate(-45deg)" }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: "10px", height: "10px", transform: "rotate(45deg)" }}>
+                        <path d="M4 6h16v12H4z M12 6v12 M4 12h16" />
                       </svg>
                     </div>
                     <span>Lapangan</span>
                   </div>
                   <div className="flex items-center gap-2.5">
-                    <div className="flex items-center justify-center w-[18px] h-[18px] bg-[#dc2626] border-2 border-white rounded-[50%_50%_50%_0] shadow-sm flex-shrink-0" style={{transform:"rotate(-45deg)"}}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{width:"10px",height:"10px",transform:"rotate(45deg)"}}>
-                        <path d="M3 21h18 M5 21V9l7-4 7 4v12 M9 21v-6h6v6"/>
+                    <div className="flex items-center justify-center w-[22px] h-[22px] bg-[#16a34a] border-2 border-white rounded-[50%_50%_50%_0] shadow-sm flex-shrink-0" style={{ transform: "rotate(-45deg)" }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: "10px", height: "10px", transform: "rotate(45deg)" }}>
+                        <path d="M3 21h18 M5 21V9l7-4 7 4v12 M9 21v-6h6v6" />
                       </svg>
                     </div>
                     <span>Kantor Pemerintah</span>
                   </div>
                   <div className="flex items-center gap-2.5 text-[10px] text-slate-400 dark:text-zinc-500 mt-1">
                     <div className="flex items-center gap-0.5">
-                      <div className="w-3 h-2 bg-[#dc2626] rounded-sm"></div>
-                      <div className="w-3 h-2 bg-[#ea580c] rounded-sm"></div>
-                      <div className="w-3 h-2 bg-[#ca8a04] rounded-sm"></div>
-                      <div className="w-3 h-2 bg-[#16a34a] rounded-sm"></div>
+                      <div className="w-3 h-2 bg-[#dc2626] rounded-full"></div>
+                      <div className="w-3 h-2 bg-[#ea580c] rounded-full"></div>
+                      <div className="w-3 h-2 bg-[#ca8a04] rounded-full"></div>
+                      <div className="w-3 h-2 bg-[#16a34a] rounded-full"></div>
                     </div>
                     <span>Warna kapasitas (Kritis–Aman)</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Hazard Zones */}
-              <div>
-                <h4 className="text-[10px] uppercase font-bold text-slate-600 dark:text-zinc-400 mb-2 tracking-wider flex items-center gap-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                  Zona Bahaya
-                </h4>
-                <div className="space-y-1.5 text-xs text-slate-600 dark:text-zinc-300">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-4 h-3 rounded-sm bg-[#dc2626]/70 border border-[#dc2626] flex-shrink-0"></div>
-                    <span>CRITICAL</span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-4 h-3 rounded-sm bg-[#f97316]/70 border border-[#f97316] flex-shrink-0"></div>
-                    <span>HIGH</span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-4 h-3 rounded-sm bg-[#eab308]/70 border border-[#eab308] flex-shrink-0"></div>
-                    <span>MEDIUM</span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-4 h-3 rounded-sm bg-[#22c55e]/70 border border-[#22c55e] flex-shrink-0"></div>
-                    <span>LOW</span>
                   </div>
                 </div>
               </div>
@@ -1393,7 +1369,7 @@ export default function MapClient({
               {/* Earthquake */}
               <div>
                 <h4 className="text-[10px] uppercase font-bold text-slate-600 dark:text-zinc-400 mb-2 tracking-wider flex items-center gap-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z" /><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z" /><path d="M16 17h4" /><path d="M4 13h4" /></svg>
                   Gempa Bumi
                 </h4>
                 <div className="space-y-1.5 text-xs text-slate-600 dark:text-zinc-300">
@@ -1416,7 +1392,7 @@ export default function MapClient({
               {/* Route */}
               <div>
                 <h4 className="text-[10px] uppercase font-bold text-slate-600 dark:text-zinc-400 mb-2 tracking-wider flex items-center gap-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6l-3-3-3 3"/><path d="M9 9l3 3 3-3"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="5.5" cy="17.5" r="3.5" /><circle cx="18.5" cy="17.5" r="3.5" /><path d="M15 6l-3-3-3 3" /><path d="M9 9l3 3 3-3" /></svg>
                   Rute Evakuasi
                 </h4>
                 <div className="space-y-1.5 text-xs text-slate-600 dark:text-zinc-300">
@@ -1438,7 +1414,7 @@ export default function MapClient({
               {/* Other elements */}
               <div>
                 <h4 className="text-[10px] uppercase font-bold text-slate-600 dark:text-zinc-400 mb-2 tracking-wider flex items-center gap-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" /></svg>
                   Lainnya
                 </h4>
                 <div className="space-y-1.5 text-xs text-slate-600 dark:text-zinc-300">
@@ -1501,6 +1477,15 @@ export default function MapClient({
         .evacuation-marker-icon {
           background: transparent;
           border: 0;
+          transition: all 0.3s ease;
+        }
+        .evacuation-marker-icon.selected {
+          z-index: 1000 !important;
+        }
+        .evacuation-marker-icon.selected .evacuation-marker-pin {
+          transform: scale(1.3) rotate(-45deg);
+          box-shadow: 0 12px 24px rgba(15, 23, 42, 0.4);
+          border-width: 3px;
         }
         .evacuation-marker-pin {
           width: 32px;
@@ -1630,6 +1615,9 @@ export default function MapClient({
                 <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 mb-1 mt-2">
+              Lokasi Potensial Evakuasi Sementara
+            </div>
             <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-zinc-50 mb-0.5 sm:mb-1 leading-tight">
               {selectedEvacuationLocation.name}
             </h3>
@@ -1651,8 +1639,8 @@ export default function MapClient({
             </div>
           </div>
 
-          {/* Capacity Grid */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 p-3 sm:p-4 border-b border-slate-200/80 dark:border-zinc-800/60">
+          {/* Capacity Section */}
+          <div className="p-3 sm:p-4 border-b border-slate-200/80 dark:border-zinc-800/60">
             {(() => {
               const capacity = selectedEvacuationLocation.capacity || 0;
               const occupied = selectedEvacuationLocation.currentOccupancy || 0;
@@ -1661,86 +1649,54 @@ export default function MapClient({
                 capacity > 0 ? (occupied / capacity) * 100 : 0;
 
               // Color coding based on availability
-              let availabilityColor = "text-emerald-400"; // > 50% available
-              let availabilityBg = "bg-emerald-500/10";
-              let availabilityBorder = "border-emerald-500/20";
+              let availabilityColor = "text-emerald-500 dark:text-emerald-400";
+              let progressColor = "bg-emerald-500";
 
               if (occupancyPercentage >= 90) {
-                // < 10% available - Critical (Red)
-                availabilityColor = "text-red-400";
-                availabilityBg = "bg-red-500/10";
-                availabilityBorder = "border-red-500/20";
+                availabilityColor = "text-red-500 dark:text-red-400";
+                progressColor = "bg-red-500";
               } else if (occupancyPercentage >= 70) {
-                // 10-30% available - Warning (Orange)
-                availabilityColor = "text-orange-400";
-                availabilityBg = "bg-orange-500/10";
-                availabilityBorder = "border-orange-500/20";
+                availabilityColor = "text-orange-500 dark:text-orange-400";
+                progressColor = "bg-orange-500";
               } else if (occupancyPercentage >= 50) {
-                // 30-50% available - Caution (Yellow)
-                availabilityColor = "text-yellow-400";
-                availabilityBg = "bg-yellow-500/10";
-                availabilityBorder = "border-yellow-500/20";
+                availabilityColor = "text-yellow-500 dark:text-yellow-400";
+                progressColor = "bg-yellow-500";
               }
 
               return (
-                <>
-                  <div className="bg-slate-50 dark:bg-zinc-900/80 rounded-lg p-3 border border-slate-200/80 dark:border-zinc-800/40">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className="text-slate-400 dark:text-zinc-500"
-                      >
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                        <circle cx="9" cy="7" r="4" />
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                      </svg>
-                      <span className="text-[9px] text-slate-500 dark:text-zinc-500 font-bold uppercase tracking-wider">
-                        KAPASITAS
-                      </span>
+                <div className="bg-slate-50 dark:bg-zinc-900/80 rounded-xl p-3.5 border border-slate-200/80 dark:border-zinc-800/40">
+                  <div className="flex justify-between items-end mb-3">
+                    <div>
+                      <div className="text-[10px] text-slate-500 dark:text-zinc-500 font-bold uppercase tracking-wider mb-0.5">
+                        Daya Tampung
+                      </div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-extrabold text-slate-900 dark:text-zinc-50">
+                          {occupied.toLocaleString()}
+                        </span>
+                        <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">
+                          / {capacity.toLocaleString()} orang
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-2xl font-extrabold text-slate-900 dark:text-zinc-50">
-                      {capacity.toLocaleString()}
-                    </div>
-                  </div>
-                  <div
-                    className={`${availabilityBg} rounded-lg p-3 border ${availabilityBorder}`}
-                  >
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className={availabilityColor}
-                      >
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                        <circle cx="9" cy="7" r="4" />
-                      </svg>
-                      <span
-                        className={`text-[9px] font-bold uppercase tracking-wider ${availabilityColor}`}
-                      >
-                        TERSEDIA
-                      </span>
-                    </div>
-                    <div
-                      className={`text-2xl font-extrabold ${availabilityColor}`}
-                    >
-                      {available.toLocaleString()}
-                    </div>
-                    <div className="text-[10px] text-slate-500 dark:text-zinc-500 mt-1 font-medium">
-                      {occupied.toLocaleString()} / {capacity.toLocaleString()}{" "}
-                      terisi
+                    <div className={`text-right ${availabilityColor}`}>
+                      <div className="text-[10px] font-bold uppercase tracking-wider mb-0.5">
+                        Tersedia
+                      </div>
+                      <div className="text-lg font-bold leading-tight">
+                        {available.toLocaleString()}
+                      </div>
                     </div>
                   </div>
-                </>
+                  
+                  {/* Progress Bar */}
+                  <div className="h-2 w-full bg-slate-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${progressColor}`}
+                      style={{ width: `${Math.min(occupancyPercentage, 100)}%` }}
+                    />
+                  </div>
+                </div>
               );
             })()}
           </div>
@@ -1765,77 +1721,7 @@ export default function MapClient({
             </div>
           </div>
 
-          {/* Button */}
-          <div className="p-4">
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log("=== Button Rute Evakuasi Clicked ===");
-                console.log(
-                  "onCalculateRouteRef.current:",
-                  onCalculateRouteRef.current,
-                );
-                console.log("selectedEvacuationLocation:", selectedEvacuationLocation);
 
-                if (!onCalculateRouteRef.current) {
-                  console.error("onCalculateRouteRef.current is undefined!");
-                  return;
-                }
-
-                if (!selectedEvacuationLocation) {
-                  console.error("selectedEvacuationLocation is null!");
-                  return;
-                }
-
-                // EvacuationLocation uses 'geometry' not 'location'
-                const geom = selectedEvacuationLocation.geometry as any;
-                if (!geom || !geom.coordinates) {
-                  console.error(
-                    "selectedEvacuationLocation.geometry.coordinates is undefined!",
-                  );
-                  console.log(
-                    "Full evacuationLocation object:",
-                    JSON.stringify(selectedEvacuationLocation, null, 2),
-                  );
-                  return;
-                }
-
-                const coords = geom.coordinates;
-                console.log("Coordinates:", coords);
-                console.log(
-                  "Calling with lat:",
-                  coords[1],
-                  "lng:",
-                  coords[0],
-                  "name:",
-                  selectedEvacuationLocation.name,
-                );
-
-                onCalculateRouteRef.current(
-                  coords[1],
-                  coords[0],
-                  selectedEvacuationLocation.name,
-                );
-                setSelectedEvacuationLocation(null);
-              }}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-900/30 cursor-pointer"
-            >
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 11l19-9-9 19-2-8-8-2z" />
-              </svg>
-              Rute Evakuasi
-            </button>
-          </div>
         </div>
       )}
     </div>

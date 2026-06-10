@@ -26,6 +26,7 @@ type NearbyEvacuationMapProps = {
     evacuationLocationLat: number,
     evacuationLocationLng: number,
     evacuationLocationName: string,
+    evacuationLocationId: number,
   ) => void;
   roadNetwork?: Record<string, unknown> | null;
   calculatedRoute?: Record<string, any> | null;
@@ -189,7 +190,7 @@ export default function NearbyEvacuationMap({
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="rounded-lg bg-slate-50 p-3 dark:bg-zinc-900">
               <div className="text-xs font-semibold text-slate-500">
-                Kapasitas
+                Kapasitas Max
               </div>
               <div className="mt-1 text-xl font-extrabold text-slate-900 dark:text-zinc-50">
                 {Number(selectedEvacuationLocation.capacity || 0).toLocaleString("id-ID")}
@@ -197,10 +198,10 @@ export default function NearbyEvacuationMap({
             </div>
             <div className="rounded-lg bg-emerald-50 p-3 dark:bg-emerald-950/20">
               <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                Terisi
+                Sisa Kapasitas
               </div>
               <div className="mt-1 text-xl font-extrabold text-emerald-700 dark:text-emerald-300">
-                {Number(selectedEvacuationLocation.currentOccupancy || 0).toLocaleString(
+                {Number((selectedEvacuationLocation as any).availableCapacity ?? Math.max(0, (selectedEvacuationLocation.capacity || 0) - (selectedEvacuationLocation.currentOccupancy || 0))).toLocaleString(
                   "id-ID",
                 )}
               </div>
@@ -213,12 +214,14 @@ export default function NearbyEvacuationMap({
                 selectedEvacuationLocationCoords.lat,
                 selectedEvacuationLocationCoords.lng,
                 selectedEvacuationLocation.name,
+                selectedEvacuationLocation.id
               );
               setSelectedEvacuationLocation(null);
             }}
-            className="mt-4 w-full bg-blue-600 text-white hover:bg-blue-700"
+            disabled={((selectedEvacuationLocation as any).availableCapacity ?? ((selectedEvacuationLocation.capacity || 0) - (selectedEvacuationLocation.currentOccupancy || 0))) <= 0}
+            className="mt-4 w-full bg-blue-600 text-white hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed"
           >
-            Lihat Rute Evakuasi
+            {((selectedEvacuationLocation as any).availableCapacity ?? ((selectedEvacuationLocation.capacity || 0) - (selectedEvacuationLocation.currentOccupancy || 0))) <= 0 ? "Kapasitas Penuh" : "Lihat Rute Evakuasi"}
           </Button>
         </div>
       )}

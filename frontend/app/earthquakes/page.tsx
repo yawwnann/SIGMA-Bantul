@@ -80,7 +80,7 @@ const getLocalISODate = (d: Date) => {
 const getInitialDates = () => {
   const end = new Date();
   const start = new Date();
-  start.setDate(start.getDate() - 30);
+  start.setDate(end.getDate() - 30);
   return {
     start: getLocalISODate(start),
     end: getLocalISODate(end),
@@ -94,7 +94,7 @@ export default function EarthquakesPage() {
   const [error, setError] = useState<string | null>(null);
   const [startDate, setStartDate] = useState(defaultDates.start);
   const [endDate, setEndDate] = useState(defaultDates.end);
-  const [regionFilter, setRegionFilter] = useState("Bantul");
+  const [regionFilter, setRegionFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
@@ -143,26 +143,27 @@ export default function EarthquakesPage() {
     avgMagnitude:
       earthquakes.length > 0
         ? (
-            earthquakes.reduce((sum, eq) => sum + eq.magnitude, 0) /
-            earthquakes.length
-          ).toFixed(1)
+          earthquakes.reduce((sum, eq) => sum + eq.magnitude, 0) /
+          earthquakes.length
+        ).toFixed(1)
         : 0,
     avgDepth:
       earthquakes.length > 0
         ? (
-            earthquakes.reduce((sum, eq) => sum + eq.depth, 0) /
-            earthquakes.length
-          ).toFixed(0)
+          earthquakes.reduce((sum, eq) => sum + eq.depth, 0) /
+          earthquakes.length
+        ).toFixed(0)
         : 0,
   };
 
-  const chartData = earthquakes
-    .slice(0, 30)
+  const chartData = [...earthquakes]
     .reverse()
     .map((eq) => ({
-      time: new Date(eq.time).toLocaleDateString("id-ID", {
+      time: new Date(eq.time).toLocaleString("id-ID", {
         day: "numeric",
         month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
       }),
       magnitude: eq.magnitude,
     }));
@@ -175,14 +176,10 @@ export default function EarthquakesPage() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
             <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-zinc-50 flex items-center flex-wrap gap-3">
               Data Gempa Bumi
-              <Badge variant="secondary" className="text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200">
-                30 Hari Terakhir
-              </Badge>
             </h1>
           </div>
           <p className="text-slate-600 dark:text-zinc-400">
-            Histori dan data gempa bumi dari BMKG untuk wilayah Bantul dan
-            sekitarnya dalam 30 hari terakhir.
+            Histori dan data gempa bumi 30 hari terakhir dari BMKG untuk seluruh wilayah
           </p>
           <div className="mt-3 text-xs italic text-slate-500 dark:text-slate-400">
             *Sumber data gempa pada sistem ini berasal dari BMKG (Badan
@@ -277,7 +274,7 @@ export default function EarthquakesPage() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-slate-500 dark:text-zinc-400" />
-                  Tren Magnitudo (30 Gempa Terakhir)
+                  Tren Magnitudo (30 Hari Terakhir)
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 min-h-[220px]">
@@ -296,14 +293,19 @@ export default function EarthquakesPage() {
                       dataKey="time"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: "#888888", fontSize: 12 }}
-                      minTickGap={20}
+                      tick={{ fill: "#888888", fontSize: 11 }}
+                      minTickGap={15}
+                      tickFormatter={(value) => value.split(',')[0]}
+                      angle={-45}
+                      textAnchor="end"
+                      height={40}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: "#888888", fontSize: 12 }}
                       domain={["dataMin - 0.5", "dataMax + 0.5"]}
+                      tickFormatter={(value) => value.toFixed(1)}
                     />
                     <Tooltip content={<CustomTooltip />} />
                     <Line
@@ -326,75 +328,7 @@ export default function EarthquakesPage() {
           </div>
         )}
 
-        {/* Streamlined Filter Toolbar */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3 mb-6 flex flex-col sm:flex-row items-center gap-3 shadow-sm">
-          <div className="flex items-center gap-2 px-3 border-r border-slate-200 dark:border-zinc-800 sm:w-auto w-full text-sm font-medium text-slate-700 dark:text-zinc-300">
-            <Filter className="h-4 w-4 text-blue-600" />
-            <span className="hidden sm:inline">Filter</span>
-          </div>
 
-          <div className="flex-1 flex flex-col sm:flex-row items-center gap-3 w-full">
-            <div className="relative flex-1 w-full flex items-center">
-              <Calendar className="absolute left-3 h-4 w-4 text-slate-400" />
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="pl-9 h-10 w-full border-slate-200 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <span className="text-slate-400 hidden sm:block">-</span>
-            <div className="relative flex-1 w-full flex items-center">
-              <Calendar className="absolute left-3 h-4 w-4 text-slate-400" />
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="pl-9 h-10 w-full border border-slate-200 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="relative flex-1 w-full flex items-center">
-              <select
-                value={regionFilter}
-                onChange={(e) => setRegionFilter(e.target.value)}
-                className="h-10 w-full border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-slate-700 dark:text-zinc-100 rounded-lg focus:ring-2 focus:ring-blue-500 px-3 cursor-pointer appearance-none pr-8"
-              >
-                <option value="Bantul">Bantul dan sekitarnya</option>
-                <option value="">Beserta Luar Bantul</option>
-              </select>
-              <div className="absolute right-3 pointer-events-none">
-                <MapPin className="h-4 w-4 text-slate-400" />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Button
-                onClick={() => fetchEarthquakes()}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium h-10 flex-1 sm:flex-none rounded-lg transition-colors"
-                disabled={loading}
-              >
-                <Filter className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Terapkan</span>
-              </Button>
-              {(startDate !== defaultDates.start || endDate !== defaultDates.end || regionFilter !== "Bantul") && (
-                <Button
-                  onClick={() => {
-                    setStartDate(defaultDates.start);
-                    setEndDate(defaultDates.end);
-                    setRegionFilter("Bantul");
-                    fetchEarthquakes({ start: defaultDates.start, end: defaultDates.end, reg: "Bantul" });
-                  }}
-                  variant="outline"
-                  className="border-slate-200 dark:border-zinc-800 dark:hover:bg-zinc-800 dark:text-zinc-300 hover:bg-slate-50 h-10 w-10 p-0 rounded-lg flex items-center justify-center shrink-0"
-                  title="Reset Filter"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
 
         {/* Data List */}
         {loading ? (
@@ -479,9 +413,7 @@ export default function EarthquakesPage() {
                               Live
                             </Badge>
                           )}
-                          <span className="text-[10px] text-slate-400 dark:text-zinc-500 ml-auto">
-                            #{earthquakes.length - index}
-                          </span>
+
                         </div>
                         <h3
                           className="text-base font-bold text-slate-900 dark:text-zinc-100 leading-tight mb-1 line-clamp-1"
@@ -539,18 +471,7 @@ export default function EarthquakesPage() {
                         </div>
                       </div>
 
-                      {eq.dirasakan && (
-                        <div className="mt-1 flex items-start gap-1.5 p-2 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded text-xs text-amber-800 dark:text-amber-300">
-                          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 text-amber-500 shrink-0" />
-                          <span
-                            className="line-clamp-2"
-                            title={`Dirasakan: ${eq.dirasakan}`}
-                          >
-                            <span className="font-semibold">Dirasakan:</span>{" "}
-                            {eq.dirasakan}
-                          </span>
-                        </div>
-                      )}
+
                     </div>
                   </Card>
                 ))}

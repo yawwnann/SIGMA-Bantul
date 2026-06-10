@@ -684,18 +684,12 @@ export default function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      // Calculate 24 hours ago for earthquake filter
-      const twentyFourHoursAgo = new Date(
-        Date.now() - 24 * 60 * 60 * 1000,
-      ).toISOString();
-
       const [hazardData, earthquakesResponse, facilitiesData, roadNetworkData] =
         await Promise.all([
           hazardZoneApi.getAll().catch(() => []),
           earthquakeApi
             .getAll({
               limit: 1000,
-              startDate: twentyFourHoursAgo,
             })
             .catch(() => ({ data: [], total: 0, page: 1, limit: 1000 })),
           publicFacilityApi.getAll().catch(() => []),
@@ -719,7 +713,10 @@ export default function Dashboard() {
       }
       // Don't fetch all evacuationLocations here - will fetch nearby evacuationLocations based on user location
       setHazardZones(hazardData as HazardZone[]);
-      setEarthquakes(earthquakesResponse.data);
+      const filteredEarthquakes = earthquakesResponse.data.filter(
+        (eq: any) => eq.lat != null && eq.lon != null && isWithinBantul(eq.lat, eq.lon)
+      );
+      setEarthquakes(filteredEarthquakes);
       setFacilities(facilitiesData as PublicFacility[]);
       setRoadNetwork(roadNetworkData);
     } catch (err) {
@@ -822,8 +819,8 @@ export default function Dashboard() {
   useEffect(() => {
     fetchData();
 
-    // Periodic refresh every 5 minutes agar data gempa tetap up-to-date
-    const refreshInterval = setInterval(fetchData, 5 * 60 * 1000);
+    // Periodic refresh dihapus karena sudah digantikan sepenuhnya oleh WebSocket (onNewEarthquake & onDashboardStats)
+    // agar layar tidak memunculkan efek loading setiap 5 menit.
 
     socketService.connect();
 
@@ -951,7 +948,6 @@ export default function Dashboard() {
     });
 
     return () => {
-      clearInterval(refreshInterval);
       unsubscribeEarthquake();
       unsubscribeDashboardStats();
       unsubscribeCapacity();

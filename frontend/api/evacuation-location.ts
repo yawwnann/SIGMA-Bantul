@@ -53,4 +53,18 @@ export const evacuationLocationApi = {
     const response = await apiClient.delete(`/evacuation-locations/${evacuationLocationId}/assign`);
     return response.data;
   },
+
+  startNavigation: async (evacuationLocationId: number, deviceId: string) => {
+    const response = await apiClient.post(`/evacuation-locations/${evacuationLocationId}/navigate`, {
+      deviceId,
+    });
+    return response.data;
+  },
+
+  stopNavigation: async (evacuationLocationId: number, deviceId: string) => {
+    const response = await apiClient.delete(`/evacuation-locations/${evacuationLocationId}/navigate`, {
+      data: { deviceId },
+    });
+    return response.data;
+  },
 };
