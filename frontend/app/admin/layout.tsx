@@ -38,7 +38,7 @@ const menuItems = [
   { href: "/admin/evacuation-locations", label: "Lokasi Evakuasi", icon: Home },
   { href: "/admin/officers", label: "Petugas Evakuasi", icon: ShieldAlert },
   { href: "/admin/routes", label: "Manajemen Rute", icon: MapIcon },
-  { href: "/admin/simulation", label: "Simulasi Gempa", icon: Settings },
+  { href: "/admin/simulation", label: "Uji Skenario Darurat", icon: Settings },
 ];
 
 export default function AdminLayout({

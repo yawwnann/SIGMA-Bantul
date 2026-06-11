@@ -37,7 +37,7 @@ export default function SimulationPage() {
   const [formData, setFormData] = useState({
     magnitude: "6.5",
     depth: "10",
-    location: "Simulasi Pusat Gempa Bantul",
+    location: "Uji Skenario Pusat Gempa Bantul",
     region: "DIY Yogyakarta",
     lat: "-7.888", // Pusat Bantul approx
     lon: "110.330",
@@ -60,18 +60,18 @@ export default function SimulationPage() {
         region: formData.region,
         time: new Date().toISOString(),
         isLatest: true,
-        dirasakan: "IV MMI (Simulasi)",
+        dirasakan: "IV MMI (Data Uji)",
       };
 
       await earthquakeApi.create(payload);
 
-      toast.success("Simulasi Berhasil Dibuat", {
+      toast.success("Uji Skenario Berhasil Dibuat", {
         description:
           "Gempa tersimpan dan Web Push Notification semestinya telah dibroadcast ke seluruh klien.",
       });
     } catch (error) {
       console.error(error);
-      toast.error("Gagal memicu simulasi", {
+      toast.error("Gagal memicu uji skenario", {
         description: "Periksa kembali koordinat dan koneksi backend",
       });
     } finally {
@@ -92,7 +92,7 @@ export default function SimulationPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
-          Zona Simulasi (Seminar)
+          Zona Uji Skenario Darurat
         </h1>
         <p className="text-muted-foreground mt-2">
           Fitur ini dikhususkan untuk keperluan presentasi dan pengujian sistem

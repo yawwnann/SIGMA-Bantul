@@ -197,10 +197,35 @@ export default function Dashboard() {
   const [pendingEarthquake, setPendingEarthquake] = useState<Earthquake | null>(null);
 
   useEffect(() => {
-    setCurrentTime(new Date());
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
+    const updateTime = () => setCurrentTime(new Date());
+
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+
+    // Restore active navigation state from localStorage
+    try {
+      const activeNavData = localStorage.getItem("activeNavigation");
+      if (activeNavData) {
+        const parsed = JSON.parse(activeNavData);
+        // Check if not expired (45 minutes)
+        if (Date.now() - parsed.timestamp < 45 * 60 * 1000) {
+          setNavigatingToId(parsed.shelterId);
+          setDestinationShelterId(parsed.shelterId);
+          setEvacueeCount(parsed.evacueeCount || 1);
+          setDestinationName(parsed.name);
+          
+          // Re-trigger routing quietly after a slight delay to let the map init
+          setTimeout(() => {
+            calculateRouteToEvacuationLocation(parsed.lat, parsed.lng, parsed.name, parsed.shelterId);
+          }, 1000);
+        } else {
+          localStorage.removeItem("activeNavigation");
+        }
+      }
+    } catch (e) {
+      console.error("Failed to restore navigation state:", e);
+    }
+
     return () => clearInterval(timer);
   }, []);
 
@@ -1241,6 +1266,17 @@ export default function Dashboard() {
     try {
       await evacuationLocationApi.startNavigation(shelterId, getDeviceId(), evacueeCount);
       setNavigatingToId(shelterId);
+      
+      // Persist navigation session to survive page refreshes
+      localStorage.setItem("activeNavigation", JSON.stringify({
+        shelterId,
+        lat: routeEnd.lat,
+        lng: routeEnd.lng,
+        name: destinationName,
+        evacueeCount,
+        timestamp: Date.now()
+      }));
+
       toast.success("Navigasi dimulai! Kapasitas lokasi evakuasi telah di-booking untuk Anda.", {
         description: "Geofencing aktif — sistem akan mendeteksi otomatis saat Anda tiba.",
         duration: 6000,
@@ -1261,6 +1297,7 @@ export default function Dashboard() {
         console.error("Failed to stop navigation:", e);
       }
     }
+    localStorage.removeItem("activeNavigation");
     setNavigatingToId(null);
     setDestinationShelterId(null);
     setCalculatedRoute(null);
@@ -1293,6 +1330,9 @@ export default function Dashboard() {
       evacuationLocationApi.stopNavigation(navigatingToId, getDeviceId()).catch(e => {
         console.error("Auto-arrive stop navigation failed:", e);
       });
+
+      // Clear persisted state
+      localStorage.removeItem("activeNavigation");
 
       // Reset navigation state
       setNavigatingToId(null);
