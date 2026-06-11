@@ -54,9 +54,10 @@ export const evacuationLocationApi = {
     return response.data;
   },
 
-  startNavigation: async (evacuationLocationId: number, deviceId: string) => {
+  startNavigation: async (evacuationLocationId: number, deviceId: string, evacueeCount: number = 1) => {
     const response = await apiClient.post(`/evacuation-locations/${evacuationLocationId}/navigate`, {
       deviceId,
+      evacueeCount,
     });
     return response.data;
   },

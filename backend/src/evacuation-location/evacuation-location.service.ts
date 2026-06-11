@@ -123,9 +123,16 @@ export class EvacuationLocationService {
     return updated;
   }
 
+  // 15% of capacity is reserved for walk-ins (people arriving without the system)
+  private readonly SYSTEM_CAPACITY_RATIO = 0.85;
+
+  getSystemCapacity(totalCapacity: number): number {
+    return Math.floor(totalCapacity * this.SYSTEM_CAPACITY_RATIO);
+  }
+
   async getInboundCount(id: number): Promise<number> {
     const cacheKey = `evacuation-location:${id}:inbound`;
-    let inboundUsers = await this.redisService.getJson<{deviceId: string, timestamp: number}[]>(cacheKey) || [];
+    let inboundUsers = await this.redisService.getJson<{deviceId: string, timestamp: number, evacueeCount: number}[]>(cacheKey) || [];
     
     // Clean up old ones (45 mins timeout)
     const now = Date.now();
@@ -136,13 +143,14 @@ export class EvacuationLocationService {
       await this.redisService.setJson(cacheKey, validUsers);
     }
     
-    return validUsers.length;
+    // Sum all evacuee counts (not just number of devices)
+    return validUsers.reduce((sum, u) => sum + (u.evacueeCount || 1), 0);
   }
 
-  async startNavigation(id: number, deviceId: string) {
+  async startNavigation(id: number, deviceId: string, evacueeCount: number = 1) {
     const shelter = await this.findById(id);
     const cacheKey = `evacuation-location:${id}:inbound`;
-    let inboundUsers = await this.redisService.getJson<{deviceId: string, timestamp: number}[]>(cacheKey) || [];
+    let inboundUsers = await this.redisService.getJson<{deviceId: string, timestamp: number, evacueeCount: number}[]>(cacheKey) || [];
     
     const now = Date.now();
     const timeoutMs = 45 * 60 * 1000;
@@ -150,31 +158,42 @@ export class EvacuationLocationService {
 
     const existingIdx = inboundUsers.findIndex(u => u.deviceId === deviceId);
     if (existingIdx >= 0) {
+      // Update existing booking
       inboundUsers[existingIdx].timestamp = now;
+      inboundUsers[existingIdx].evacueeCount = evacueeCount;
     } else {
-      const inboundCount = inboundUsers.length;
-      if (shelter.currentOccupancy + inboundCount >= shelter.capacity) {
-        throw new BadRequestException('Kapasitas shelter penuh oleh pengungsi lain yang sedang menuju ke sana');
+      // Check against system capacity (85% of total)
+      const systemCapacity = this.getSystemCapacity(shelter.capacity);
+      const currentInbound = inboundUsers.reduce((sum, u) => sum + (u.evacueeCount || 1), 0);
+      const totalOccupied = shelter.currentOccupancy + currentInbound + evacueeCount;
+      
+      if (totalOccupied > systemCapacity) {
+        throw new BadRequestException(
+          `Kapasitas sistem untuk lokasi ini sudah penuh (${systemCapacity} dari ${shelter.capacity} total, 15% dicadangkan untuk kedatangan langsung). Silakan pilih lokasi evakuasi lain.`
+        );
       }
-      inboundUsers.push({ deviceId, timestamp: now });
+      inboundUsers.push({ deviceId, timestamp: now, evacueeCount });
     }
 
     await this.redisService.setJson(cacheKey, inboundUsers);
+
+    const totalInbound = inboundUsers.reduce((sum, u) => sum + (u.evacueeCount || 1), 0);
+    const systemCapacity = this.getSystemCapacity(shelter.capacity);
 
     this.websocketService.broadcastEvacuationCapacityUpdate({
       id: shelter.id,
       name: shelter.name,
       currentOccupancy: shelter.currentOccupancy,
-      availableCapacity: shelter.capacity - shelter.currentOccupancy - inboundUsers.length,
+      availableCapacity: systemCapacity - shelter.currentOccupancy - totalInbound,
       totalCapacity: shelter.capacity,
     });
 
-    return { success: true, inboundCount: inboundUsers.length };
+    return { success: true, inboundCount: totalInbound, systemCapacity };
   }
 
   async stopNavigation(id: number, deviceId: string) {
     const cacheKey = `evacuation-location:${id}:inbound`;
-    let inboundUsers = await this.redisService.getJson<{deviceId: string, timestamp: number}[]>(cacheKey) || [];
+    let inboundUsers = await this.redisService.getJson<{deviceId: string, timestamp: number, evacueeCount: number}[]>(cacheKey) || [];
     
     const initialLength = inboundUsers.length;
     inboundUsers = inboundUsers.filter(u => u.deviceId !== deviceId);
@@ -183,11 +202,14 @@ export class EvacuationLocationService {
       await this.redisService.setJson(cacheKey, inboundUsers);
       
       const shelter = await this.findById(id);
+      const totalInbound = inboundUsers.reduce((sum, u) => sum + (u.evacueeCount || 1), 0);
+      const systemCapacity = this.getSystemCapacity(shelter.capacity);
+
       this.websocketService.broadcastEvacuationCapacityUpdate({
         id: shelter.id,
         name: shelter.name,
         currentOccupancy: shelter.currentOccupancy,
-        availableCapacity: shelter.capacity - shelter.currentOccupancy - inboundUsers.length,
+        availableCapacity: systemCapacity - shelter.currentOccupancy - totalInbound,
         totalCapacity: shelter.capacity,
       });
     }
@@ -246,12 +268,14 @@ export class EvacuationLocationService {
 
     const results = await Promise.all(evacuationLocations.map(async (evacuationLocation) => {
       const inboundCount = await this.getInboundCount(evacuationLocation.id);
+      const systemCapacity = this.getSystemCapacity(evacuationLocation.capacity);
       return {
         ...evacuationLocation,
         distanceKm: Math.round((evacuationLocation.distance / 1000) * 100) / 100,
         inboundCount,
+        systemCapacity,
         availableCapacity:
-          evacuationLocation.capacity -
+          systemCapacity -
           (evacuationLocation.currentOccupancy || 0) - inboundCount,
       };
     }));

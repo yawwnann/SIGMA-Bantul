@@ -180,6 +180,7 @@ export default function Dashboard() {
   // Navigation booking state
   const [navigatingToId, setNavigatingToId] = useState<number | null>(null);
   const [destinationShelterId, setDestinationShelterId] = useState<number | null>(null);
+  const [evacueeCount, setEvacueeCount] = useState<number>(1);
   const navigatingWatchRef = useRef<number | null>(null);
 
   const getDeviceId = useCallback(() => {
@@ -253,9 +254,12 @@ export default function Dashboard() {
           return;
         }
 
-        let availableEvacuationLocations = currentEvacuationLocations.filter(
-          (s) => s.capacity - (s.currentOccupancy ?? 0) > 0,
-        );
+        let availableEvacuationLocations = currentEvacuationLocations.filter((s) => {
+          const availCap = s.availableCapacity !== undefined 
+            ? s.availableCapacity 
+            : s.capacity - (s.currentOccupancy ?? 0);
+          return availCap > 0;
+        });
         if (availableEvacuationLocations.length === 0) {
           availableEvacuationLocations = [...currentEvacuationLocations];
         }
@@ -426,9 +430,12 @@ export default function Dashboard() {
           }
 
           // Filter by capacity
-          let availableLocations = locations.filter(
-            (s) => s.capacity - (s.currentOccupancy ?? 0) > 0,
-          );
+          let availableLocations = locations.filter((s) => {
+            const availCap = s.availableCapacity !== undefined 
+              ? s.availableCapacity 
+              : s.capacity - (s.currentOccupancy ?? 0);
+            return availCap > 0;
+          });
           if (availableLocations.length === 0) {
             availableLocations = [...locations];
           }
@@ -619,10 +626,13 @@ export default function Dashboard() {
               console.error("Gagal memuat tempat evakuasi", err);
               return [];
             })
-            .then((loc) => {
-              const availableLocations = loc.filter(
-                (s) => s.capacity - (s.currentOccupancy ?? 0) > 0
-              );
+            .then((res) => {
+              let availableLocations = res.filter((s) => {
+                const availCap = s.availableCapacity !== undefined 
+                  ? s.availableCapacity 
+                  : s.capacity - (s.currentOccupancy ?? 0);
+                return availCap > 0;
+              });
               if (availableLocations.length === 0) return;
 
               let nearestLoc = availableLocations[0];
@@ -1229,7 +1239,7 @@ export default function Dashboard() {
     if (!shelterId || !routeEnd) return;
 
     try {
-      await evacuationLocationApi.startNavigation(shelterId, getDeviceId());
+      await evacuationLocationApi.startNavigation(shelterId, getDeviceId(), evacueeCount);
       setNavigatingToId(shelterId);
       toast.success("Navigasi dimulai! Kapasitas lokasi evakuasi telah di-booking untuk Anda.", {
         description: "Geofencing aktif — sistem akan mendeteksi otomatis saat Anda tiba.",
@@ -1500,10 +1510,12 @@ export default function Dashboard() {
                                         </div>
                                         <div>
                                           <p className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">
-                                            Kapasitas
+                                            Sisa Kuota Sistem
                                           </p>
                                           <p className="text-xs font-medium text-slate-700 dark:text-zinc-300">
-                                            {evacuationLocation.capacity} Orang
+                                            {evacuationLocation.availableCapacity !== undefined 
+                                              ? evacuationLocation.availableCapacity 
+                                              : evacuationLocation.capacity - (evacuationLocation.currentOccupancy ?? 0)} Orang
                                           </p>
                                         </div>
                                       </div>
@@ -1938,15 +1950,40 @@ export default function Dashboard() {
                       </Button>
                     </div>
                   ) : (
-                    <Button
-                      onClick={startNavigationBooking}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md"
-                      size="sm"
-                      disabled={!destinationShelterId}
-                    >
-                      <Navigation className="w-4 h-4 mr-2" />
-                      Menuju Kesana
-                    </Button>
+                    <div className="space-y-3">
+                      {/* Evacuee count input */}
+                      <div className="flex items-center justify-between px-2 py-1 bg-slate-50 dark:bg-zinc-900/50 rounded-lg border border-slate-100 dark:border-zinc-800">
+                        <span className="text-xs font-medium text-slate-600 dark:text-zinc-400">
+                          Jumlah Pengungsi:
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => setEvacueeCount(Math.max(1, evacueeCount - 1))}
+                            className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-300 dark:hover:bg-zinc-700 transition-colors"
+                            disabled={evacueeCount <= 1}
+                          >
+                            -
+                          </button>
+                          <span className="text-sm font-semibold w-4 text-center">{evacueeCount}</span>
+                          <button
+                            onClick={() => setEvacueeCount(evacueeCount + 1)}
+                            className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-300 dark:hover:bg-zinc-700 transition-colors"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <Button
+                        onClick={startNavigationBooking}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md"
+                        size="sm"
+                        disabled={!destinationShelterId}
+                      >
+                        <Navigation className="w-4 h-4 mr-2" />
+                        Menuju Kesana
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>

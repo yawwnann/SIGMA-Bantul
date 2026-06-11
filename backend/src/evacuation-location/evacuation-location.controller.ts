@@ -64,9 +64,10 @@ export class EvacuationLocationController {
   async startNavigation(
     @Param('id', ParseIntPipe) id: number,
     @Body('deviceId') deviceId: string,
+    @Body('evacueeCount') evacueeCount?: number,
   ) {
     if (!deviceId) throw new BadRequestException('deviceId is required');
-    return this.evacuationLocationService.startNavigation(id, deviceId);
+    return this.evacuationLocationService.startNavigation(id, deviceId, evacueeCount || 1);
   }
 
   @Delete(':id/navigate')

@@ -1,4 +1,4 @@
-﻿export enum UserRole {
+export enum UserRole {
   ADMIN = "ADMIN",
   USER = "USER",
   EVACUATION_LOCATION_OFFICER = "EVACUATION_LOCATION_OFFICER",
@@ -116,6 +116,8 @@ export interface EvacuationLocation {
   };
   createdAt: string;
   updatedAt: string;
+  availableCapacity?: number;
+  systemCapacity?: number;
 }
 
 export interface Road {
