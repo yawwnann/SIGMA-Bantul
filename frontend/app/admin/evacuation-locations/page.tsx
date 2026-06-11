@@ -70,6 +70,8 @@ export default function AdminEvacuationLocationsPage() {
   );
   const [selectedOfficerId, setSelectedOfficerId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [formData, setFormData] = useState({
     name: "",
     address: "",
@@ -97,6 +99,10 @@ export default function AdminEvacuationLocationsPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const handleSubmit = async () => {
     try {
@@ -197,13 +203,24 @@ export default function AdminEvacuationLocationsPage() {
 
   // Filter evacuation locations based on search query
   const filteredLocations = evacuationLocations.filter((location) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      location.name.toLowerCase().includes(query) ||
-      (location.address && location.address.toLowerCase().includes(query)) ||
-      (location.officer && location.officer.name.toLowerCase().includes(query))
-    );
+    if (!searchQuery) return true;
+    
+    const searchTerms = searchQuery.toLowerCase().split(/\s+/).filter(term => term.length > 0);
+    const searchableString = `
+      ${location.name} 
+      ${location.address || ""} 
+      ${location.officer?.name || ""}
+    `.toLowerCase();
+
+    // Ensure ALL search terms (AND operator) exist somewhere in the combined string
+    return searchTerms.every(term => searchableString.includes(term));
   });
+
+  const totalPages = Math.ceil(filteredLocations.length / itemsPerPage);
+  const paginatedLocations = filteredLocations.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className="py-6 w-full px-4 sm:px-6 md:px-8 space-y-6">
@@ -214,7 +231,7 @@ export default function AdminEvacuationLocationsPage() {
             Manajemen Lokasi Evakuasi
           </h2>
           <p className="text-zinc-400 mt-1 text-sm">
-            Menampilkan {filteredLocations.length} dari {evacuationLocations.length} lokasi evakuasi.
+            Menampilkan {filteredLocations.length > 0 ? ((currentPage - 1) * itemsPerPage) + 1 : 0}-{Math.min(currentPage * itemsPerPage, filteredLocations.length)} dari {filteredLocations.length} lokasi evakuasi{searchQuery ? ` (filter aktif)` : ""}.
           </p>
         </div>
         <Button
@@ -355,7 +372,7 @@ export default function AdminEvacuationLocationsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredLocations.map((evacuationLocation) => (
+                paginatedLocations.map((evacuationLocation) => (
                   <TableRow
                     key={evacuationLocation.id}
                     className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors"
@@ -434,6 +451,38 @@ export default function AdminEvacuationLocationsPage() {
             </TableBody>
           </Table>
         </div>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="border-t border-zinc-800 p-4 flex items-center justify-between bg-zinc-950/30">
+            <div className="text-sm text-zinc-400">
+              Menampilkan {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredLocations.length)} dari {filteredLocations.length} data
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              >
+                Sebelumnya
+              </Button>
+              <div className="text-sm text-zinc-400 px-2">
+                Halaman {currentPage} dari {totalPages}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              >
+                Selanjutnya
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Assign Officer Dialog */}

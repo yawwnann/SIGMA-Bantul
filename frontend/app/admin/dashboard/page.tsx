@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { dashboardApi, evacuationLocationApi, evacuationApi, apiClient } from "@/api";
+import { dashboardApi, evacuationLocationApi, evacuationApi } from "@/api";
 import {
   Card,
   CardContent,
@@ -10,22 +10,25 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { DashboardStats } from "@/types";
 import {
-  Shield,
   Map,
-  Activity,
   Compass,
   Home,
   Building,
-  Clock,
-  MapPin,
   ArrowRight,
   ShieldAlert,
   BarChart3,
+  Users,
+  UserCheck,
+  Route,
+  Activity,
+  Clock,
+  MapPin,
+  AlertTriangle,
+  Waves
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -43,18 +46,13 @@ export default function AdminDashboardPage() {
           evacuationLocationApi.getStatistics(),
           evacuationApi.getStatistics(),
         ]);
-        // dashboardData shape: { earthquake: { total, last30Days }, evacuationLocation, latestEarthquake, ... }
-        const data = dashboardData as unknown as {
-          earthquake?: { total?: number };
-          latestEarthquake?: DashboardStats["latestEarthquake"];
-          earthquakeCount?: number;
-        };
+
         setRawStats(dashboardData as unknown as Record<string, unknown>);
         setStats({
           evacuationLocationCount: evacuationLocationStats.total || 0,
-          earthquakeCount: data.earthquake?.total ?? data.earthquakeCount ?? 0,
+          earthquakeCount: (dashboardData as any).earthquake?.total ?? 0,
           routeCount: routeStats.totalRoutes || 0,
-          latestEarthquake: data.latestEarthquake,
+          latestEarthquake: (dashboardData as any).latestEarthquake,
         });
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
@@ -93,271 +91,255 @@ export default function AdminDashboardPage() {
     );
   }
 
+  // Extract variables for easy rendering
+  const evLoc = rawStats?.evacuationLocation as Record<string, number> | undefined;
+  const hz = rawStats?.hazardZone as Record<string, number> | undefined;
+  const evRoute = rawStats?.evacuation as Record<string, number> | undefined;
+  const rd = rawStats?.road as Record<string, number> | undefined;
+  const latestEq = rawStats?.latestEarthquake as Record<string, any> | undefined;
+  const eqStats = rawStats?.earthquake as Record<string, any> | undefined;
+
+
+  const totalCapacity = evLoc?.totalCapacity ?? 0;
+  const currentOccupancy = evLoc?.currentOccupancy ?? 0;
+  const occupancyPercent = totalCapacity > 0 ? Math.round((currentOccupancy / totalCapacity) * 100) : 0;
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "-";
+    try {
+      return new Intl.DateTimeFormat('id-ID', {
+        dateStyle: 'full',
+        timeStyle: 'long',
+      }).format(new Date(dateStr));
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
   return (
     <div className="py-6 w-full px-4 sm:px-6 md:px-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header Area */}
       <div className="flex flex-col gap-2">
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight dark:text-white text-slate-900 flex items-center gap-4">
-          <div className="p-3 bg-blue-500/10 rounded-2xl">
-            <BarChart3 className="w-10 h-10 text-blue-500" />
-          </div>
-          Dashboard
+
+          Dashboard Admin
         </h1>
         <p className="text-zinc-400 max-w-3xl text-xl mt-1">
-          Pantau pusat kendali operasi dan analitik krisis gempa bumi wilayah
-          Kabupaten Bantul.
+          Pantau pusat kendali operasi dan analitik krisis gempa bumi wilayah Kabupaten Bantul secara real-time.
         </p>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {/* EvacuationLocation Card */}
+      {/* KPI Cards (4 columns) */}
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Lokasi Evakuasi */}
         <Card className="border border-zinc-800 bg-zinc-900/40 relative overflow-hidden group hover:bg-zinc-900/80 transition-all duration-300 hover:border-blue-500/30">
           <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-transform duration-500">
             <Home className="w-40 h-40" />
           </div>
-          <CardContent className="p-8">
-            <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-6 border border-blue-500/20 shadow-inner">
-              <Shield className="h-8 w-8 text-blue-500" />
+          <CardContent className="p-6">
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-4 border border-blue-500/20 shadow-inner">
+              <Home className="h-6 w-6 text-blue-500" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-base font-medium text-zinc-400">
-                Total Lokasi Evakuasi
-              </h3>
-              <div className="text-5xl font-bold tracking-tight dark:text-white text-slate-900">
-                {stats?.evacuationLocationCount || 0}
+              <h3 className="text-sm font-medium text-zinc-400">Total Lokasi Evakuasi</h3>
+              <div className="text-3xl font-bold tracking-tight dark:text-white text-slate-900">
+                {evLoc?.total || 0}
               </div>
             </div>
-            <div className="mt-6 flex items-center text-sm">
-              <Badge
-                variant="outline"
-                className="bg-blue-500/10 text-blue-400 border-blue-500/20 px-3 py-1 text-sm font-medium"
-              >
-                Aktif Beroperasi
-              </Badge>
-            </div>
+            <p className="mt-2 text-xs text-zinc-500">
+              <span className="text-emerald-400 font-medium">{evLoc?.goodCondition || 0}</span> lokasi kondisi baik
+            </p>
           </CardContent>
         </Card>
 
-        {/* Earthquake Card */}
+        {/* Kapasitas */}
         <Card className="border border-zinc-800 bg-zinc-900/40 relative overflow-hidden group hover:bg-zinc-900/80 transition-all duration-300 hover:border-emerald-500/30">
+          <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-transform duration-500">
+            <Users className="w-40 h-40" />
+          </div>
+          <CardContent className="p-6">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-4 border border-emerald-500/20 shadow-inner">
+              <Users className="h-6 w-6 text-emerald-500" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium text-zinc-400">Kapasitas Keseluruhan</h3>
+              <div className="text-3xl font-bold tracking-tight dark:text-white text-slate-900">
+                {totalCapacity.toLocaleString("id-ID")} <span className="text-base text-zinc-500 font-normal">jiwa</span>
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-zinc-500">
+              Sedang menampung <span className={occupancyPercent > 85 ? "text-red-400 font-medium" : "text-emerald-400 font-medium"}>{currentOccupancy.toLocaleString("id-ID")}</span> pengungsi
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Riwayat Gempa */}
+        <Card className="border border-zinc-800 bg-zinc-900/40 relative overflow-hidden group hover:bg-zinc-900/80 transition-all duration-300 hover:border-orange-500/30">
           <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-transform duration-500">
             <Activity className="w-40 h-40" />
           </div>
-          <CardContent className="p-8">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-6 border border-emerald-500/20 shadow-inner">
-              <Activity className="h-8 w-8 text-emerald-500" />
+          <CardContent className="p-6">
+            <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center mb-4 border border-orange-500/20 shadow-inner">
+              <Activity className="h-6 w-6 text-orange-500" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-base font-medium text-zinc-400">
-                Total Gempa
-              </h3>
-              <div className="text-5xl font-bold tracking-tight dark:text-white text-slate-900">
-                {stats?.earthquakeCount || 0}
+              <h3 className="text-sm font-medium text-zinc-400">Total Kejadian Gempa</h3>
+              <div className="text-3xl font-bold tracking-tight dark:text-white text-slate-900">
+                {eqStats?.total?.toLocaleString("id-ID") || 0}
               </div>
             </div>
-            <div className="mt-6 flex items-center text-sm">
-              <Badge
-                variant="outline"
-                className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 px-3 py-1 text-sm font-medium"
-              >
-                Data Terekam
-              </Badge>
-            </div>
+            <p className="mt-2 text-xs text-zinc-500">
+              <span className="text-orange-400 font-medium">{eqStats?.last30Days?.toLocaleString("id-ID") || 0}</span> kejadian dalam 30 hari terakhir
+            </p>
           </CardContent>
         </Card>
 
-
-        {/* Latest Earthquake Card */}
-        <Card className="border border-zinc-800 bg-gradient-to-br from-zinc-900/80 to-zinc-900 relative overflow-hidden group hover:border-red-500/30 transition-all duration-300">
+        {/* Total Petugas */}
+        <Card className="border border-zinc-800 bg-zinc-900/40 relative overflow-hidden group hover:bg-zinc-900/80 transition-all duration-300 hover:border-purple-500/30">
           <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-transform duration-500">
-            <ShieldAlert className="w-40 h-40 text-red-500" />
+            <UserCheck className="w-40 h-40" />
           </div>
-          <CardContent className="p-8 flex flex-col h-full justify-between">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20 shadow-inner shrink-0">
-                <Clock className="h-5 w-5 text-red-500 animate-pulse" />
-              </div>
-              <h3 className="text-base font-medium text-zinc-300">
-                Gempa Terbaru
-              </h3>
+          <CardContent className="p-6">
+            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center mb-4 border border-purple-500/20 shadow-inner">
+              <UserCheck className="h-6 w-6 text-purple-500" />
             </div>
-
-            {stats?.latestEarthquake ? (
-              <div className="space-y-4 relative z-10">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-5xl font-black text-red-500 tracking-tighter">
-                    M{stats.latestEarthquake.magnitude}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-start gap-2 text-base text-zinc-300">
-                    <MapPin className="h-5 w-5 shrink-0 text-red-400 mt-0.5" />
-                    <span className="leading-tight">
-                      {stats.latestEarthquake.location}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-zinc-500 ml-7">
-                    <span>
-                      {new Date(stats.latestEarthquake.time).toLocaleString(
-                        "id-ID",
-                        { dateStyle: "long", timeStyle: "short" },
-                      )}
-                    </span>
-                  </div>
-                </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium text-zinc-400">Petugas Aktif</h3>
+              <div className="text-3xl font-bold tracking-tight dark:text-white text-slate-900">
+                {evLoc?.totalOfficers || 0}
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full opacity-50 py-4">
-                <Activity className="h-10 w-10 mb-2" />
-                <p className="text-sm">Belum ada data terbaru</p>
-              </div>
-            )}
+            </div>
+            <p className="mt-2 text-xs text-zinc-500">
+              Tersebar di lokasi evakuasi
+            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Main Content Area */}
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Quick Actions Panel */}
-        <Card className="md:col-span-1 border border-zinc-800 bg-zinc-900/60 backdrop-blur-md shadow-xl rounded-2xl overflow-hidden">
-          <CardHeader className="border-b border-zinc-800/50 bg-zinc-900/50 pb-4">
-            <CardTitle className="text-lg font-bold dark:text-white text-slate-900 flex items-center gap-2">
-              <Building className="h-5 w-5 text-blue-500" />
-              Aksi Cepat
-            </CardTitle>
-            <CardDescription className="text-zinc-400">
-              Pintasan menu manajemen sistem
-            </CardDescription>
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Latest Earthquake Info */}
+        <Card className="border border-slate-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md shadow-xl rounded-2xl overflow-hidden flex flex-col">
+          <CardHeader className="border-b border-slate-200 dark:border-zinc-800/50 bg-slate-50/50 dark:bg-zinc-900/50 pb-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle className="text-lg font-bold dark:text-white text-slate-900 flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-red-500" />
+                  Informasi Gempa Terkini
+                </CardTitle>
+                <CardDescription className="text-slate-500 dark:text-zinc-400 mt-1">
+                  Data seismik terbaru dari BMKG
+                </CardDescription>
+              </div>
+              <div className="px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+                <span className="text-xs font-semibold text-red-500">Live Update</span>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="p-4 space-y-3">
-            <Link href="/admin/evacuation-locations" className="block group">
-              <Button
-                variant="ghost"
-                className="w-full justify-between bg-zinc-950/50 border border-zinc-800/50 text-zinc-300 hover:bg-blue-600 hover:text-white hover:border-blue-500 transition-all duration-300 h-12"
-              >
-                <div className="flex items-center">
-                  <Home className="mr-3 h-4 w-4" /> Manajemen Lokasi Evakuasi
+          <CardContent className="p-5 flex-1">
+            {latestEq ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-zinc-950/50 border border-slate-200 dark:border-zinc-800 rounded-xl">
+                  <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-500/10 flex items-center justify-center border border-red-200 dark:border-red-500/20 shadow-inner flex-shrink-0">
+                    <span className="text-xl font-bold text-red-600 dark:text-red-500">{latestEq.magnitude}</span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-2">
+                      <Clock className="w-4 h-4" /> Waktu Kejadian
+                    </h4>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white mt-1">{formatDate(latestEq.time)}</p>
+                  </div>
                 </div>
-                <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-              </Button>
-            </Link>
-            <Link href="/admin/facilities" className="block group">
-              <Button
-                variant="ghost"
-                className="w-full justify-between bg-zinc-950/50 border border-zinc-800/50 text-zinc-300 hover:bg-emerald-600 hover:text-white hover:border-emerald-500 transition-all duration-300 h-12"
-              >
-                <div className="flex items-center">
-                  <Building className="mr-3 h-4 w-4" /> Layanan Fasilitas
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-slate-50 dark:bg-zinc-950/30 border border-slate-200 dark:border-zinc-800/50 rounded-lg">
+                    <h4 className="text-xs font-medium text-slate-500 dark:text-zinc-500 flex items-center gap-2 mb-1">
+                      <MapPin className="w-3 h-3" /> Lokasi
+                    </h4>
+                    <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{latestEq.location}</p>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">{latestEq.region}</p>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-zinc-950/30 border border-slate-200 dark:border-zinc-800/50 rounded-lg flex flex-col justify-center">
+                    <h4 className="text-xs font-medium text-slate-500 dark:text-zinc-500 flex items-center gap-2 mb-1">
+                      <Waves className="w-3 h-3" /> Kedalaman
+                    </h4>
+                    <p className="text-sm font-medium text-slate-700 dark:text-zinc-200">{latestEq.depth} km</p>
+                  </div>
                 </div>
-                <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-              </Button>
-            </Link>
-            <Link href="/admin/routes" className="block group">
-              <Button
-                variant="ghost"
-                className="w-full justify-between bg-zinc-950/50 border border-zinc-800/50 text-zinc-300 hover:bg-purple-600 hover:text-white hover:border-purple-500 transition-all duration-300 h-12"
-              >
-                <div className="flex items-center">
-                  <Compass className="mr-3 h-4 w-4" /> Manajemen Evakuasi
-                </div>
-                <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-              </Button>
-            </Link>
-            <div className="h-px bg-zinc-800 my-2" />
-            <Link href="/map" className="block group">
-              <Button className="w-full justify-between bg-zinc-100 text-zinc-900 hover:bg-white hover:scale-[1.02] transition-all duration-300 shadow-xl h-12 font-semibold">
-                <div className="flex items-center">
-                  <Map className="mr-3 h-4 w-4" /> Buka Peta Analisis
-                </div>
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+
+                {latestEq.dirasakan && (
+                  <div className="p-3 bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-lg">
+                    <h4 className="text-xs font-medium text-orange-600 dark:text-orange-500 flex items-center gap-2 mb-1">
+                      <AlertTriangle className="w-3 h-3" /> Dirasakan (Skala MMI)
+                    </h4>
+                    <p className="text-sm text-orange-800 dark:text-orange-200/90">{latestEq.dirasakan}</p>
+                  </div>
+                )}
+
+                {latestEq.potential && (
+                  <div className="p-3 bg-zinc-950/30 border border-zinc-800/50 rounded-lg">
+                    <p className="text-xs text-zinc-400">{latestEq.potential}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-zinc-500 space-y-2 py-8">
+                <Activity className="w-8 h-8 opacity-20" />
+                <p className="text-sm">Data gempa tidak tersedia</p>
+              </div>
+            )}
+
+            {/* Removed Live Map button */}
           </CardContent>
         </Card>
 
         {/* Spatial Stats Panel */}
-        <Card className="md:col-span-2 border border-zinc-800 bg-zinc-900/60 backdrop-blur-md shadow-xl rounded-2xl overflow-hidden flex flex-col">
+        <Card className="border border-zinc-800 bg-zinc-900/60 backdrop-blur-md shadow-xl rounded-2xl overflow-hidden flex flex-col">
           <CardHeader className="border-b border-zinc-800/50 bg-zinc-900/50 pb-4">
             <CardTitle className="text-lg font-bold dark:text-white text-slate-900 flex items-center gap-2">
-              <Map className="h-5 w-5 text-emerald-500" />
-              Distribusi Pemetaan Spasial
+              <Route className="h-5 w-5 text-emerald-500" />
+              Statistik Infrastruktur Jalan
             </CardTitle>
             <CardDescription className="text-zinc-400">
-              Ringkasan geospasial titik rawan dan evakuasi
+              Ringkasan data kondisi infrastruktur jalan
             </CardDescription>
           </CardHeader>
           <CardContent className="p-5 flex-1">
-            {rawStats ? (
-              (() => {
-                const eq = rawStats.earthquake as
-                  | Record<string, number>
-                  | undefined;
-                const hz = rawStats.hazardZone as
-                  | Record<string, number>
-                  | undefined;
-                const sh = rawStats.evacuationLocation as
-                  | Record<string, number>
-                  | undefined;
-                const ev = rawStats.evacuation as
-                  | Record<string, number>
-                  | undefined;
-                const items = [
-                  {
-                    label: "Gempa 30 Hari",
-                    value: eq?.last30Days ?? 0,
-                    sub: `Rata-rata M${eq?.averageMagnitude ?? 0}`,
-                    color: "text-red-400",
-                    bg: "bg-red-500/10",
-                    border: "border-red-500/20",
-                  },
-                  {
-                    label: "Zona Rawan",
-                    value: hz?.total ?? 0,
-                    sub: `${hz?.critical ?? 0} Kritis · ${hz?.high ?? 0} Tinggi`,
-                    color: "text-orange-400",
-                    bg: "bg-orange-500/10",
-                    border: "border-orange-500/20",
-                  },
-                  {
-                    label: "Kapasitas Lokasi Evakuasi",
-                    value: sh?.totalCapacity ?? 0,
-                    sub: `${sh?.goodCondition ?? 0} kondisi baik`,
-                    color: "text-blue-400",
-                    bg: "bg-blue-500/10",
-                    border: "border-blue-500/20",
-                  },
-                ];
-                return (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
-                    {items.map((item) => (
-                      <div
-                        key={item.label}
-                        className={`rounded-xl border ${item.border} ${item.bg} p-5 flex flex-col justify-between`}
-                      >
-                        <span className="text-sm text-zinc-400 font-medium">
-                          {item.label}
-                        </span>
-                        <div>
-                          <div
-                            className={`text-4xl font-black tracking-tight ${item.color}`}
-                          >
-                            {item.value.toLocaleString("id-ID")}
-                          </div>
-                          <div className="text-xs text-zinc-500 mt-1">
-                            {item.sub}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()
-            ) : (
-              <div className="flex items-center justify-center h-full text-zinc-600 text-sm">
-                Memuat data...
+            <div className="flex flex-col gap-4 justify-center h-full">
+              <div className="flex items-center justify-between p-4 bg-zinc-950/50 border border-zinc-800 rounded-xl">
+                <div>
+                  <h4 className="text-sm font-medium text-zinc-400">Total Ruas Jalan</h4>
+                  <p className="text-2xl font-bold text-white mt-1">{rd?.total?.toLocaleString("id-ID") || 0}</p>
+                </div>
+                <div className="text-right">
+                  <h4 className="text-sm font-medium text-zinc-400">Total Panjang</h4>
+                  <p className="text-2xl font-bold text-emerald-400 mt-1">{rd?.totalLength?.toLocaleString("id-ID") || 0} km</p>
+                </div>
               </div>
-            )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                  <h4 className="text-xs font-medium text-emerald-500 mb-1">Kondisi Baik</h4>
+                  <p className="text-lg font-bold text-emerald-400">{rd?.goodCondition?.toLocaleString("id-ID") || 0} <span className="text-xs font-normal opacity-70">ruas</span></p>
+                </div>
+                <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                  <h4 className="text-xs font-medium text-blue-500 mb-1">Kondisi Sedang</h4>
+                  <p className="text-lg font-bold text-blue-400">{rd?.moderateCondition?.toLocaleString("id-ID") || 0} <span className="text-xs font-normal opacity-70">ruas</span></p>
+                </div>
+                <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl">
+                  <h4 className="text-xs font-medium text-orange-500 mb-1">Kondisi Buruk</h4>
+                  <p className="text-lg font-bold text-orange-400">{rd?.poorCondition?.toLocaleString("id-ID") || 0} <span className="text-xs font-normal opacity-70">ruas</span></p>
+                </div>
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+                  <h4 className="text-xs font-medium text-red-500 mb-1">Kondisi Rusak</h4>
+                  <p className="text-lg font-bold text-red-400">{rd?.damagedCondition?.toLocaleString("id-ID") || 0} <span className="text-xs font-normal opacity-70">ruas</span></p>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
