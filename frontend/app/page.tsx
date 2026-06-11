@@ -7,6 +7,7 @@ import {
   hazardZoneApi,
   publicFacilityApi,
   roadApi,
+  evacuationLocationApi,
 } from "@/api";
 import { analysisApi } from "@/api/analysis";
 import { setBantulPolygon, isWithinBantul } from "@/lib/bantul-boundary";
@@ -46,6 +47,7 @@ import {
   Clock,
   Activity,
   AlertTriangle,
+  CheckCircle2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 // Import hook dan service baru untuk nearby evacuationLocations
@@ -174,6 +176,20 @@ export default function Dashboard() {
   const [, setIsEvacuationLocationDetailOpen] = useState(false);
   const [redZoneEmergency, setRedZoneEmergency] = useState<Earthquake | null>(null);
   const processedEmergencyRef = useRef<string | null>(null);
+
+  // Navigation booking state
+  const [navigatingToId, setNavigatingToId] = useState<number | null>(null);
+  const [destinationShelterId, setDestinationShelterId] = useState<number | null>(null);
+  const navigatingWatchRef = useRef<number | null>(null);
+
+  const getDeviceId = useCallback(() => {
+    let id = localStorage.getItem("deviceId");
+    if (!id) {
+      id = Math.random().toString(36).substring(2, 15);
+      localStorage.setItem("deviceId", id);
+    }
+    return id;
+  }, []);
 
   // Manual location modal state
   const [manualLocationModalOpen, setManualLocationModalOpen] = useState(false);
@@ -362,22 +378,10 @@ export default function Dashboard() {
 
         setSelectedEarthquake(eq);
 
-        // Check if starting point is within Bantul
-        if (!isWithinBantul(userLat, userLng)) {
-          setFlyToLocation({ lat: eq.lat, lon: eq.lon, zoom: 11 });
-          setGettingLocation(false);
-          toast.warning("Lokasi Anda terdeteksi di luar Bantul.", {
-            description: "Sistem evakuasi otomatis hanya mendukung wilayah Kabupaten Bantul. Memfokuskan peta ke episentrum.",
-            duration: 8000,
-          });
-          return;
-        }
-
         if (distMeters <= baseRadius) {
-          // RED ZONE
+          // RED ZONE - always show warning regardless of Bantul boundary
           setRedZoneEmergency(eq);
           setFlyToLocation({ lat: eq.lat, lon: eq.lon, zoom: 14 });
-          // Jangan menghitung rute navigasi
           setCalculatedRoute(null);
           setRouteStart(null);
           setRouteEnd(null);
@@ -387,12 +391,23 @@ export default function Dashboard() {
             duration: 10000,
           });
         } else if (distMeters <= baseRadius * 6) {
-          // YELLOW or GREEN ZONE (radius * 3 or radius * 6)
+          // YELLOW or GREEN ZONE
           const isYellow = distMeters <= baseRadius * 3;
           toast.info(isYellow ? "🟡 Anda berada di Zona Kuning (Dampak Menengah)" : "🟢 Anda berada di Zona Hijau (Dampak Ringan)", {
             description: "Mencari rute evakuasi otomatis menuju lokasi terdekat...",
             duration: 5000,
           });
+
+          // Check Bantul boundary AFTER zone detection - only block auto-routing
+          if (!isWithinBantul(userLat, userLng)) {
+            setFlyToLocation({ lat: eq.lat, lon: eq.lon, zoom: 11 });
+            setGettingLocation(false);
+            toast.warning("Lokasi Anda terdeteksi di luar Bantul.", {
+              description: "Sistem evakuasi otomatis hanya mendukung wilayah Kabupaten Bantul. Gunakan peta untuk navigasi manual.",
+              duration: 8000,
+            });
+            return;
+          }
 
           // Get or fetch evacuation locations
           let locations = evacuationLocationsRef.current;
@@ -466,6 +481,8 @@ export default function Dashboard() {
               lng: targetCoords.coordinates[0],
             });
             setDestinationName(nearestLoc.name);
+            // Store the shelter ID for booking later (user must press "Menuju Kesana")
+            setDestinationShelterId(nearestLoc.id);
             setIsMapExpanded(true);
             setFlyToLocation({ lat: userLat, lon: userLng, zoom: 14 });
 
@@ -1115,6 +1132,7 @@ export default function Dashboard() {
     evacuationLocationLat: number,
     evacuationLocationLng: number,
     evacuationLocationName: string,
+    evacuationLocationId?: number,
   ) => {
     // Jika routing mode ON tanpa routeStart, set tujuan dulu
     if (routingMode && !routeStart) {
@@ -1167,6 +1185,8 @@ export default function Dashboard() {
             lng: evacuationLocationLng,
           });
           setDestinationName(evacuationLocationName);
+          // Store shelter ID for booking later
+          if (evacuationLocationId) setDestinationShelterId(evacuationLocationId);
           setIsMapExpanded(true);
 
           const threateningEq = earthquakes.find((eq) =>
@@ -1202,6 +1222,86 @@ export default function Dashboard() {
     setSelectedEarthquake(null);
     window.dispatchEvent(new CustomEvent("hideEarthquakeRadius"));
   };
+
+  // === NAVIGATION BOOKING ===
+  const startNavigationBooking = useCallback(async () => {
+    const shelterId = destinationShelterId;
+    if (!shelterId || !routeEnd) return;
+
+    try {
+      await evacuationLocationApi.startNavigation(shelterId, getDeviceId());
+      setNavigatingToId(shelterId);
+      toast.success("Navigasi dimulai! Kapasitas lokasi evakuasi telah di-booking untuk Anda.", {
+        description: "Geofencing aktif — sistem akan mendeteksi otomatis saat Anda tiba.",
+        duration: 6000,
+        icon: <Navigation className="w-5 h-5 text-blue-600" />,
+      });
+    } catch (err: any) {
+      console.error("Failed to start navigation booking:", err);
+      const msg = err?.response?.data?.message || err?.message || "Gagal memulai navigasi.";
+      toast.error(msg, { duration: 6000 });
+    }
+  }, [destinationShelterId, routeEnd, getDeviceId]);
+
+  const cancelNavigation = useCallback(async () => {
+    if (navigatingToId) {
+      try {
+        await evacuationLocationApi.stopNavigation(navigatingToId, getDeviceId());
+      } catch (e) {
+        console.error("Failed to stop navigation:", e);
+      }
+    }
+    setNavigatingToId(null);
+    setDestinationShelterId(null);
+    setCalculatedRoute(null);
+    setRouteStart(null);
+    setRouteEnd(null);
+    setDestinationName("Tujuan");
+    toast.info("Navigasi dibatalkan. Booking kapasitas telah dibebaskan.");
+  }, [navigatingToId, getDeviceId]);
+
+  // === GEOFENCING AUTO-ARRIVE ===
+  useEffect(() => {
+    if (!userLocation || !routeEnd || !navigatingToId) return;
+
+    const distanceToDestination = calculateDistance(
+      userLocation.lat,
+      userLocation.lng,
+      routeEnd.lat,
+      routeEnd.lng,
+    );
+
+    // If within 50 meters (0.05 km)
+    if (distanceToDestination <= 0.05) {
+      toast.success("🎉 Anda telah tiba di lokasi evakuasi!", {
+        description: "Silakan melapor ke petugas yang bertugas di lokasi.",
+        duration: 15000,
+        icon: <CheckCircle2 className="w-5 h-5 text-green-600" />,
+      });
+
+      // Auto-arrive: stop navigation booking
+      evacuationLocationApi.stopNavigation(navigatingToId, getDeviceId()).catch(e => {
+        console.error("Auto-arrive stop navigation failed:", e);
+      });
+
+      // Reset navigation state
+      setNavigatingToId(null);
+      setDestinationShelterId(null);
+      setCalculatedRoute(null);
+      setRouteStart(null);
+      setRouteEnd(null);
+      setDestinationName("Tujuan");
+    }
+  }, [userLocation, routeEnd, navigatingToId, getDeviceId]);
+
+  // Cleanup navigation on unmount
+  useEffect(() => {
+    return () => {
+      if (navigatingWatchRef.current) {
+        navigator.geolocation.clearWatch(navigatingWatchRef.current);
+      }
+    };
+  }, []);
 
   const isDark = mounted && theme === "dark";
 
@@ -1433,6 +1533,7 @@ export default function Dashboard() {
                                             coords.coordinates[1],
                                             coords.coordinates[0],
                                             evacuationLocation.name,
+                                            evacuationLocation.id,
                                           );
                                         }}
                                       >
@@ -1754,9 +1855,14 @@ export default function Dashboard() {
                     <button
                       className="p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-900 rounded-full mt-1"
                       onClick={() => {
-                        setCalculatedRoute(null);
-                        setRouteStart(null);
-                        setRouteEnd(null);
+                        if (navigatingToId) {
+                          cancelNavigation();
+                        } else {
+                          setCalculatedRoute(null);
+                          setRouteStart(null);
+                          setRouteEnd(null);
+                          setDestinationShelterId(null);
+                        }
                       }}
                     >
                       <X className="w-5 h-5" />
@@ -1805,6 +1911,43 @@ export default function Dashboard() {
                       </>
                     );
                   })()}
+                </div>
+
+                {/* Navigation Action Buttons */}
+                <div className="p-3 border-t border-slate-100 dark:border-zinc-800">
+                  {navigatingToId ? (
+                    <div className="space-y-2">
+                      {/* Active navigation indicator */}
+                      <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800/50">
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
+                        </span>
+                        <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">
+                          Navigasi aktif — Geofencing memantau kedatangan Anda
+                        </span>
+                      </div>
+                      <Button
+                        onClick={cancelNavigation}
+                        variant="destructive"
+                        className="w-full font-semibold"
+                        size="sm"
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Batalkan Navigasi
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={startNavigationBooking}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md"
+                      size="sm"
+                      disabled={!destinationShelterId}
+                    >
+                      <Navigation className="w-4 h-4 mr-2" />
+                      Menuju Kesana
+                    </Button>
+                  )}
                 </div>
               </div>
             </>
