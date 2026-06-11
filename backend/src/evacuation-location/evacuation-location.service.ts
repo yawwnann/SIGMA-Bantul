@@ -256,8 +256,9 @@ export class EvacuationLocationService {
       };
     }));
     
-    // Filter out full locations
-    return results.filter(loc => loc.availableCapacity > 0);
+    // Return all locations so they are visible on the map, even if full
+    // The frontend map handles the full status visually and ignores them for auto-routing
+    return results;
   }
 
   private calculateDistance(
