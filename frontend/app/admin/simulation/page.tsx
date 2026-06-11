@@ -226,6 +226,7 @@ export default function SimulationPage() {
                 facilities={[]}
                 selectedLocation={selectedLocation}
                 onLocationSelect={handleLocationSelect}
+                hideFilterAndLegend={true}
               />
             </div>
           </CardContent>

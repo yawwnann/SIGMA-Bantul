@@ -39,6 +39,7 @@ interface MapClientProps {
   center?: [number, number];
   zoom?: number;
   children?: React.ReactNode;
+  hideFilterAndLegend?: boolean;
 }
 
 const BANTUL_CENTER: [number, number] = [-7.888, 110.33];
@@ -91,6 +92,7 @@ export default function MapClient({
   center,
   zoom,
   children,
+  hideFilterAndLegend,
 }: MapClientProps) {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -300,12 +302,24 @@ export default function MapClient({
       }
     });
 
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapRef.current) {
+        mapRef.current.invalidateSize();
+      }
+    });
+    resizeObserver.observe(mapContainerRef.current);
+
     Promise.resolve().then(() => {
       setIsMapReady(true);
       setMapInstance(mapRef.current);
     });
 
     return () => {
+      if (mapContainerRef.current) {
+        resizeObserver.unobserve(mapContainerRef.current);
+      }
+      resizeObserver.disconnect();
+
       if (mapRef.current) {
         try {
           // Clear all layer groups first
@@ -1188,39 +1202,41 @@ export default function MapClient({
       )}
 
       <div className="absolute top-4 left-4 md:left-4 z-[60] md:z-[500] flex flex-col items-start gap-2">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsFilterOpen(!isFilterOpen);
-              if (!isFilterOpen) setIsLegendOpen(false);
-            }}
-            className="bg-white/95 dark:bg-zinc-950/90 backdrop-blur-md rounded-lg shadow-lg border border-slate-200 dark:border-zinc-800/60 p-2.5 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2"
-          >
-            {isFilterOpen ? (
-              <X className="w-4 h-4" />
-            ) : (
-              <Filter className="w-4 h-4" />
-            )}
-            <span className="text-xs font-bold uppercase tracking-wider">
-              {isFilterOpen ? "Tutup Filter" : "Filter Map"}
-            </span>
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsLegendOpen(!isLegendOpen);
-              if (!isLegendOpen) setIsFilterOpen(false);
-            }}
-            className="bg-white/95 dark:bg-zinc-950/90 backdrop-blur-md rounded-lg shadow-lg border border-slate-200 dark:border-zinc-800/60 p-2.5 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2"
-            title="Legenda Peta"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
-            <span className="text-xs font-bold uppercase tracking-wider">
-              {isLegendOpen ? "Tutup" : "Legenda"}
-            </span>
-          </button>
-        </div>
+        {!hideFilterAndLegend && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsFilterOpen(!isFilterOpen);
+                if (!isFilterOpen) setIsLegendOpen(false);
+              }}
+              className="bg-white/95 dark:bg-zinc-950/90 backdrop-blur-md rounded-lg shadow-lg border border-slate-200 dark:border-zinc-800/60 p-2.5 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2"
+            >
+              {isFilterOpen ? (
+                <X className="w-4 h-4" />
+              ) : (
+                <Filter className="w-4 h-4" />
+              )}
+              <span className="text-xs font-bold uppercase tracking-wider">
+                {isFilterOpen ? "Tutup Filter" : "Filter Map"}
+              </span>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsLegendOpen(!isLegendOpen);
+                if (!isLegendOpen) setIsFilterOpen(false);
+              }}
+              className="bg-white/95 dark:bg-zinc-950/90 backdrop-blur-md rounded-lg shadow-lg border border-slate-200 dark:border-zinc-800/60 p-2.5 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2"
+              title="Legenda Peta"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>
+              <span className="text-xs font-bold uppercase tracking-wider">
+                {isLegendOpen ? "Tutup" : "Legenda"}
+              </span>
+            </button>
+          </div>
+        )}
 
         {isFilterOpen && (
           <div className="bg-white/95 dark:bg-zinc-950/90 backdrop-blur-md rounded-xl shadow-2xl border border-slate-200 dark:border-zinc-800/60 p-4 w-45 transition-all animate-in fade-in slide-in-from-top-2">

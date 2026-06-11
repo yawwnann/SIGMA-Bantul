@@ -163,7 +163,7 @@ export default function Dashboard() {
   );
   const [destinationName, setDestinationName] = useState<string>("Tujuan");
   const [activeRouteMode, setActiveRouteMode] = useState<
-    "walk" | "bike" | "car"
+    "walk" | "car"
   >("car");
   const [nearbyRadius, setNearbyRadius] = useState(3);
   const [calculatingRoute, setCalculatingRoute] = useState(false);
@@ -1888,7 +1888,6 @@ export default function Dashboard() {
                     const distKm =
                       calculatedRoute.properties.totalDistance / 1000;
                     const walkTime = Math.ceil((distKm / 5) * 60);
-                    const bikeTime = Math.ceil((distKm / 40) * 60);
                     const carTime = Math.ceil((distKm / 30) * 60);
 
                     return (
@@ -1900,15 +1899,6 @@ export default function Dashboard() {
                           <Car className="w-4 h-4 mb-1" />
                           <span className="text-[10px] font-bold">
                             {carTime} mnt
-                          </span>
-                        </button>
-                        <button
-                          onClick={() => setActiveRouteMode("bike")}
-                          className={`flex flex-col items-center p-2 rounded-xl min-w-[70px] transition-colors ${activeRouteMode === "bike" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400" : "text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800"}`}
-                        >
-                          <Bike className="w-4 h-4 mb-1" />
-                          <span className="text-[10px] font-bold">
-                            {bikeTime} mnt
                           </span>
                         </button>
                         <button
