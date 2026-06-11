@@ -62,27 +62,39 @@ export class DashboardService {
   }
 
   private async getEvacuationLocationSummary() {
-    const [total, totalCapacity, goodCondition] = await Promise.all([
+    const [total, agg, goodCondition, totalOfficers] = await Promise.all([
       this.prisma.evacuationLocation.count(),
-      this.prisma.evacuationLocation.aggregate({ _sum: { capacity: true } }),
+      this.prisma.evacuationLocation.aggregate({ _sum: { capacity: true, currentOccupancy: true } }),
       this.prisma.evacuationLocation.count({
         where: { condition: 'GOOD' },
       }),
+      this.prisma.user.count({ where: { role: 'EVACUATION_LOCATION_OFFICER' } })
     ]);
 
     return {
       total,
-      totalCapacity: totalCapacity._sum.capacity || 0,
+      totalCapacity: agg._sum.capacity || 0,
+      currentOccupancy: agg._sum.currentOccupancy || 0,
       goodCondition,
+      totalOfficers,
     };
   }
 
   private async getRoadSummary() {
-    const [total, totalLength, goodCondition] = await Promise.all([
+    const [total, totalLength, goodCondition, moderateCondition, poorCondition, damagedCondition] = await Promise.all([
       this.prisma.road.count(),
       this.prisma.road.aggregate({ _sum: { length: true } }),
       this.prisma.road.count({
         where: { condition: 'GOOD' },
+      }),
+      this.prisma.road.count({
+        where: { condition: 'MODERATE' },
+      }),
+      this.prisma.road.count({
+        where: { condition: 'POOR' },
+      }),
+      this.prisma.road.count({
+        where: { condition: 'DAMAGED' },
       }),
     ]);
 
@@ -90,6 +102,9 @@ export class DashboardService {
       total,
       totalLength: Math.round((totalLength._sum.length || 0) * 100) / 100,
       goodCondition,
+      moderateCondition,
+      poorCondition,
+      damagedCondition,
     };
   }
 
