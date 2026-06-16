@@ -29,23 +29,51 @@ async function main() {
   });
 
   if (locations.length === 0) {
-    console.log('⚠️ No evacuation locations found! Please run the evacuation location seeder first.');
+    console.log(
+      '⚠️ No evacuation locations found! Please run the evacuation location seeder first.',
+    );
     return;
   }
 
-  console.log(`Found ${locations.length} evacuation locations to assign officers.`);
+  console.log(
+    `Found ${locations.length} evacuation locations to assign officers.`,
+  );
 
   // 4. Create 30 officers and assign them to the locations (1 location = 1 officer)
   const hashedPassword = await bcrypt.hash('password123', 10);
-  
+
   // List of Indonesian names for realism
   const officerNames = [
-    'Ahmad Fauzi', 'Siti Nurhaliza', 'Budi Santoso', 'Dewi Lestari', 'Eko Prasetyo',
-    'Fitri Handayani', 'Gunawan Wijaya', 'Hesti Rahmawati', 'Indra Kusuma', 'Joko Widodo',
-    'Kartika Sari', 'Lukman Hakim', 'Maya Anggraini', 'Nugroho Susanto', 'Putri Wulandari',
-    'Rahmat Hidayat', 'Sri Wahyuni', 'Taufik Hidayat', 'Umi Kulsum', 'Vina Panduwinata',
-    'Wawan Darmawan', 'Yuli Astuti', 'Zainal Arifin', 'Agus Setiawan', 'Bagus Saputra',
-    'Citra Kirana', 'Deni Setiawan', 'Eka Putra', 'Fajar Ramadhan', 'Gita Gutawa'
+    'Ahmad Fauzi',
+    'Siti Nurhaliza',
+    'Budi Santoso',
+    'Dewi Lestari',
+    'Eko Prasetyo',
+    'Fitri Handayani',
+    'Gunawan Wijaya',
+    'Hesti Rahmawati',
+    'Indra Kusuma',
+    'Joko Widodo',
+    'Kartika Sari',
+    'Lukman Hakim',
+    'Maya Anggraini',
+    'Nugroho Susanto',
+    'Putri Wulandari',
+    'Rahmat Hidayat',
+    'Sri Wahyuni',
+    'Taufik Hidayat',
+    'Umi Kulsum',
+    'Vina Panduwinata',
+    'Wawan Darmawan',
+    'Yuli Astuti',
+    'Zainal Arifin',
+    'Agus Setiawan',
+    'Bagus Saputra',
+    'Citra Kirana',
+    'Deni Setiawan',
+    'Eka Putra',
+    'Fajar Ramadhan',
+    'Gita Gutawa',
   ];
 
   let assignedCount = 0;
@@ -74,7 +102,9 @@ async function main() {
     assignedCount++;
   }
 
-  console.log(`✅ Successfully created and assigned ${assignedCount} officers to ${assignedCount} evacuation locations!`);
+  console.log(
+    `✅ Successfully created and assigned ${assignedCount} officers to ${assignedCount} evacuation locations!`,
+  );
 }
 
 main()
