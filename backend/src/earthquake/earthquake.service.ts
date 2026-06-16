@@ -472,8 +472,12 @@ export class EarthquakeService {
         });
 
         const boundary = await this.bantulBoundaryService.getBoundary();
-        const filteredEarthquakes = allMatching.filter(eq =>
-          this.bantulBoundaryService.checkMultiPolygon(eq.lat, eq.lon, boundary)
+        const filteredEarthquakes = allMatching.filter((eq) =>
+          this.bantulBoundaryService.checkMultiPolygon(
+            eq.lat,
+            eq.lon,
+            boundary,
+          ),
         );
 
         const total = filteredEarthquakes.length;

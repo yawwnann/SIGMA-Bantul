@@ -54,10 +54,18 @@ export const evacuationLocationApi = {
     return response.data;
   },
 
-  startNavigation: async (evacuationLocationId: number, deviceId: string, evacueeCount: number = 1) => {
+  startNavigation: async (
+    evacuationLocationId: number,
+    deviceId: string,
+    evacueeCount: number = 1,
+    startLat?: number,
+    startLng?: number,
+  ) => {
     const response = await apiClient.post(`/evacuation-locations/${evacuationLocationId}/navigate`, {
       deviceId,
       evacueeCount,
+      startLat,
+      startLng,
     });
     return response.data;
   },
@@ -66,6 +74,26 @@ export const evacuationLocationApi = {
     const response = await apiClient.delete(`/evacuation-locations/${evacuationLocationId}/navigate`, {
       data: { deviceId },
     });
+    return response.data;
+  },
+
+  trackPosition: async (
+    evacuationLocationId: number,
+    data: {
+      deviceId: string;
+      lat: number;
+      lng: number;
+      heading?: number;
+      speed?: number;
+      accuracy?: number;
+    },
+  ) => {
+    const response = await apiClient.post(`/evacuation-locations/${evacuationLocationId}/track-position`, data);
+    return response.data;
+  },
+
+  getNavigationStatus: async (deviceId: string) => {
+    const response = await apiClient.get(`/evacuation-locations/navigation/${deviceId}`);
     return response.data;
   },
 };

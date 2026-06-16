@@ -117,7 +117,7 @@ export default function MapClient({
     boundary: true,
     evacuationLocations: true,
     hazardZones: false,
-    earthquakes: false, // Default: tidak tampil
+    earthquakes: true, // Default: tampil untuk lihat gempa 24 jam
     facilities: false,
     roads: false,
     bpbdRisk: false,

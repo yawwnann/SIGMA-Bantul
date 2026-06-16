@@ -54,6 +54,7 @@ function getMagnitudeLabel(magnitude: number): string {
 }
 
 // Custom Tooltip for Recharts
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
@@ -421,13 +422,7 @@ export default function EarthquakesPage() {
                         >
                           {eq.location}
                         </h3>
-                        <p
-                          className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-1 line-clamp-1"
-                          title={eq.region}
-                        >
-                          <MapPin className="h-3 w-3 shrink-0" />
-                          {eq.region}
-                        </p>
+
                       </div>
                     </div>
 

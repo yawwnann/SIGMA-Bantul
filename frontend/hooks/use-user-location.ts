@@ -6,6 +6,8 @@ export interface UserLocation {
   lat: number;
   lng: number;
   heading?: number;
+  speed?: number;
+  accuracy?: number;
 }
 
 export interface UseUserLocationReturn {
@@ -55,11 +57,13 @@ export function useUserLocation(
     // iOS-friendly: watchPosition for continuous heading updates
     watcherRef.current = watchPositionRobust(
       (position) => {
-        const { latitude, longitude, heading } = position.coords;
+        const { latitude, longitude, heading, speed, accuracy } = position.coords;
         setLocation({
           lat: latitude,
           lng: longitude,
           heading: heading !== null && !isNaN(heading) ? heading : undefined,
+          speed: speed !== null && !isNaN(speed) ? speed : undefined,
+          accuracy: accuracy !== null && !isNaN(accuracy) ? accuracy : undefined,
         });
         setLoading(false);
       },

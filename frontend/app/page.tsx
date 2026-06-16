@@ -183,6 +183,15 @@ export default function Dashboard() {
   const [evacueeCount, setEvacueeCount] = useState<number>(1);
   const navigatingWatchRef = useRef<number | null>(null);
 
+  // GPS Tracking state
+  const [trackingInfo, setTrackingInfo] = useState<{
+    distance: number;
+    distanceKm: number;
+    eta: number;
+    arrived: boolean;
+  } | null>(null);
+  const trackingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   const getDeviceId = useCallback(() => {
     let id = localStorage.getItem("deviceId");
     if (!id) {
@@ -202,32 +211,82 @@ export default function Dashboard() {
     updateTime();
     const timer = setInterval(updateTime, 1000);
 
-    // Restore active navigation state from localStorage
-    try {
-      const activeNavData = localStorage.getItem("activeNavigation");
-      if (activeNavData) {
+    // Restore active navigation from localStorage + fetch live tracking from backend
+    const restoreNavigation = async () => {
+      try {
+        const activeNavData = localStorage.getItem("activeNavigation");
+        if (!activeNavData) return;
+
         const parsed = JSON.parse(activeNavData);
         // Check if not expired (45 minutes)
         if (Date.now() - parsed.timestamp < 45 * 60 * 1000) {
+          const deviceId = getDeviceId();
+
+          // Restore basic state
           setNavigatingToId(parsed.shelterId);
           setDestinationShelterId(parsed.shelterId);
           setEvacueeCount(parsed.evacueeCount || 1);
           setDestinationName(parsed.name);
-          
-          // Re-trigger routing quietly after a slight delay to let the map init
+          setRouteEnd({ lat: parsed.lat, lng: parsed.lng });
+
+          // Re-calculate route
           setTimeout(() => {
             calculateRouteToEvacuationLocation(parsed.lat, parsed.lng, parsed.name, parsed.shelterId);
           }, 1000);
+
+          // Fetch live tracking from backend
+          try {
+            const status = await evacuationLocationApi.getNavigationStatus(deviceId);
+            if (status.active && status.shelterId === parsed.shelterId) {
+              // Restore tracking info from backend
+              setTrackingInfo({
+                distance: status.distanceRemaining,
+                distanceKm: status.distanceKm,
+                eta: status.eta,
+                arrived: status.status === 'ARRIVED',
+              });
+
+              // If already arrived, trigger arrival flow
+              if (status.status === 'ARRIVED') {
+                toast.success("Selamat datang kembali! Anda telah tiba di lokasi evakuasi sebelumnya.", {
+                  description: "Navigasi sebelumnya telah tercatat.",
+                  duration: 10000,
+                  icon: <CheckCircle2 className="w-5 h-5 text-green-600" />,
+                });
+                // Auto-clear navigation
+                evacuationLocationApi.stopNavigation(parsed.shelterId, deviceId).catch(() => {});
+                localStorage.removeItem("activeNavigation");
+                setNavigatingToId(null);
+                setDestinationShelterId(null);
+                setCalculatedRoute(null);
+                setRouteStart(null);
+                setRouteEnd(null);
+                setDestinationName("Tujuan");
+                stopTracking();
+                return;
+              }
+
+              toast.info("Navigasi dipulihkan", {
+                description: `Jarak tersisa: ${status.distanceKm} km, ETA: ${status.eta} menit`,
+                duration: 5000,
+              });
+            }
+          } catch (trackErr) {
+            // Backend might not have the session, that's ok
+            console.warn("Could not restore tracking from backend:", trackErr);
+          }
         } else {
           localStorage.removeItem("activeNavigation");
         }
+      } catch (e) {
+        console.error("Failed to restore navigation state:", e);
       }
-    } catch (e) {
-      console.error("Failed to restore navigation state:", e);
-    }
+    };
+
+    restoreNavigation();
 
     return () => clearInterval(timer);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setMounted(true);
@@ -634,7 +693,7 @@ export default function Dashboard() {
         );
 
         // Get or fetch evacuation locations
-        let locations = evacuationLocationsRef.current;
+        const locations = evacuationLocationsRef.current;
         if (locations.length === 0) {
           evacuationService
             .getNearbyEvacuationLocations({
@@ -652,7 +711,7 @@ export default function Dashboard() {
               return [];
             })
             .then((res) => {
-              let availableLocations = res.filter((s) => {
+              const availableLocations = res.filter((s) => {
                 const availCap = s.availableCapacity !== undefined 
                   ? s.availableCapacity 
                   : s.capacity - (s.currentOccupancy ?? 0);
@@ -735,12 +794,23 @@ export default function Dashboard() {
   const fetchData = async () => {
     setLoading(true);
     setError(null);
+
+    // Calculate 24 hours ago in WIB timezone (UTC+7)
+    // BMKG Indonesia uses WIB, so filter should match
+    const now = new Date();
+    const wibOffset = 7 * 60 * 60 * 1000; // WIB is UTC+7
+    const nowWIB = new Date(now.getTime() + wibOffset);
+    const oneDayAgoWIB = new Date(nowWIB.getTime() - 24 * 60 * 60 * 1000);
+
     try {
       const [hazardData, earthquakesResponse, facilitiesData, roadNetworkData] =
         await Promise.all([
           hazardZoneApi.getAll().catch(() => []),
           earthquakeApi
             .getAll({
+              // Filter 24 jam terakhir dalam WIB timezone
+              startDate: oneDayAgoWIB.toISOString(),
+              endDate: nowWIB.toISOString(),
               limit: 1000,
             })
             .catch(() => ({ data: [], total: 0, page: 1, limit: 1000 })),
@@ -765,8 +835,9 @@ export default function Dashboard() {
       }
       // Don't fetch all evacuationLocations here - will fetch nearby evacuationLocations based on user location
       setHazardZones(hazardData as HazardZone[]);
+      // Show ALL earthquakes from 24h (not filtered by Bantul) so users can see impact radius
       const filteredEarthquakes = earthquakesResponse.data.filter(
-        (eq: any) => eq.lat != null && eq.lon != null && isWithinBantul(eq.lat, eq.lon)
+        (eq: Earthquake) => eq.lat != null && eq.lon != null
       );
       setEarthquakes(filteredEarthquakes);
       setFacilities(facilitiesData as PublicFacility[]);
@@ -824,12 +895,12 @@ export default function Dashboard() {
             `Ditemukan ${nearbyEvacuationLocations.length} lokasi evakuasi terdekat`,
           );
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(
           "[Dashboard] Error fetching nearby evacuationLocations:",
           error,
         );
-        toast.error(error.message || "Gagal memuat lokasi evakuasi terdekat");
+        toast.error((error as Error).message || "Gagal memuat lokasi evakuasi terdekat");
         setEvacuationLocations([]); // Set empty if error
       }
     };
@@ -1258,15 +1329,88 @@ export default function Dashboard() {
     window.dispatchEvent(new CustomEvent("hideEarthquakeRadius"));
   };
 
+  // === GPS TRACKING INTERVAL ===
+  const startTracking = useCallback(() => {
+    // Clear existing interval if any
+    if (trackingIntervalRef.current) {
+      clearInterval(trackingIntervalRef.current);
+    }
+
+    let lastTrackedLat: number | null = null;
+    let lastTrackedLng: number | null = null;
+
+    trackingIntervalRef.current = setInterval(async () => {
+      if (!navigatingToId || !userLocation) return;
+
+      const { lat, lng } = userLocation;
+
+      // Only track if position changed significantly (> 5 meters)
+      if (lastTrackedLat !== null && lastTrackedLng !== null) {
+        const movedDist = calculateDistance(lastTrackedLat, lastTrackedLng, lat, lng);
+        if (movedDist < 0.005) return; // Skip if moved less than 5 meters
+      }
+
+      lastTrackedLat = lat;
+      lastTrackedLng = lng;
+
+      try {
+        const result = await evacuationLocationApi.trackPosition(navigatingToId, {
+          deviceId: getDeviceId(),
+          lat,
+          lng,
+          heading: userLocation.heading,
+          speed: userLocation.speed,
+          accuracy: userLocation.accuracy,
+        });
+
+        if (result.success) {
+          setTrackingInfo({
+            distance: result.distance,
+            distanceKm: result.distanceKm,
+            eta: result.eta,
+            arrived: result.arrived,
+          });
+
+          // If arrived, stop tracking
+          if (result.arrived) {
+            if (trackingIntervalRef.current) {
+              clearInterval(trackingIntervalRef.current);
+              trackingIntervalRef.current = null;
+            }
+          }
+        }
+      } catch (e) {
+        // Silent fail - don't spam console
+      }
+    }, 5000); // Track every 5 seconds
+  }, [navigatingToId, userLocation, getDeviceId]);
+
+  const stopTracking = useCallback(() => {
+    if (trackingIntervalRef.current) {
+      clearInterval(trackingIntervalRef.current);
+      trackingIntervalRef.current = null;
+    }
+    setTrackingInfo(null);
+  }, []);
+
   // === NAVIGATION BOOKING ===
   const startNavigationBooking = useCallback(async () => {
     const shelterId = destinationShelterId;
     if (!shelterId || !routeEnd) return;
 
+    // Get current position for start coordinates
+    let startLat: number | undefined;
+    let startLng: number | undefined;
+
+    if (userLocation) {
+      startLat = userLocation.lat;
+      startLng = userLocation.lng;
+    }
+
     try {
-      await evacuationLocationApi.startNavigation(shelterId, getDeviceId(), evacueeCount);
+      await evacuationLocationApi.startNavigation(shelterId, getDeviceId(), evacueeCount, startLat, startLng);
       setNavigatingToId(shelterId);
-      
+
       // Persist navigation session to survive page refreshes
       localStorage.setItem("activeNavigation", JSON.stringify({
         shelterId,
@@ -1277,24 +1421,30 @@ export default function Dashboard() {
         timestamp: Date.now()
       }));
 
+      // Start GPS tracking
+      startTracking();
+
       toast.success("Navigasi dimulai! Kapasitas lokasi evakuasi telah di-booking untuk Anda.", {
         description: "Geofencing aktif — sistem akan mendeteksi otomatis saat Anda tiba.",
         duration: 6000,
         icon: <Navigation className="w-5 h-5 text-blue-600" />,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to start navigation booking:", err);
-      const msg = err?.response?.data?.message || err?.message || "Gagal memulai navigasi.";
+      const error = err as { response?: { data?: { message?: string } }; message?: string };
+      const msg = error.response?.data?.message || error.message || "Gagal memulai navigasi.";
       toast.error(msg, { duration: 6000 });
     }
-  }, [destinationShelterId, routeEnd, getDeviceId]);
+  }, [destinationShelterId, routeEnd, userLocation, getDeviceId, evacueeCount, destinationName, startTracking]);
 
   const cancelNavigation = useCallback(async () => {
+    stopTracking(); // Stop GPS tracking
+
     if (navigatingToId) {
       try {
         await evacuationLocationApi.stopNavigation(navigatingToId, getDeviceId());
       } catch (e) {
-        console.error("Failed to stop navigation:", e);
+        // Silent fail
       }
     }
     localStorage.removeItem("activeNavigation");
@@ -1305,7 +1455,7 @@ export default function Dashboard() {
     setRouteEnd(null);
     setDestinationName("Tujuan");
     toast.info("Navigasi dibatalkan. Booking kapasitas telah dibebaskan.");
-  }, [navigatingToId, getDeviceId]);
+  }, [navigatingToId, getDeviceId, stopTracking]);
 
   // === GEOFENCING AUTO-ARRIVE ===
   useEffect(() => {
@@ -1320,15 +1470,17 @@ export default function Dashboard() {
 
     // If within 50 meters (0.05 km)
     if (distanceToDestination <= 0.05) {
-      toast.success("🎉 Anda telah tiba di lokasi evakuasi!", {
+      stopTracking(); // Stop GPS tracking interval
+
+      toast.success("Anda telah tiba di lokasi evakuasi!", {
         description: "Silakan melapor ke petugas yang bertugas di lokasi.",
         duration: 15000,
         icon: <CheckCircle2 className="w-5 h-5 text-green-600" />,
       });
 
       // Auto-arrive: stop navigation booking
-      evacuationLocationApi.stopNavigation(navigatingToId, getDeviceId()).catch(e => {
-        console.error("Auto-arrive stop navigation failed:", e);
+      evacuationLocationApi.stopNavigation(navigatingToId, getDeviceId()).catch(() => {
+        // Silent fail
       });
 
       // Clear persisted state
@@ -1342,7 +1494,17 @@ export default function Dashboard() {
       setRouteEnd(null);
       setDestinationName("Tujuan");
     }
-  }, [userLocation, routeEnd, navigatingToId, getDeviceId]);
+  }, [userLocation, routeEnd, navigatingToId, getDeviceId, stopTracking]);
+
+  // === AUTO-START GPS TRACKING ===
+  useEffect(() => {
+    if (navigatingToId && userLocation) {
+      startTracking();
+    }
+    return () => {
+      // Cleanup will be handled by cancelNavigation or auto-arrive
+    };
+  }, [navigatingToId, userLocation]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cleanup navigation on unmount
   useEffect(() => {
@@ -1959,15 +2121,43 @@ export default function Dashboard() {
                 <div className="p-3 border-t border-slate-100 dark:border-zinc-800">
                   {navigatingToId ? (
                     <div className="space-y-2">
-                      {/* Active navigation indicator */}
-                      <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800/50">
-                        <span className="relative flex h-2.5 w-2.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
-                        </span>
-                        <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">
-                          Navigasi aktif — Geofencing memantau kedatangan Anda
-                        </span>
+                      {/* Active navigation indicator with live tracking */}
+                      <div className="flex flex-col gap-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800/50">
+                        <div className="flex items-center gap-2">
+                          <span className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
+                          </span>
+                          <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">
+                            Navigasi Aktif
+                          </span>
+                        </div>
+
+                        {/* Live Distance & ETA */}
+                        {trackingInfo ? (
+                          <div className="flex items-center justify-between px-2 py-1 bg-white/70 dark:bg-zinc-800/50 rounded-lg">
+                            <div className="flex items-center gap-1.5">
+                              <MapPin className="w-3.5 h-3.5 text-orange-500" />
+                              <span className="text-sm font-bold text-slate-800 dark:text-zinc-200">
+                                {trackingInfo.distance <= 1000
+                                  ? `${trackingInfo.distance} m`
+                                  : `${trackingInfo.distanceKm.toFixed(1)} km`}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-slate-500" />
+                              <span className="text-sm font-semibold text-slate-600 dark:text-zinc-300">
+                                {trackingInfo.eta <= 1
+                                  ? "< 1 menit"
+                                  : `${trackingInfo.eta} menit`}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-xs text-blue-600 dark:text-blue-400 italic">
+                            Mendapatkan info lokasi...
+                          </div>
+                        )}
                       </div>
                       <Button
                         onClick={cancelNavigation}
@@ -2024,17 +2214,6 @@ export default function Dashboard() {
           {/* Selected Location Floating Detail - REMOVED */}
 
           <div className="relative h-full w-full dark-map-container flex-1">
-            {loading && (
-              <div className="absolute inset-0 z-[2000] bg-white/95 dark:bg-zinc-950/95 backdrop-blur-sm flex flex-col items-center justify-center">
-                <Loader2 className="h-12 w-12 animate-spin text-blue-500 mb-4" />
-                <p className="text-slate-700 dark:text-zinc-300 font-medium">
-                  Memuat data peta...
-                </p>
-                <p className="text-slate-500 dark:text-zinc-500 text-sm mt-2">
-                  Mengambil data evacuationLocation, gempa, dan zona rawan
-                </p>
-              </div>
-            )}
             <MapClient
               earthquakes={earthquakes}
               evacuationLocations={evacuationLocations}
@@ -2053,6 +2232,16 @@ export default function Dashboard() {
               flyToLocation={flyToLocation}
               onEvacuationLocationDetailOpen={setIsEvacuationLocationDetailOpen}
             />
+
+            {/* Inline loading indicator - non-blocking */}
+            {loading && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-slate-200 dark:border-zinc-800 flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                <span className="text-xs font-medium text-slate-600 dark:text-zinc-300">
+                  Memuat data...
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
