@@ -25,6 +25,7 @@
     "db:seed": "ts-node prisma/seed.ts",
     "db:seed-evacuation-locations": "ts-node prisma/seeders/seed-evacuation-locations.ts",
     "db:seed-earthquakes": "ts-node prisma/seeders/seed-earthquakes.ts",
+    "db:seed-officers": "ts-node prisma/seeders/seed-officers.ts",
     "db:studio": "prisma studio",
     "db:seed-jalan": "ts-node scripts/seed-jalan-lengkap.ts",
     "db:import-roads": "ts-node scripts/import-roads.ts",
