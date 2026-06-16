@@ -20,6 +20,7 @@ import {
   EvacuationLocationCategory,
   EvacuationLocationCondition,
 } from '@prisma/client';
+import { TrackPositionDto } from './dto/track-position.dto';
 
 @Controller('evacuation-locations')
 export class EvacuationLocationController {
@@ -77,6 +78,20 @@ export class EvacuationLocationController {
   ) {
     if (!deviceId) throw new BadRequestException('deviceId is required');
     return this.evacuationLocationService.stopNavigation(id, deviceId);
+  }
+
+  @Post(':id/track-position')
+  async trackPosition(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: TrackPositionDto,
+  ) {
+    return this.evacuationLocationService.trackPosition(id, dto);
+  }
+
+  @Get('navigation/:deviceId')
+  async getNavigationStatus(@Param('deviceId') deviceId: string) {
+    if (!deviceId) throw new BadRequestException('deviceId is required');
+    return this.evacuationLocationService.getNavigationStatus(deviceId);
   }
 
   @Get(':id')

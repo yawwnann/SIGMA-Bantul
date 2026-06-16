@@ -14,6 +14,25 @@ import {
 } from '@prisma/client';
 import { WebsocketService } from '../websocket/websocket.service';
 
+interface NavigationSession {
+  shelterId: number;
+  shelterName: string;
+  shelterLat: number;
+  shelterLng: number;
+  startLat: number;
+  startLng: number;
+  currentLat: number;
+  currentLng: number;
+  heading?: number;
+  speed?: number;
+  evacueeCount: number;
+  startTime: number;
+  lastUpdate: number;
+  distanceRemaining: number;
+  eta: number;
+  status: 'ACTIVE' | 'ARRIVED' | 'CANCELLED';
+}
+
 @Injectable()
 export class EvacuationLocationService {
   constructor(
@@ -147,35 +166,66 @@ export class EvacuationLocationService {
     return validUsers.reduce((sum, u) => sum + (u.evacueeCount || 1), 0);
   }
 
-  async startNavigation(id: number, deviceId: string, evacueeCount: number = 1) {
+  async startNavigation(
+    id: number,
+    deviceId: string,
+    evacueeCount: number = 1,
+    startLat?: number,
+    startLng?: number,
+  ) {
     const shelter = await this.findById(id);
     const cacheKey = `evacuation-location:${id}:inbound`;
     let inboundUsers = await this.redisService.getJson<{deviceId: string, timestamp: number, evacueeCount: number}[]>(cacheKey) || [];
-    
+
     const now = Date.now();
     const timeoutMs = 45 * 60 * 1000;
     inboundUsers = inboundUsers.filter(u => now - u.timestamp < timeoutMs);
 
     const existingIdx = inboundUsers.findIndex(u => u.deviceId === deviceId);
     if (existingIdx >= 0) {
-      // Update existing booking
       inboundUsers[existingIdx].timestamp = now;
       inboundUsers[existingIdx].evacueeCount = evacueeCount;
     } else {
-      // Check against system capacity (85% of total)
       const systemCapacity = this.getSystemCapacity(shelter.capacity);
       const currentInbound = inboundUsers.reduce((sum, u) => sum + (u.evacueeCount || 1), 0);
       const totalOccupied = shelter.currentOccupancy + currentInbound + evacueeCount;
-      
+
       if (totalOccupied > systemCapacity) {
         throw new BadRequestException(
-          `Kapasitas sistem untuk lokasi ini sudah penuh (${systemCapacity} dari ${shelter.capacity} total, 15% dicadangkan untuk kedatangan langsung). Silakan pilih lokasi evakuasi lain.`
+          `Kapasitas sistem untuk lokasi ini sudah penuh (${systemCapacity} dari ${shelter.capacity} total, 15% dicadangkan untuk kedatangan langsung). Silakan pilih lokasi evakuasi lain.`,
         );
       }
       inboundUsers.push({ deviceId, timestamp: now, evacueeCount });
     }
 
     await this.redisService.setJson(cacheKey, inboundUsers);
+
+    // Store navigation session with shelter coordinates
+    const shelterGeometry = shelter.geometry as { coordinates: [number, number] };
+    const shelterLng = shelterGeometry.coordinates[0];
+    const shelterLat = shelterGeometry.coordinates[1];
+
+    const navCacheKey = `navigation:${deviceId}`;
+    const navigationSession: NavigationSession = {
+      shelterId: shelter.id,
+      shelterName: shelter.name,
+      shelterLat,
+      shelterLng,
+      startLat: startLat || shelterLat,
+      startLng: startLng || shelterLng,
+      currentLat: startLat || shelterLat,
+      currentLng: startLng || shelterLng,
+      evacueeCount,
+      startTime: now,
+      lastUpdate: now,
+      distanceRemaining: startLat && startLng
+        ? this.calculateDistance(startLat, startLng, shelterLat, shelterLng)
+        : 0,
+      eta: 0,
+      status: 'ACTIVE',
+    };
+
+    await this.redisService.setJson(navCacheKey, navigationSession, timeoutMs / 1000);
 
     const totalInbound = inboundUsers.reduce((sum, u) => sum + (u.evacueeCount || 1), 0);
     const systemCapacity = this.getSystemCapacity(shelter.capacity);
@@ -188,19 +238,30 @@ export class EvacuationLocationService {
       totalCapacity: shelter.capacity,
     });
 
-    return { success: true, inboundCount: totalInbound, systemCapacity };
+    return {
+      success: true,
+      inboundCount: totalInbound,
+      systemCapacity,
+      shelter: {
+        id: shelter.id,
+        name: shelter.name,
+        lat: shelterLat,
+        lng: shelterLng,
+      },
+      distanceRemaining: navigationSession.distanceRemaining,
+    };
   }
 
   async stopNavigation(id: number, deviceId: string) {
     const cacheKey = `evacuation-location:${id}:inbound`;
     let inboundUsers = await this.redisService.getJson<{deviceId: string, timestamp: number, evacueeCount: number}[]>(cacheKey) || [];
-    
+
     const initialLength = inboundUsers.length;
     inboundUsers = inboundUsers.filter(u => u.deviceId !== deviceId);
-    
+
     if (inboundUsers.length !== initialLength) {
       await this.redisService.setJson(cacheKey, inboundUsers);
-      
+
       const shelter = await this.findById(id);
       const totalInbound = inboundUsers.reduce((sum, u) => sum + (u.evacueeCount || 1), 0);
       const systemCapacity = this.getSystemCapacity(shelter.capacity);
@@ -213,7 +274,108 @@ export class EvacuationLocationService {
         totalCapacity: shelter.capacity,
       });
     }
+
+    // Clear navigation session
+    const navCacheKey = `navigation:${deviceId}`;
+    await this.redisService.del(navCacheKey);
+
     return { success: true };
+  }
+
+  async trackPosition(shelterId: number, dto: { deviceId: string; lat: number; lng: number; heading?: number; speed?: number; accuracy?: number }) {
+    const navCacheKey = `navigation:${dto.deviceId}`;
+    const session = await this.redisService.getJson<NavigationSession>(navCacheKey);
+
+    if (!session || session.shelterId !== shelterId) {
+      return { success: false, reason: 'NO_ACTIVE_NAVIGATION' };
+    }
+
+    const now = Date.now();
+    const distanceToShelter = this.calculateDistance(dto.lat, dto.lng, session.shelterLat, session.shelterLng);
+
+    // Calculate ETA based on walking speed (~5 km/h)
+    const walkingSpeedKmH = 5;
+    const eta = (distanceToShelter / walkingSpeedKmH) * 60; // ETA in minutes
+
+    // Check for arrival (within 50 meters)
+    const arrived = distanceToShelter <= 0.05; // 50 meters = 0.05 km
+
+    // Update session
+    const updatedSession: NavigationSession = {
+      ...session,
+      currentLat: dto.lat,
+      currentLng: dto.lng,
+      heading: dto.heading,
+      speed: dto.speed,
+      lastUpdate: now,
+      distanceRemaining: distanceToShelter,
+      eta: Math.ceil(eta),
+      status: arrived ? 'ARRIVED' : 'ACTIVE',
+    };
+
+    await this.redisService.setJson(navCacheKey, updatedSession);
+
+    // If arrived, also update the inbound list and broadcast
+    if (arrived && session.status !== 'ARRIVED') {
+      // Remove from inbound tracking since they've arrived
+      const inboundKey = `evacuation-location:${shelterId}:inbound`;
+      const inboundUsers = await this.redisService.getJson<{deviceId: string; timestamp: number; evacueeCount: number}[]>(inboundKey) || [];
+      const filtered = inboundUsers.filter(u => u.deviceId !== dto.deviceId);
+      await this.redisService.setJson(inboundKey, filtered);
+
+      // Broadcast capacity update
+      const shelter = await this.findById(shelterId);
+      const totalInbound = filtered.reduce((sum, u) => sum + (u.evacueeCount || 1), 0);
+      const systemCapacity = this.getSystemCapacity(shelter.capacity);
+
+      this.websocketService.broadcastEvacuationCapacityUpdate({
+        id: shelter.id,
+        name: shelter.name,
+        currentOccupancy: shelter.currentOccupancy,
+        availableCapacity: systemCapacity - shelter.currentOccupancy - totalInbound,
+        totalCapacity: shelter.capacity,
+      });
+    }
+
+    return {
+      success: true,
+      distance: Math.round(distanceToShelter * 1000), // in meters
+      distanceKm: Math.round(distanceToShelter * 100) / 100,
+      eta: Math.ceil(eta),
+      arrived,
+      status: updatedSession.status,
+    };
+  }
+
+  async getNavigationStatus(deviceId: string) {
+    const navCacheKey = `navigation:${deviceId}`;
+    const session = await this.redisService.getJson<NavigationSession>(navCacheKey);
+
+    if (!session) {
+      return { active: false };
+    }
+
+    // Check if expired
+    const now = Date.now();
+    const timeoutMs = 45 * 60 * 1000;
+    if (now - session.lastUpdate > timeoutMs) {
+      await this.redisService.del(navCacheKey);
+      return { active: false };
+    }
+
+    return {
+      active: true,
+      shelterId: session.shelterId,
+      shelterName: session.shelterName,
+      shelterLat: session.shelterLat,
+      shelterLng: session.shelterLng,
+      distanceRemaining: Math.round(session.distanceRemaining * 1000),
+      distanceKm: Math.round(session.distanceRemaining * 100) / 100,
+      eta: session.eta,
+      status: session.status,
+      startTime: session.startTime,
+      lastUpdate: session.lastUpdate,
+    };
   }
 
   async getNearby(
