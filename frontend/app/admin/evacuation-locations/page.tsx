@@ -145,18 +145,22 @@ export default function AdminEvacuationLocationsPage() {
 
   const handleEdit = (evacuationLocation: EvacuationLocation) => {
     setEditingEvacuationLocation(evacuationLocation);
-    const coords = (evacuationLocation.geometry as { coordinates?: [number, number] })
-      ?.coordinates;
-    setFormData({
-      name: evacuationLocation.name,
-      address: evacuationLocation.address || "",
-      capacity: evacuationLocation.capacity,
-      condition: evacuationLocation.condition,
-      lat: coords?.[1] || -7.888,
-      lon: coords?.[0] || 110.33,
-    });
     setIsDialogOpen(true);
   };
+
+  useEffect(() => {
+    if (editingEvacuationLocation && isDialogOpen) {
+      const coords = (editingEvacuationLocation.geometry as { coordinates?: [number, number] })?.coordinates;
+      setFormData({
+        name: editingEvacuationLocation.name || "",
+        address: editingEvacuationLocation.address || "",
+        capacity: editingEvacuationLocation.capacity || 0,
+        condition: editingEvacuationLocation.condition as EvacuationLocationCondition || "GOOD",
+        lat: coords?.[1] || -7.888,
+        lon: coords?.[0] || 110.33,
+      });
+    }
+  }, [editingEvacuationLocation, isDialogOpen]);
 
   const handleOpenAssign = (evacuationLocation: EvacuationLocation) => {
     setAssigningEvacuationLocation(evacuationLocation);
@@ -495,7 +499,7 @@ export default function AdminEvacuationLocationsPage() {
             </DialogTitle>
             <DialogDescription className="text-zinc-400 mt-2">
               Pilih petugas yang akan bertanggung jawab mengelola lokasi evakuasi{" "}
-               <span className="dark:text-white text-slate-900 font-medium">
+               <span className="text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-md">
                 {assigningEvacuationLocation?.name}
               </span>
             </DialogDescription>
@@ -509,7 +513,7 @@ export default function AdminEvacuationLocationsPage() {
                 value={selectedOfficerId}
                 onValueChange={(value) => setSelectedOfficerId(value || "")}
               >
-                <SelectTrigger className="bg-zinc-950 border-zinc-700 h-11 text-zinc-100">
+                <SelectTrigger className="w-full bg-zinc-950 border-zinc-700 h-11 text-zinc-100">
                   <SelectValue placeholder="Pilih petugas...">
                     {selectedOfficerId === "none" ? (
                       <div className="flex items-center gap-2">
@@ -517,9 +521,9 @@ export default function AdminEvacuationLocationsPage() {
                         <span className="text-zinc-400">Tidak ada petugas</span>
                       </div>
                     ) : selectedOfficerId ? (
-                      <div className="flex items-center gap-2">
-                        <UserCheck className="w-4 h-4 text-emerald-500" />
-                        <span>
+                      <div className="flex items-center gap-2 text-left truncate">
+                        <UserCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span className="font-medium truncate block">
                           {officers.find(
                             (o) => o.id.toString() === selectedOfficerId,
                           )?.name || "Pilih petugas..."}
@@ -530,7 +534,7 @@ export default function AdminEvacuationLocationsPage() {
                     )}
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100 max-h-[300px]">
+                <SelectContent className="w-[var(--radix-select-trigger-width)] bg-zinc-900 border-zinc-800 text-zinc-100 max-h-[300px]">
                   <SelectItem value="none">
                     <div className="flex items-center gap-2 py-1">
                       <UserX className="w-4 h-4 text-zinc-500" />
@@ -562,7 +566,7 @@ export default function AdminEvacuationLocationsPage() {
                               officer.managedEvacuationLocations.length > 0 && (
                                 <div className="text-xs text-amber-500 mt-0.5">
                                   Mengelola {officer.managedEvacuationLocations.length}{" "}
-                                  evacuationLocation
+                                  lokasi evakuasi
                                 </div>
                               )}
                           </div>
@@ -580,8 +584,8 @@ export default function AdminEvacuationLocationsPage() {
                 <div className="flex items-start gap-2">
                   <UserCheck className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
                   <div className="text-sm text-emerald-400">
-                    Petugas akan dapat mengakses dan mengelola evacuationLocation ini
-                    melalui dashboard mereka
+                    Petugas akan dapat mengakses dan mengelola lokasi evakuasi ini
+                    melalui dashboard mereka.
                   </div>
                 </div>
               </div>
@@ -655,7 +659,7 @@ export default function AdminEvacuationLocationsPage() {
                       setFormData({ ...formData, name: e.target.value })
                     }
                     placeholder="Contoh: Balai Desa Bantul"
-                    className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   />
                   <p className="text-xs text-zinc-500">
                     Nama resmi lokasi evakuasi yang mudah dikenali
@@ -679,7 +683,7 @@ export default function AdminEvacuationLocationsPage() {
                       setFormData({ ...formData, address: e.target.value })
                     }
                     placeholder="Contoh: Jl. Dr. Wahidin Sudiro Kusumo No.3"
-                    className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   />
                   <p className="text-xs text-zinc-500">
                     Alamat lengkap untuk memudahkan navigasi
@@ -707,7 +711,7 @@ export default function AdminEvacuationLocationsPage() {
                       })
                     }
                     placeholder="0"
-                    className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <p className="text-xs text-zinc-500">
                     Jumlah maksimal pengungsi (orang)
@@ -732,7 +736,7 @@ export default function AdminEvacuationLocationsPage() {
                         condition: e.target.value as EvacuationLocationCondition,
                       })
                     }
-                    className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   >
                     <option value="GOOD">Sangat Baik</option>
                     <option value="MODERATE">Layak Huni</option>
@@ -764,7 +768,7 @@ export default function AdminEvacuationLocationsPage() {
                           lat: parseFloat(e.target.value),
                         })
                       }
-                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      className="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -785,7 +789,7 @@ export default function AdminEvacuationLocationsPage() {
                           lon: parseFloat(e.target.value),
                         })
                       }
-                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      className="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     />
                   </div>
                 </div>

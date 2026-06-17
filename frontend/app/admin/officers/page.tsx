@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { UserPlus, Shield, Mail, Search } from "lucide-react";
+import { UserPlus, Shield, Mail, Search, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 export default function AdminOfficersPage() {
@@ -28,6 +28,8 @@ export default function AdminOfficersPage() {
     phone: "",
   });
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const fetchOfficers = async () => {
     try {
@@ -115,6 +117,18 @@ export default function AdminOfficersPage() {
     );
   });
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredOfficers.length / itemsPerPage);
+  const paginatedOfficers = filteredOfficers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   return (
     <div className="py-6 w-full px-4 sm:px-6 md:px-8 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -191,7 +205,7 @@ export default function AdminOfficersPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredOfficers.map((officer) => (
+                paginatedOfficers.map((officer) => (
                   <TableRow
                     key={officer.id}
                     className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors"
@@ -206,12 +220,21 @@ export default function AdminOfficersPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant="outline"
-                        className="bg-zinc-800 font-medium border-zinc-700 text-zinc-300"
-                      >
-                        {officer.managedEvacuationLocations?.length || 0} Lokasi Evakuasi
-                      </Badge>
+                      {officer.managedEvacuationLocations && officer.managedEvacuationLocations.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {officer.managedEvacuationLocations.map(loc => (
+                            <Badge
+                              key={loc.id}
+                              variant="outline"
+                              className="bg-blue-500/10 font-medium border-blue-500/20 text-blue-400"
+                            >
+                              {loc.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-zinc-500 italic text-sm">Belum ada lokasi</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button
@@ -237,6 +260,52 @@ export default function AdminOfficersPage() {
             </TableBody>
           </Table>
         </div>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800">
+            <div className="text-sm text-zinc-400">
+              Menampilkan {((currentPage - 1) * itemsPerPage) + 1} hingga {Math.min(currentPage * itemsPerPage, filteredOfficers.length)} dari {filteredOfficers.length} petugas
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="bg-zinc-900 border-zinc-700 hover:bg-zinc-800"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <Button
+                    key={i}
+                    variant={currentPage === i + 1 ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(i + 1)}
+                    className={
+                      currentPage === i + 1
+                        ? "bg-blue-600 hover:bg-blue-700"
+                        : "bg-zinc-900 border-zinc-700 hover:bg-zinc-800"
+                    }
+                  >
+                    {i + 1}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="bg-zinc-900 border-zinc-700 hover:bg-zinc-800"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Officer Dialog */}
@@ -381,6 +450,37 @@ export default function AdminOfficersPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Tampilkan Lokasi yang Dikelola Saat Ini (Jika Edit) */}
+              {editingOfficer && (
+                <div className="space-y-3 pt-2 border-t border-zinc-800">
+                  <label className="text-sm font-semibold text-zinc-300 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-rose-400" />
+                    Lokasi Evakuasi yang Dikelola
+                  </label>
+                  
+                  {editingOfficer.managedEvacuationLocations && editingOfficer.managedEvacuationLocations.length > 0 ? (
+                    <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
+                      {editingOfficer.managedEvacuationLocations.map(loc => (
+                        <div key={loc.id} className="flex items-start gap-2 bg-zinc-900 p-2 rounded-md border border-zinc-800/50">
+                          <MapPin className="w-4 h-4 text-zinc-500 mt-0.5 shrink-0" />
+                          <div>
+                            <div className="text-sm text-zinc-200 font-medium">{loc.name}</div>
+                            {loc.address && <div className="text-xs text-zinc-500 line-clamp-1">{loc.address}</div>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-zinc-950 border border-zinc-800 border-dashed rounded-lg p-4 text-center">
+                      <span className="text-zinc-500 text-sm">Belum ada lokasi yang ditugaskan</span>
+                    </div>
+                  )}
+                  <p className="text-xs text-zinc-500">
+                    * Untuk menugaskan atau mengubah lokasi, silakan menuju halaman <b>Manajemen Lokasi Evakuasi</b>.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Footer */}

@@ -21,15 +21,14 @@ import type {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
@@ -42,7 +41,6 @@ import {
   Layers,
   Info,
   Footprints,
-  Bike,
   Car,
   Clock,
   Activity,
@@ -53,7 +51,10 @@ import { useTheme } from "next-themes";
 // Import hook dan service baru untuk nearby evacuationLocations
 import { useUserLocation } from "@/hooks/use-user-location";
 import { evacuationService } from "@/services/evacuation.service";
-import { getCurrentPositionRobust, saveLastKnownLocation } from "@/lib/geolocation-utils";
+import {
+  getCurrentPositionRobust,
+  saveLastKnownLocation,
+} from "@/lib/geolocation-utils";
 import { ManualLocationModal } from "@/components/manual-location-modal";
 
 const MapClient = dynamic(
@@ -114,6 +115,20 @@ function isThreatened(
   return distance <= impactRadius;
 }
 
+// Helper function to get time ago string
+function getTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMins < 1) return "Baru saja";
+  if (diffMins < 60) return `${diffMins} menit lalu`;
+  if (diffHours < 24) return `${diffHours} jam lalu`;
+  return `${diffDays} hari lalu`;
+}
+
 // --- Main Component ---
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
@@ -124,6 +139,8 @@ export default function Dashboard() {
 
   // Data State
   const [earthquakes, setEarthquakes] = useState<Earthquake[]>([]);
+  // Separate state for Bantul earthquakes only (for card display)
+  const [bantulEarthquakes, setBantulEarthquakes] = useState<Earthquake[]>([]);
   const [evacuationLocations, setEvacuationLocations] = useState<
     EvacuationLocation[]
   >([]);
@@ -136,7 +153,6 @@ export default function Dashboard() {
 
   // App State
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Map Interactive State
   const [isMapExpanded, setIsMapExpanded] = useState(false);
@@ -162,9 +178,7 @@ export default function Dashboard() {
     null,
   );
   const [destinationName, setDestinationName] = useState<string>("Tujuan");
-  const [activeRouteMode, setActiveRouteMode] = useState<
-    "walk" | "car"
-  >("car");
+  const [activeRouteMode, setActiveRouteMode] = useState<"walk" | "car">("car");
   const [nearbyRadius, setNearbyRadius] = useState(3);
   const [calculatingRoute, setCalculatingRoute] = useState(false);
   const [flyToLocation, setFlyToLocation] = useState<{
@@ -174,14 +188,22 @@ export default function Dashboard() {
   } | null>(null);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [, setIsEvacuationLocationDetailOpen] = useState(false);
-  const [redZoneEmergency, setRedZoneEmergency] = useState<Earthquake | null>(null);
+  const [redZoneEmergency, setRedZoneEmergency] = useState<Earthquake | null>(
+    null,
+  );
   const processedEmergencyRef = useRef<string | null>(null);
 
   // Navigation booking state
   const [navigatingToId, setNavigatingToId] = useState<number | null>(null);
-  const [destinationShelterId, setDestinationShelterId] = useState<number | null>(null);
+  const [destinationShelterId, setDestinationShelterId] = useState<
+    number | null
+  >(null);
   const [evacueeCount, setEvacueeCount] = useState<number>(1);
   const navigatingWatchRef = useRef<number | null>(null);
+
+  // Track if initial data has been loaded (for WebSocket buffering)
+  const initialDataLoadedRef = useRef(false);
+  const pendingEarthquakesRef = useRef<Earthquake[]>([]);
 
   // GPS Tracking state
   const [trackingInfo, setTrackingInfo] = useState<{
@@ -203,7 +225,9 @@ export default function Dashboard() {
 
   // Manual location modal state
   const [manualLocationModalOpen, setManualLocationModalOpen] = useState(false);
-  const [pendingEarthquake, setPendingEarthquake] = useState<Earthquake | null>(null);
+  const [pendingEarthquake, setPendingEarthquake] = useState<Earthquake | null>(
+    null,
+  );
 
   useEffect(() => {
     const updateTime = () => setCurrentTime(new Date());
@@ -231,30 +255,41 @@ export default function Dashboard() {
 
           // Re-calculate route
           setTimeout(() => {
-            calculateRouteToEvacuationLocation(parsed.lat, parsed.lng, parsed.name, parsed.shelterId);
+            calculateRouteToEvacuationLocation(
+              parsed.lat,
+              parsed.lng,
+              parsed.name,
+              parsed.shelterId,
+            );
           }, 1000);
 
           // Fetch live tracking from backend
           try {
-            const status = await evacuationLocationApi.getNavigationStatus(deviceId);
+            const status =
+              await evacuationLocationApi.getNavigationStatus(deviceId);
             if (status.active && status.shelterId === parsed.shelterId) {
               // Restore tracking info from backend
               setTrackingInfo({
                 distance: status.distanceRemaining,
                 distanceKm: status.distanceKm,
                 eta: status.eta,
-                arrived: status.status === 'ARRIVED',
+                arrived: status.status === "ARRIVED",
               });
 
               // If already arrived, trigger arrival flow
-              if (status.status === 'ARRIVED') {
-                toast.success("Selamat datang kembali! Anda telah tiba di lokasi evakuasi sebelumnya.", {
-                  description: "Navigasi sebelumnya telah tercatat.",
-                  duration: 10000,
-                  icon: <CheckCircle2 className="w-5 h-5 text-green-600" />,
-                });
+              if (status.status === "ARRIVED") {
+                toast.success(
+                  "Selamat datang kembali! Anda telah tiba di lokasi evakuasi sebelumnya.",
+                  {
+                    description: "Navigasi sebelumnya telah tercatat.",
+                    duration: 10000,
+                    icon: <CheckCircle2 className="w-5 h-5 text-green-600" />,
+                  },
+                );
                 // Auto-clear navigation
-                evacuationLocationApi.stopNavigation(parsed.shelterId, deviceId).catch(() => {});
+                evacuationLocationApi
+                  .stopNavigation(parsed.shelterId, deviceId)
+                  .catch(() => {});
                 localStorage.removeItem("activeNavigation");
                 setNavigatingToId(null);
                 setDestinationShelterId(null);
@@ -338,12 +373,15 @@ export default function Dashboard() {
           return;
         }
 
-        let availableEvacuationLocations = currentEvacuationLocations.filter((s) => {
-          const availCap = s.availableCapacity !== undefined 
-            ? s.availableCapacity 
-            : s.capacity - (s.currentOccupancy ?? 0);
-          return availCap > 0;
-        });
+        let availableEvacuationLocations = currentEvacuationLocations.filter(
+          (s) => {
+            const availCap =
+              s.availableCapacity !== undefined
+                ? s.availableCapacity
+                : s.capacity - (s.currentOccupancy ?? 0);
+            return availCap > 0;
+          },
+        );
         if (availableEvacuationLocations.length === 0) {
           availableEvacuationLocations = [...currentEvacuationLocations];
         }
@@ -445,7 +483,8 @@ export default function Dashboard() {
   const processEmergencyFlow = useCallback(async (eq: Earthquake) => {
     setGettingLocation(true);
     toast.info("Memproses respons darurat...", {
-      description: "Sedang mendapatkan koordinat lokasi Anda untuk menentukan zona keselamatan.",
+      description:
+        "Sedang mendapatkan koordinat lokasi Anda untuk menentukan zona keselamatan.",
       duration: 4000,
     });
 
@@ -462,7 +501,9 @@ export default function Dashboard() {
         const distMeters = distKm * 1000;
         const baseRadius = Math.pow(eq.magnitude, 2.5) * 50;
 
-        console.log(`[Emergency Flow] User coords: ${userLat}, ${userLng}. Dist: ${distMeters.toFixed(1)}m. baseRadius: ${baseRadius.toFixed(1)}m`);
+        console.log(
+          `[Emergency Flow] User coords: ${userLat}, ${userLng}. Dist: ${distMeters.toFixed(1)}m. baseRadius: ${baseRadius.toFixed(1)}m`,
+        );
 
         setSelectedEarthquake(eq);
 
@@ -475,23 +516,31 @@ export default function Dashboard() {
           setRouteEnd(null);
           setGettingLocation(false);
           toast.error("🔴 ANDA BERADA DI ZONA MERAH (BAHAYA TINGGI)", {
-            description: "Bahaya reruntuhan tinggi! Tetap berlindung di tempat aman/shelter-in-place.",
+            description:
+              "Bahaya reruntuhan tinggi! Tetap berlindung di tempat aman/shelter-in-place.",
             duration: 10000,
           });
         } else if (distMeters <= baseRadius * 6) {
           // YELLOW or GREEN ZONE
           const isYellow = distMeters <= baseRadius * 3;
-          toast.info(isYellow ? "🟡 Anda berada di Zona Kuning (Dampak Menengah)" : "🟢 Anda berada di Zona Hijau (Dampak Ringan)", {
-            description: "Mencari rute evakuasi otomatis menuju lokasi terdekat...",
-            duration: 5000,
-          });
+          toast.info(
+            isYellow
+              ? "🟡 Anda berada di Zona Kuning (Dampak Menengah)"
+              : "🟢 Anda berada di Zona Hijau (Dampak Ringan)",
+            {
+              description:
+                "Mencari rute evakuasi otomatis menuju lokasi terdekat...",
+              duration: 5000,
+            },
+          );
 
           // Check Bantul boundary AFTER zone detection - only block auto-routing
           if (!isWithinBantul(userLat, userLng)) {
             setFlyToLocation({ lat: eq.lat, lon: eq.lon, zoom: 11 });
             setGettingLocation(false);
             toast.warning("Lokasi Anda terdeteksi di luar Bantul.", {
-              description: "Sistem evakuasi otomatis hanya mendukung wilayah Kabupaten Bantul. Gunakan peta untuk navigasi manual.",
+              description:
+                "Sistem evakuasi otomatis hanya mendukung wilayah Kabupaten Bantul. Gunakan peta untuk navigasi manual.",
               duration: 8000,
             });
             return;
@@ -515,9 +564,10 @@ export default function Dashboard() {
 
           // Filter by capacity
           let availableLocations = locations.filter((s) => {
-            const availCap = s.availableCapacity !== undefined 
-              ? s.availableCapacity 
-              : s.capacity - (s.currentOccupancy ?? 0);
+            const availCap =
+              s.availableCapacity !== undefined
+                ? s.availableCapacity
+                : s.capacity - (s.currentOccupancy ?? 0);
             return availCap > 0;
           });
           if (availableLocations.length === 0) {
@@ -526,7 +576,8 @@ export default function Dashboard() {
 
           if (availableLocations.length === 0) {
             toast.error("Tidak ada lokasi evakuasi terdekat yang ditemukan.", {
-              description: "Silakan pantau pengumuman keselamatan atau pilih lokasi manual.",
+              description:
+                "Silakan pantau pengumuman keselamatan atau pilih lokasi manual.",
             });
             setGettingLocation(false);
             setFlyToLocation({ lat: eq.lat, lon: eq.lon, zoom: 12 });
@@ -579,12 +630,13 @@ export default function Dashboard() {
 
             toast.success(
               `Rute evakuasi ke ${nearestLoc.name} berhasil ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
-              { duration: 8000 }
+              { duration: 8000 },
             );
           } catch (routeErr) {
             console.error("Error calculating emergency route:", routeErr);
             toast.error("Gagal menghitung rute evakuasi darurat otomatis.", {
-              description: "Coba pilih tempat evakuasi secara manual pada panel informasi.",
+              description:
+                "Coba pilih tempat evakuasi secara manual pada panel informasi.",
               duration: 8000,
             });
           } finally {
@@ -628,7 +680,7 @@ export default function Dashboard() {
         enableHighAccuracy: true,
         timeout: 12000,
         maximumAge: 0,
-      }
+      },
     );
   }, []);
 
@@ -660,7 +712,7 @@ export default function Dashboard() {
       const baseRadius = Math.pow(eq.magnitude, 2.5) * 50;
 
       console.log(
-        `[Manual Location] Source: ${location.source}, Coords: ${userLat}, ${userLng}. Dist: ${distMeters.toFixed(1)}m. baseRadius: ${baseRadius.toFixed(1)}m`
+        `[Manual Location] Source: ${location.source}, Coords: ${userLat}, ${userLng}. Dist: ${distMeters.toFixed(1)}m. baseRadius: ${baseRadius.toFixed(1)}m`,
       );
 
       setSelectedEarthquake(eq);
@@ -674,9 +726,10 @@ export default function Dashboard() {
         setRouteEnd(null);
         setGettingLocation(false);
         toast.error("🔴 ANDA BERADA DI ZONA MERAH (BAHAYA TINGGI)", {
-          description: location.source === "manual"
-            ? "Lokasi manual terdeteksi di zona bahaya. Tetap berlindung di tempat aman."
-            : "Bahaya reruntuhan tinggi! Tetap berlindung di tempat aman/shelter-in-place.",
+          description:
+            location.source === "manual"
+              ? "Lokasi manual terdeteksi di zona bahaya. Tetap berlindung di tempat aman."
+              : "Bahaya reruntuhan tinggi! Tetap berlindung di tempat aman/shelter-in-place.",
           duration: 10000,
         });
       } else if (distMeters <= baseRadius * 6) {
@@ -687,9 +740,10 @@ export default function Dashboard() {
             ? "🟡 Anda berada di Zona Kuning (Dampak Menengah)"
             : "🟢 Anda berada di Zona Hijau (Dampak Ringan)",
           {
-            description: "Mencari rute evakuasi otomatis menuju lokasi terdekat...",
+            description:
+              "Mencari rute evakuasi otomatis menuju lokasi terdekat...",
             duration: 5000,
-          }
+          },
         );
 
         // Get or fetch evacuation locations
@@ -712,9 +766,10 @@ export default function Dashboard() {
             })
             .then((res) => {
               const availableLocations = res.filter((s) => {
-                const availCap = s.availableCapacity !== undefined 
-                  ? s.availableCapacity 
-                  : s.capacity - (s.currentOccupancy ?? 0);
+                const availCap =
+                  s.availableCapacity !== undefined
+                    ? s.availableCapacity
+                    : s.capacity - (s.currentOccupancy ?? 0);
                 return availCap > 0;
               });
               if (availableLocations.length === 0) return;
@@ -728,7 +783,7 @@ export default function Dashboard() {
                   userLat,
                   userLng,
                   coords.coordinates[1],
-                  coords.coordinates[0]
+                  coords.coordinates[0],
                 );
                 if (d < minDistance) {
                   minDistance = d;
@@ -736,7 +791,9 @@ export default function Dashboard() {
                 }
               });
 
-              const targetCoords = nearestLoc.geometry as { coordinates: [number, number] };
+              const targetCoords = nearestLoc.geometry as {
+                coordinates: [number, number];
+              };
               setRoutingMode(true);
 
               roadApi
@@ -744,7 +801,7 @@ export default function Dashboard() {
                   userLat,
                   userLng,
                   targetCoords.coordinates[1],
-                  targetCoords.coordinates[0]
+                  targetCoords.coordinates[0],
                 )
                 .then((route) => {
                   setCalculatedRoute(route);
@@ -758,12 +815,14 @@ export default function Dashboard() {
                   setFlyToLocation({ lat: userLat, lon: userLng, zoom: 14 });
                   toast.success(
                     `Rute evakuasi ke ${nearestLoc.name} ditemukan! Jarak: ${(route.properties.totalDistance / 1000).toFixed(2)} km`,
-                    { duration: 8000 }
+                    { duration: 8000 },
                   );
                 })
                 .catch((routeErr) => {
                   console.error("Error calculating route:", routeErr);
-                  toast.error("Gagal menghitung rute evakuasi.", { duration: 8000 });
+                  toast.error("Gagal menghitung rute evakuasi.", {
+                    duration: 8000,
+                  });
                 })
                 .finally(() => setGettingLocation(false));
             });
@@ -775,16 +834,13 @@ export default function Dashboard() {
         setRouteStart(null);
         setRouteEnd(null);
         setGettingLocation(false);
-        toast.success(
-          "Safe Zone: Anda berada di luar radius dampak gempa.",
-          {
-            description: `Jarak Anda ke pusat gempa: ${distKm.toFixed(1)} km. Memfokuskan peta ke episentrum.`,
-            duration: 8000,
-          }
-        );
+        toast.success("Safe Zone: Anda berada di luar radius dampak gempa.", {
+          description: `Jarak Anda ke pusat gempa: ${distKm.toFixed(1)} km. Memfokuskan peta ke episentrum.`,
+          duration: 8000,
+        });
       }
     },
-    [pendingEarthquake]
+    [pendingEarthquake],
   );
 
   useEffect(() => {
@@ -793,7 +849,6 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     setLoading(true);
-    setError(null);
 
     // Calculate 24 hours ago in WIB timezone (UTC+7)
     // BMKG Indonesia uses WIB, so filter should match
@@ -837,14 +892,41 @@ export default function Dashboard() {
       setHazardZones(hazardData as HazardZone[]);
       // Show ALL earthquakes from 24h (not filtered by Bantul) so users can see impact radius
       const filteredEarthquakes = earthquakesResponse.data.filter(
-        (eq: Earthquake) => eq.lat != null && eq.lon != null
+        (eq: Earthquake) => eq.lat != null && eq.lon != null,
       );
       setEarthquakes(filteredEarthquakes);
+
+      const filteredBantul = filteredEarthquakes.filter((eq: Earthquake) =>
+        isWithinBantul(eq.lat, eq.lon),
+      );
+      setBantulEarthquakes(filteredBantul);
+
       setFacilities(facilitiesData as PublicFacility[]);
       setRoadNetwork(roadNetworkData);
+
+      // Mark initial data as loaded and flush pending earthquakes
+      initialDataLoadedRef.current = true;
+      if (pendingEarthquakesRef.current.length > 0) {
+        // Add any pending earthquakes that came in while loading
+        const pendingToAdd = pendingEarthquakesRef.current.filter(
+          (newEq) => !filteredEarthquakes.some((eq) => eq.id === newEq.id),
+        );
+        if (pendingToAdd.length > 0) {
+          setEarthquakes((prev) => [...pendingToAdd, ...prev].slice(0, 99));
+          const bantulPending = pendingToAdd.filter((eq) =>
+            isWithinBantul(eq.lat, eq.lon),
+          );
+          if (bantulPending.length > 0) {
+            setBantulEarthquakes((prev) =>
+              [...bantulPending, ...prev].slice(0, 99),
+            );
+          }
+        }
+        pendingEarthquakesRef.current = [];
+      }
     } catch (err) {
       console.error(err);
-      setError("Gagal memuat data dari server.");
+      initialDataLoadedRef.current = true; // Still mark as loaded on error
     } finally {
       setLoading(false);
     }
@@ -873,7 +955,10 @@ export default function Dashboard() {
           "[Dashboard] Fetching nearby evacuationLocations for location:",
           userLocation,
         );
-        lastFetchedLocRef.current = { lat: userLocation.lat, lng: userLocation.lng };
+        lastFetchedLocRef.current = {
+          lat: userLocation.lat,
+          lng: userLocation.lng,
+        };
         const nearbyEvacuationLocations =
           await evacuationService.getNearbyEvacuationLocations({
             lat: userLocation.lat,
@@ -900,7 +985,9 @@ export default function Dashboard() {
           "[Dashboard] Error fetching nearby evacuationLocations:",
           error,
         );
-        toast.error((error as Error).message || "Gagal memuat lokasi evakuasi terdekat");
+        toast.error(
+          (error as Error).message || "Gagal memuat lokasi evakuasi terdekat",
+        );
         setEvacuationLocations([]); // Set empty if error
       }
     };
@@ -948,46 +1035,45 @@ export default function Dashboard() {
     socketService.connect();
 
     // Listen for dashboard stats updates (auto-refresh)
-    const unsubscribeDashboardStats = socketService.onDashboardStats((stats) => {
-      console.log("[Dashboard] Dashboard stats updated via WebSocket:", stats);
-      // Update earthquakes list if there's a new latest earthquake
-      if (stats.latestEarthquake) {
-        setEarthquakes((prev) => {
-          const exists = prev.some((eq) => eq.id === stats.latestEarthquake?.id);
-          if (!exists && stats.latestEarthquake) {
-            return [stats.latestEarthquake, ...prev.slice(0, 99)];
-          }
-          return prev;
-        });
-      }
-    });
+    const unsubscribeDashboardStats = socketService.onDashboardStats(
+      (stats) => {
+        console.log(
+          "[Dashboard] Dashboard stats updated via WebSocket:",
+          stats,
+        );
+        // Update earthquakes list if there's a new latest earthquake
+        // Removed setEarthquakes here to prevent the "1 to 5" glitch on initial load.
+        // Real-time earthquake updates are already handled by socketService.onNewEarthquake below.
+      },
+    );
 
     // Listen for evacuation capacity updates (real-time marker updates)
-    const unsubscribeCapacity = socketService.onEvacuationCapacityUpdate((data) => {
-      console.log("[Dashboard] Evacuation capacity updated:", data);
-      // Update the evacuation location in state - create new array to force re-render
-      setEvacuationLocations((prev) => {
-        // Create a new array with the updated location to ensure re-render
-        const updated = prev.map((loc) =>
-          loc.id === data.id
-            ? {
-                ...loc,
-                currentOccupancy: data.currentOccupancy,
-                capacity: data.totalCapacity,
-              }
-            : loc,
-        );
-        // Return new array reference to trigger React re-render
-        return [...updated];
-      });
-      // Show toast notification
-      if (data.availableCapacity === 0) {
-        toast.warning(
-          `${data.name} sudah penuh!`,
-          { description: "Kapasitas tersedia: 0 orang" },
-        );
-      }
-    });
+    const unsubscribeCapacity = socketService.onEvacuationCapacityUpdate(
+      (data) => {
+        console.log("[Dashboard] Evacuation capacity updated:", data);
+        // Update the evacuation location in state - create new array to force re-render
+        setEvacuationLocations((prev) => {
+          // Create a new array with the updated location to ensure re-render
+          const updated = prev.map((loc) =>
+            loc.id === data.id
+              ? {
+                  ...loc,
+                  currentOccupancy: data.currentOccupancy,
+                  capacity: data.totalCapacity,
+                }
+              : loc,
+          );
+          // Return new array reference to trigger React re-render
+          return [...updated];
+        });
+        // Show toast notification
+        if (data.availableCapacity === 0) {
+          toast.warning(`${data.name} sudah penuh!`, {
+            description: "Kapasitas tersedia: 0 orang",
+          });
+        }
+      },
+    );
 
     const unsubscribeEarthquake = socketService.onNewEarthquake((newEq) => {
       const eqInBantul = isWithinBantul(newEq.lat, newEq.lon);
@@ -1067,7 +1153,32 @@ export default function Dashboard() {
         { duration: 15000 },
       );
 
-      setEarthquakes((prev) => [newEq, ...prev.slice(0, 99)]);
+      // Buffer earthquakes until initial data is loaded
+      // This prevents race conditions between API fetch and WebSocket
+      if (!initialDataLoadedRef.current) {
+        // Buffer if not already in buffer
+        const alreadyBuffered = pendingEarthquakesRef.current.some(
+          (eq) => eq.id === newEq.id,
+        );
+        if (!alreadyBuffered) {
+          pendingEarthquakesRef.current.push(newEq);
+        }
+        return;
+      }
+
+      // Initial data loaded - add earthquake directly with deduplication
+      setEarthquakes((prev) => {
+        const exists = prev.some((eq) => eq.id === newEq.id);
+        if (exists) return prev;
+        return [newEq, ...prev.slice(0, 99)];
+      });
+      if (eqInBantul) {
+        setBantulEarthquakes((prev) => {
+          const exists = prev.some((eq) => eq.id === newEq.id);
+          if (exists) return prev;
+          return [newEq, ...prev.slice(0, 99)];
+        });
+      }
     });
 
     return () => {
@@ -1292,7 +1403,8 @@ export default function Dashboard() {
           });
           setDestinationName(evacuationLocationName);
           // Store shelter ID for booking later
-          if (evacuationLocationId) setDestinationShelterId(evacuationLocationId);
+          if (evacuationLocationId)
+            setDestinationShelterId(evacuationLocationId);
           setIsMapExpanded(true);
 
           const threateningEq = earthquakes.find((eq) =>
@@ -1313,7 +1425,9 @@ export default function Dashboard() {
         }
       },
       (error) => {
-        toast.error(`Gagal mendapatkan lokasi Anda. (debug: app/page.tsx - line 917, error_code: ${error.code})`);
+        toast.error(
+          `Gagal mendapatkan lokasi Anda. (debug: app/page.tsx - line 917, error_code: ${error.code})`,
+        );
         setCalculatingRoute(false);
       },
       { enableHighAccuracy: true, timeout: 10000 },
@@ -1346,7 +1460,12 @@ export default function Dashboard() {
 
       // Only track if position changed significantly (> 5 meters)
       if (lastTrackedLat !== null && lastTrackedLng !== null) {
-        const movedDist = calculateDistance(lastTrackedLat, lastTrackedLng, lat, lng);
+        const movedDist = calculateDistance(
+          lastTrackedLat,
+          lastTrackedLng,
+          lat,
+          lng,
+        );
         if (movedDist < 0.005) return; // Skip if moved less than 5 meters
       }
 
@@ -1354,14 +1473,17 @@ export default function Dashboard() {
       lastTrackedLng = lng;
 
       try {
-        const result = await evacuationLocationApi.trackPosition(navigatingToId, {
-          deviceId: getDeviceId(),
-          lat,
-          lng,
-          heading: userLocation.heading,
-          speed: userLocation.speed,
-          accuracy: userLocation.accuracy,
-        });
+        const result = await evacuationLocationApi.trackPosition(
+          navigatingToId,
+          {
+            deviceId: getDeviceId(),
+            lat,
+            lng,
+            heading: userLocation.heading,
+            speed: userLocation.speed,
+            accuracy: userLocation.accuracy,
+          },
+        );
 
         if (result.success) {
           setTrackingInfo({
@@ -1408,41 +1530,71 @@ export default function Dashboard() {
     }
 
     try {
-      await evacuationLocationApi.startNavigation(shelterId, getDeviceId(), evacueeCount, startLat, startLng);
+      await evacuationLocationApi.startNavigation(
+        shelterId,
+        getDeviceId(),
+        evacueeCount,
+        startLat,
+        startLng,
+      );
       setNavigatingToId(shelterId);
 
       // Persist navigation session to survive page refreshes
-      localStorage.setItem("activeNavigation", JSON.stringify({
-        shelterId,
-        lat: routeEnd.lat,
-        lng: routeEnd.lng,
-        name: destinationName,
-        evacueeCount,
-        timestamp: Date.now()
-      }));
+      localStorage.setItem(
+        "activeNavigation",
+        JSON.stringify({
+          shelterId,
+          lat: routeEnd.lat,
+          lng: routeEnd.lng,
+          name: destinationName,
+          evacueeCount,
+          timestamp: Date.now(),
+        }),
+      );
 
       // Start GPS tracking
       startTracking();
 
-      toast.success("Navigasi dimulai! Kapasitas lokasi evakuasi telah di-booking untuk Anda.", {
-        description: "Geofencing aktif — sistem akan mendeteksi otomatis saat Anda tiba.",
-        duration: 6000,
-        icon: <Navigation className="w-5 h-5 text-blue-600" />,
-      });
+      toast.success(
+        "Navigasi dimulai! Kapasitas lokasi evakuasi telah di-booking untuk Anda.",
+        {
+          description:
+            "Geofencing aktif — sistem akan mendeteksi otomatis saat Anda tiba.",
+          duration: 6000,
+          icon: <Navigation className="w-5 h-5 text-blue-600" />,
+        },
+      );
     } catch (err: unknown) {
       console.error("Failed to start navigation booking:", err);
-      const error = err as { response?: { data?: { message?: string } }; message?: string };
-      const msg = error.response?.data?.message || error.message || "Gagal memulai navigasi.";
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const msg =
+        error.response?.data?.message ||
+        error.message ||
+        "Gagal memulai navigasi.";
       toast.error(msg, { duration: 6000 });
     }
-  }, [destinationShelterId, routeEnd, userLocation, getDeviceId, evacueeCount, destinationName, startTracking]);
+  }, [
+    destinationShelterId,
+    routeEnd,
+    userLocation,
+    getDeviceId,
+    evacueeCount,
+    destinationName,
+    startTracking,
+  ]);
 
   const cancelNavigation = useCallback(async () => {
     stopTracking(); // Stop GPS tracking
 
     if (navigatingToId) {
       try {
-        await evacuationLocationApi.stopNavigation(navigatingToId, getDeviceId());
+        await evacuationLocationApi.stopNavigation(
+          navigatingToId,
+          getDeviceId(),
+        );
       } catch (e) {
         // Silent fail
       }
@@ -1479,9 +1631,11 @@ export default function Dashboard() {
       });
 
       // Auto-arrive: stop navigation booking
-      evacuationLocationApi.stopNavigation(navigatingToId, getDeviceId()).catch(() => {
-        // Silent fail
-      });
+      evacuationLocationApi
+        .stopNavigation(navigatingToId, getDeviceId())
+        .catch(() => {
+          // Silent fail
+        });
 
       // Clear persisted state
       localStorage.removeItem("activeNavigation");
@@ -1715,9 +1869,13 @@ export default function Dashboard() {
                                             Sisa Kuota Sistem
                                           </p>
                                           <p className="text-xs font-medium text-slate-700 dark:text-zinc-300">
-                                            {evacuationLocation.availableCapacity !== undefined 
-                                              ? evacuationLocation.availableCapacity 
-                                              : evacuationLocation.capacity - (evacuationLocation.currentOccupancy ?? 0)} Orang
+                                            {evacuationLocation.availableCapacity !==
+                                            undefined
+                                              ? evacuationLocation.availableCapacity
+                                              : evacuationLocation.capacity -
+                                                (evacuationLocation.currentOccupancy ??
+                                                  0)}{" "}
+                                            Orang
                                           </p>
                                         </div>
                                       </div>
@@ -2178,13 +2336,17 @@ export default function Dashboard() {
                         </span>
                         <div className="flex items-center gap-3">
                           <button
-                            onClick={() => setEvacueeCount(Math.max(1, evacueeCount - 1))}
+                            onClick={() =>
+                              setEvacueeCount(Math.max(1, evacueeCount - 1))
+                            }
                             className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-300 dark:hover:bg-zinc-700 transition-colors"
                             disabled={evacueeCount <= 1}
                           >
                             -
                           </button>
-                          <span className="text-sm font-semibold w-4 text-center">{evacueeCount}</span>
+                          <span className="text-sm font-semibold w-4 text-center">
+                            {evacueeCount}
+                          </span>
                           <button
                             onClick={() => setEvacueeCount(evacueeCount + 1)}
                             className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-300 dark:hover:bg-zinc-700 transition-colors"
@@ -2193,7 +2355,7 @@ export default function Dashboard() {
                           </button>
                         </div>
                       </div>
-                      
+
                       <Button
                         onClick={startNavigationBooking}
                         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md"
@@ -2305,55 +2467,123 @@ export default function Dashboard() {
 
           {/* Widget 2: Earthquake 24h Statistics */}
           <Card className="border border-slate-200 dark:border-zinc-800/50 bg-white dark:bg-zinc-950/80 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-slate-800 dark:text-zinc-200 flex items-center gap-2">
-                <Activity className="h-4 w-4 text-orange-600" />
-                Gempa 24 Jam Terakhir
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-slate-800 dark:text-zinc-200 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-orange-600" />
+                  Gempa 24 Jam di daerah Bantul
+                </div>
+                {/* Status Badge */}
+                {loading ? (
+                  <Skeleton className="h-5 w-16" />
+                ) : (
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] px-2 py-0.5 ${
+                      bantulEarthquakes.some((eq) => eq.magnitude >= 5)
+                        ? "border-red-300 text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400"
+                        : bantulEarthquakes.some((eq) => eq.magnitude >= 4)
+                          ? "border-yellow-300 text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-400"
+                          : "border-green-300 text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400"
+                    }`}
+                  >
+                    {bantulEarthquakes.some((eq) => eq.magnitude >= 5)
+                      ? "⚠️ Waspada"
+                      : bantulEarthquakes.some((eq) => eq.magnitude >= 4)
+                        ? "🔔 Siaga"
+                        : "✅ Aman"}
+                  </Badge>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-orange-600 dark:text-orange-400">
-                    {earthquakes.length}
-                  </span>
-                  <span className="text-sm text-slate-500 dark:text-zinc-400">
-                    kejadian
-                  </span>
-                </div>
-                <div className="pt-2 border-t border-slate-100 dark:border-zinc-800">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-600 dark:text-zinc-400">
-                      Magnitudo Tertinggi
-                    </span>
-                    <span className="font-bold text-red-600 dark:text-red-400">
-                      {earthquakes.length > 0
-                        ? `M ${Math.max(...earthquakes.map((eq) => eq.magnitude)).toFixed(1)}`
-                        : "M 0.0"}
-                    </span>
+              {loading ? (
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-end justify-between mb-3">
+                    <div className="flex items-baseline gap-1.5">
+                      <Skeleton className="h-10 w-12" />
+                      <Skeleton className="h-4 w-10 mb-1" />
+                    </div>
+                    <Skeleton className="h-8 w-16 rounded-lg" />
                   </div>
-                  <div className="flex justify-between items-center text-xs mt-2">
-                    <span className="text-slate-600 dark:text-zinc-400">
-                      Status
-                    </span>
-                    <span
-                      className={`font-bold ${
-                        earthquakes.some((eq) => eq.magnitude >= 5)
-                          ? "text-red-600 dark:text-red-400"
-                          : earthquakes.some((eq) => eq.magnitude >= 4)
-                            ? "text-yellow-600 dark:text-yellow-400"
-                            : "text-green-600 dark:text-green-400"
-                      }`}
-                    >
-                      {earthquakes.some((eq) => eq.magnitude >= 5)
-                        ? "Waspada"
-                        : earthquakes.some((eq) => eq.magnitude >= 4)
-                          ? "Siaga"
-                          : "Aman"}
-                    </span>
+                  <div className="pt-3 border-t border-slate-100 dark:border-zinc-800">
+                    <Skeleton className="h-3 w-24 mb-2.5" />
+                    <Skeleton className="h-4 w-full mb-2" />
+                    <Skeleton className="h-3 w-40" />
                   </div>
                 </div>
-              </div>
+              ) : (
+                <>
+                  {/* Main Stats */}
+                  <div className="flex items-end justify-between mb-3">
+                    <div>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-4xl font-bold text-orange-600 dark:text-orange-400">
+                          {bantulEarthquakes.length}
+                        </span>
+                        <span className="text-xs text-slate-500 dark:text-zinc-400 mb-1">
+                          gempa di Bantul
+                        </span>
+                      </div>
+                    </div>
+                    {/* Magnitude Badge */}
+                    {bantulEarthquakes.length > 0 && (
+                      <div
+                        className={`px-3 py-1.5 rounded-lg font-bold text-sm ${
+                          Math.max(
+                            ...bantulEarthquakes.map((eq) => eq.magnitude),
+                          ) >= 5
+                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            : Math.max(
+                                  ...bantulEarthquakes.map(
+                                    (eq) => eq.magnitude,
+                                  ),
+                                ) >= 4
+                              ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                              : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        }`}
+                      >
+                        M{" "}
+                        {Math.max(
+                          ...bantulEarthquakes.map((eq) => eq.magnitude),
+                        ).toFixed(1)}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Latest Earthquake Info */}
+                  {bantulEarthquakes.length > 0 &&
+                    (() => {
+                      const latest = bantulEarthquakes[0];
+                      const eqTime = new Date(latest.time);
+                      const timeAgo = getTimeAgo(eqTime);
+                      return (
+                        <div className="pt-3 border-t border-slate-100 dark:border-zinc-800">
+                          <div className="text-[10px] text-slate-500 dark:text-zinc-400 uppercase tracking-wide mb-1">
+                            Gempa Terbaru
+                          </div>
+                          <div className="text-xs font-medium text-slate-700 dark:text-zinc-200 line-clamp-2 mb-1">
+                            {latest.location}
+                          </div>
+                          <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-zinc-400">
+                            <Clock className="w-3 h-3" />
+                            <span>{timeAgo}</span>
+                            <span>•</span>
+                            <span>Kedalaman {latest.depth} km</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                  {bantulEarthquakes.length === 0 && (
+                    <div className="pt-3 border-t border-slate-100 dark:border-zinc-800 text-center">
+                      <div className="text-xs text-slate-500 dark:text-zinc-400">
+                        Tidak ada gempa dalam 24 jam terakhir
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -2439,14 +2669,18 @@ export default function Dashboard() {
               </div>
 
               <div className="space-y-2">
-                <Badge variant="destructive" className="px-3 py-1 text-xs font-bold uppercase tracking-wider bg-red-600 hover:bg-red-700 animate-bounce">
+                <Badge
+                  variant="destructive"
+                  className="px-3 py-1 text-xs font-bold uppercase tracking-wider bg-red-600 hover:bg-red-700 animate-bounce"
+                >
                   ZONA MERAH: BAHAYA TINGGI
                 </Badge>
                 <DialogTitle className="text-2xl font-black tracking-tight text-slate-900 dark:text-zinc-50">
                   {redZoneEmergency?.location}
                 </DialogTitle>
                 <div className="text-xs font-semibold text-slate-500 dark:text-zinc-400 font-mono">
-                  Magnitude {redZoneEmergency?.magnitude} &middot; Kedalaman {redZoneEmergency?.depth} Km
+                  Magnitude {redZoneEmergency?.magnitude} &middot; Kedalaman{" "}
+                  {redZoneEmergency?.depth} Km
                 </div>
               </div>
 
@@ -2455,24 +2689,36 @@ export default function Dashboard() {
                   ⚠️ Peringatan Shelter-in-Place:
                 </p>
                 <p className="text-xs">
-                  Anda terdeteksi berada sangat dekat dengan pusat gempa. **Navigasi rute otomatis dinonaktifkan** demi keselamatan Anda untuk menghindari risiko reruntuhan gedung, jalan retak, atau tiang listrik roboh di luar.
+                  Anda terdeteksi berada sangat dekat dengan pusat gempa.
+                  **Navigasi rute otomatis dinonaktifkan** demi keselamatan Anda
+                  untuk menghindari risiko reruntuhan gedung, jalan retak, atau
+                  tiang listrik roboh di luar.
                 </p>
                 <div className="pt-2 border-t border-red-500/10 space-y-1.5 text-xs font-semibold">
                   <p className="flex items-start gap-2">
                     <span className="text-red-500">1.</span>
-                    <span>TETAP BERLINDUNG di bawah meja atau struktur kokoh.</span>
+                    <span>
+                      TETAP BERLINDUNG di bawah meja atau struktur kokoh.
+                    </span>
                   </p>
                   <p className="flex items-start gap-2">
                     <span className="text-red-500">2.</span>
-                    <span>JAUHI JENDELA kaca, dinding luar, dan barang pecah belah.</span>
+                    <span>
+                      JAUHI JENDELA kaca, dinding luar, dan barang pecah belah.
+                    </span>
                   </p>
                   <p className="flex items-start gap-2">
                     <span className="text-red-500">3.</span>
-                    <span>LINDUNGI KEPALA dan leher dengan bantal atau tangan Anda.</span>
+                    <span>
+                      LINDUNGI KEPALA dan leher dengan bantal atau tangan Anda.
+                    </span>
                   </p>
                   <p className="flex items-start gap-2">
                     <span className="text-red-500">4.</span>
-                    <span>Tunggu guncangan reda sebelum mencoba keluar ke area terbuka.</span>
+                    <span>
+                      Tunggu guncangan reda sebelum mencoba keluar ke area
+                      terbuka.
+                    </span>
                   </p>
                 </div>
               </DialogDescription>
