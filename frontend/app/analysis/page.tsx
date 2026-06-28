@@ -492,100 +492,6 @@ export default function AnalysisPage() {
           </Card>
         </div>
 
-        {/* Filter Card */}
-        <Card className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-950/80 mb-6">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-zinc-100">
-              <Filter className="h-5 w-5 text-purple-600" />
-              Parameter Analisis
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div className="flex flex-col gap-2">
-                <Label className="text-sm font-medium text-slate-700 dark:text-zinc-300">
-                  Tanggal Mulai
-                </Label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="border border-slate-200 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 rounded-lg"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Label className="text-sm font-medium text-slate-700 dark:text-zinc-300">
-                  Tanggal Akhir
-                </Label>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="border border-slate-200 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 rounded-lg"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Label className="text-sm font-medium text-slate-700 dark:text-zinc-300">
-                  Ukuran Grid (km)
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {[5, 10, 20].map((size) => (
-                    <Button
-                      key={size}
-                      variant={gridSize === size ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setGridSize(size as 5 | 10 | 20)}
-                      className={
-                        gridSize === size
-                          ? "bg-purple-600 hover:bg-purple-700 text-white flex-1 min-w-[60px]"
-                          : "border-slate-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 flex-1 min-w-[60px]"
-                      }
-                    >
-                      {size}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Label className="text-sm font-medium text-slate-700 dark:text-zinc-300">
-                  Magnitudo Min
-                </Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="10"
-                  step="0.1"
-                  value={minMagnitude}
-                  onChange={(e) => setMinMagnitude(Number(e.target.value))}
-                  className="border border-slate-200 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 rounded-lg"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 justify-end">
-                <div className="flex gap-2">
-                  <Button
-                    onClick={fetchAnalysis}
-                    disabled={loading}
-                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
-                  >
-                    {loading ? "Memproses..." : "Analisis"}
-                  </Button>
-                  <Button
-                    onClick={handleReset}
-                    variant="outline"
-                    className="border-slate-200 dark:border-zinc-700 dark:text-zinc-300 dark:bg-zinc-900 dark:hover:bg-zinc-800 hover:bg-slate-50"
-                  >
-                    Reset
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Map Section */}
         <Card id="map-section" className="border border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-950/80">
           <CardHeader className="pb-4">
@@ -729,33 +635,94 @@ export default function AnalysisPage() {
               )}
             </div>
 
-            {data && (
-              <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50 dark:bg-zinc-900/50 p-3 rounded-lg border border-slate-100 dark:border-zinc-800">
-                <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">
-                  Legenda Frekuensi:
-                </span>
-                <div className="flex flex-wrap items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-green-500 rounded shadow-sm"></div>
-                    <span className="text-sm text-slate-600 dark:text-zinc-400">
-                      Rendah (0-2 gempa)
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-amber-500 rounded shadow-sm"></div>
-                    <span className="text-sm text-slate-600 dark:text-zinc-400">
-                      Sedang (3-5 gempa)
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-red-500 rounded shadow-sm"></div>
-                    <span className="text-sm text-slate-600 dark:text-zinc-400">
-                      Tinggi (&gt;5 gempa)
-                    </span>
+              {data && (
+                <div className="mt-4 flex flex-col items-start gap-4 bg-slate-50 dark:bg-zinc-900/50 p-4 rounded-lg border border-slate-200 dark:border-zinc-800">
+                  <div className="w-full flex flex-col md:flex-row justify-between gap-6">
+                    
+                    {/* Legenda 1: Frekuensi Gempa per Desa (Hanya Tampil Jika BPBD OFF) */}
+                    {!showBpbdLayer && (
+                      <div>
+                        <span className="block text-sm font-bold text-slate-800 dark:text-zinc-200 mb-2">
+                          Legenda Peta Frekuensi Desa
+                        </span>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-emerald-100 border border-emerald-500 rounded shadow-sm opacity-80 flex items-center justify-center">
+                              <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div>
+                            </div>
+                            <span className="text-sm text-slate-600 dark:text-zinc-400">
+                              Aman (Nihil Gempa)
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-yellow-500 border border-yellow-700 rounded shadow-sm opacity-80"></div>
+                            <span className="text-sm text-slate-600 dark:text-zinc-400">
+                              Risiko Rendah (Pernah Terjadi Gempa)
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-orange-500 border border-orange-700 rounded shadow-sm opacity-80"></div>
+                            <span className="text-sm text-slate-600 dark:text-zinc-400">
+                              Risiko Sedang
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-red-600 border border-red-800 rounded shadow-sm opacity-80"></div>
+                            <span className="text-sm text-slate-600 dark:text-zinc-400">
+                              Risiko Tinggi (Sering Terjadi Gempa)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Legenda 2 & 3: Tambahan Layer BPBD & Titik Gempa */}
+                    <div className="flex flex-col gap-6">
+                      
+                      {/* Titik Gempa */}
+                      {showEarthquakes && (
+                        <div>
+                          <span className="block text-sm font-bold text-slate-800 dark:text-zinc-200 mb-2">
+                            Legenda Titik Historis Gempa
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 rounded-full bg-red-500 border-2 border-white shadow-md flex items-center justify-center">
+                              <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
+                            </div>
+                            <span className="text-sm text-slate-600 dark:text-zinc-400">
+                              Pusat Titik Gempa Bumi
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Kawasan BPBD */}
+                      {showBpbdLayer && (
+                        <div>
+                          <span className="block text-sm font-bold text-slate-800 dark:text-zinc-200 mb-2">
+                            Legenda Kawasan BPBD
+                          </span>
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-5 h-1 bg-green-500 rounded-full"></div>
+                              <span className="text-sm text-slate-600 dark:text-zinc-400">Garis Kawasan Rendah</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-5 h-1 bg-amber-500 rounded-full"></div>
+                              <span className="text-sm text-slate-600 dark:text-zinc-400">Garis Kawasan Sedang</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-5 h-1 bg-red-500 rounded-full"></div>
+                              <span className="text-sm text-slate-600 dark:text-zinc-400">Garis Kawasan Tinggi</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
           </CardContent>
         </Card>
       </div>

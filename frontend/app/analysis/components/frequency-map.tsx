@@ -4,12 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-providers";
-if (typeof window !== "undefined") {
-  require("leaflet.heat");
-}
 import type { GridCell } from "@/api/analysis";
 import { analysisApi } from "@/api/analysis";
 import { useTheme } from "next-themes";
+import ReactDOMServer from 'react-dom/server';
+import { AlertTriangle, CheckCircle2, BellRing, Calendar, ArrowDownToLine, MapPin } from "lucide-react";
 
 interface FrequencyMapProps {
   grids: GridCell[];
@@ -109,7 +108,7 @@ export default function FrequencyMap({
         center: [-7.88, 110.38],
         zoom: 11,
         zoomControl: false,
-        preferCanvas: false, // Disabled to prevent canvas race conditions with leaflet.heat
+        preferCanvas: false,
       });
 
       L.control
@@ -118,8 +117,6 @@ export default function FrequencyMap({
         })
         .addTo(mapRef.current);
 
-      // Set initial tile based on current theme - using free tile providers
-      // Default to light mode tile if resolvedTheme isn't ready
       const initialTile =
         resolvedTheme === "dark" ? "CartoDB.DarkMatter" : "CartoDB.Positron";
       tileLayerRef.current = (
@@ -133,58 +130,7 @@ export default function FrequencyMap({
         .provider(initialTile, { maxZoom: 19 })
         .addTo(mapRef.current);
 
-      // Extract boundary coordinates from GeoJSON
-      const feature = bantulBoundary.features[0];
-      const geometry = feature.geometry;
-
-      // Calculate bounds for mask layer
-      let minLon = Infinity,
-        maxLon = -Infinity,
-        minLat = Infinity,
-        maxLat = -Infinity;
-
-      // Get bounds from all polygons in MultiPolygon
-      if (geometry.type === "MultiPolygon") {
-        geometry.coordinates.forEach((polygon: number[][][]) => {
-          polygon[0].forEach((coord: number[]) => {
-            minLon = Math.min(minLon, coord[0]);
-            maxLon = Math.max(maxLon, coord[1]);
-            minLat = Math.min(minLat, coord[1]);
-            maxLat = Math.max(maxLat, coord[1]);
-          });
-        });
-      }
-
-      // Create larger bounds for mask
-      const padding = 0.3;
-      const worldBounds: [number, number][] = [
-        [minLon - padding, minLat - padding],
-        [maxLon + padding, minLat - padding],
-        [maxLon + padding, maxLat + padding],
-        [minLon - padding, maxLat + padding],
-        [minLon - padding, minLat - padding],
-      ];
-
-      // Convert all polygons to holes for the mask
-      const holes: [number, number][][] = [];
-      if (geometry.type === "MultiPolygon") {
-        geometry.coordinates.forEach((polygon: number[][][]) => {
-          const hole = polygon[0].map(
-            (coord: number[]) => [coord[1], coord[0]] as [number, number],
-          );
-          holes.push(hole);
-        });
-      }
-
-      // Create mask with multiple holes
-      maskLayerRef.current = L.polygon([worldBounds, ...holes], {
-        color: "transparent",
-        fillColor: "#000000",
-        fillOpacity: 0.2,
-        interactive: false,
-      }).addTo(mapRef.current);
-
-      // Add Bantul boundary as GeoJSON layer
+      // Add Bantul boundary outline
       boundaryLayerRef.current = L.geoJSON(bantulBoundary, {
         style: {
           color: "#2563eb",
@@ -194,7 +140,6 @@ export default function FrequencyMap({
         },
       }).addTo(mapRef.current);
 
-      // Fit map to boundary
       if (boundaryLayerRef.current) {
         mapRef.current.fitBounds(boundaryLayerRef.current.getBounds(), {
           padding: [30, 30],
@@ -210,77 +155,194 @@ export default function FrequencyMap({
     });
     layersRef.current = [];
 
-    // Add Grid Heatmap Layer
-    if (grids && grids.length > 0) {
+    // Add Polygon Village Layer (ONLY if BPBD layer is NOT shown)
+    if (grids && grids.length > 0 && !showBpbdLayer) {
       if (!mapRef.current) return;
+      
+      const maxCount = Math.max(...grids.map(g => g.count));
 
-      // Only include grids with actual earthquakes (count > 0)
-      let activeGrids = grids.filter((grid) => grid.count > 0);
+      const geoJsonFeatures = grids
+        .filter(grid => grid.geometry)
+        .map(grid => ({
+          type: "Feature",
+          properties: {
+            name: grid.grid_id,
+            count: grid.count,
+            level: grid.level
+          },
+          geometry: grid.geometry
+        }));
 
-      // Filter grids to only those that intersect the Bantul boundary (check center and corners)
-      if (bantulBoundary && bantulBoundary.features && bantulBoundary.features.length > 0) {
-        const geometry = bantulBoundary.features[0].geometry;
-        activeGrids = activeGrids.filter(grid => 
-          isPointInMultiPolygon([grid.center.lon, grid.center.lat], geometry)
-        );
-      }
+      if (geoJsonFeatures.length === 0) return;
 
-      if (activeGrids.length === 0) return;
-
-      // Extract points for heat map: [lat, lon, intensity]
-      // Use log scale to compress wide range of earthquake counts
-      const heatPoints: [number, number, number][] = activeGrids.map((grid) => [
-        grid.center.lat,
-        grid.center.lon,
-        Math.log2(grid.count + 1),
-      ]);
-
-      const maxIntensity = Math.max(
-        ...activeGrids.map((g) => Math.log2(g.count + 1)),
-        1,
-      );
-
-      // Wait for map to be ready (ensure canvas is initialized)
-      const addHeatLayer = () => {
-        if (!mapRef.current) return;
-
-        try {
-          // Cast L to any because leaflet.heat adds heatLayer to L namespace
-          const heatLayer = (L as any).heatLayer(heatPoints, {
-            radius: 30,
-            blur: 30,
-            maxZoom: 11,
-            max: maxIntensity,
-            minOpacity: 0.6,
-            gradient: {
-              0.33: "lime",
-              0.66: "yellow",
-              1.0: "red"
-            },
-          });
-
-          heatLayer.addTo(mapRef.current);
-          layersRef.current.push(heatLayer);
-        } catch (error) {
-          console.warn("Failed to add heat layer:", error);
-        }
+      const geoJsonData = {
+        type: "FeatureCollection",
+        features: geoJsonFeatures
       };
 
-      // Wait for map to be ready before adding heat layer
-      mapRef.current.whenReady(() => {
-        setTimeout(addHeatLayer, 100);
+      const villageLayer = L.geoJSON(geoJsonData as any, {
+        style: (feature) => {
+          const count = feature?.properties?.count || 0;
+          let fillColor = "#10b981"; // 0 count: Emerald Green (Aman)
+          let opacity = 0.4;
+          let strokeColor = "#047857";
+          let strokeOpacity = 0.6;
+          let weight = 0.8;
+
+          if (feature?.properties?.level === "high") {
+            fillColor = "#dc2626"; // Tinggi: Merah (red-600)
+            opacity = 0.75;
+            strokeColor = "#991b1b"; // Darker red border
+            strokeOpacity = 0.8;
+            weight = 1.2;
+          } else if (feature?.properties?.level === "medium") {
+            fillColor = "#f97316"; // Sedang: Orange (orange-500)
+            opacity = 0.7;
+            strokeColor = "#c2410c"; // Darker orange border
+            strokeOpacity = 0.8;
+            weight = 1;
+          } else if (count > 0) { // low level 
+            fillColor = "#eab308"; // Rendah: Yellow (yellow-500)
+            opacity = 0.65;
+            strokeColor = "#a16207"; // Darker yellow border
+            strokeOpacity = 0.8;
+            weight = 1;
+          }
+
+          return {
+            fillColor: fillColor,
+            weight: weight, 
+            opacity: strokeOpacity, 
+            color: strokeColor, 
+            fillOpacity: opacity,
+            className: 'transition-all duration-300 ease-in-out'
+          };
+        },
+        onEachFeature: (feature, layer) => {
+          const name = feature.properties.name || "Tidak diketahui";
+          const count = feature.properties.count || 0;
+          const level = feature.properties.level || "low";
+          
+          let levelBadge = "";
+          let description = "";
+
+          if (count > 0) {
+             const levelColor = level === 'high' ? 'bg-red-100 text-red-700 border-red-200' : 
+                                level === 'medium' ? 'bg-orange-100 text-orange-700 border-orange-200' : 
+                                'bg-yellow-100 text-yellow-700 border-yellow-200';
+             
+             const levelText = level === 'high' ? 'Rawan Tinggi' : 
+                               level === 'medium' ? 'Rawan Sedang' : 'Rawan Rendah';
+             
+             const iconElement = level === 'high' ? ReactDOMServer.renderToString(<AlertTriangle size={14} />) : 
+                                 level === 'medium' ? ReactDOMServer.renderToString(<AlertTriangle size={14} />) : 
+                                 ReactDOMServer.renderToString(<BellRing size={14} />);
+             
+             description = level === 'high' ? "Desa ini cukup sering menjadi titik pusat gempa." : 
+                           level === 'medium' ? "Desa ini beberapa kali menjadi titik pusat gempa." : 
+                           "Desa ini jarang menjadi titik pusat gempa, namun tetap harus waspada.";
+             
+             levelBadge = `
+               <div class="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold border ${levelColor}">
+                  <span class="mr-1.5 flex items-center">${iconElement}</span> ${levelText}
+               </div>`;
+          } else {
+             description = "Berdasarkan data saat ini, belum pernah tercatat ada pusat gempa di desa ini.";
+             const checkIcon = ReactDOMServer.renderToString(<CheckCircle2 size={14} />);
+             levelBadge = `
+               <div class="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200">
+                  <span class="mr-1.5 flex items-center">${checkIcon}</span> Relatif Aman
+               </div>`;
+          }
+
+          const popupContent = `
+            <div class="font-sans min-w-[220px] max-w-[260px] text-slate-800 dark:text-zinc-200">
+              <div class="border-b border-slate-100 dark:border-zinc-800 pb-2 mb-3">
+                <h3 class="font-bold text-base tracking-wide uppercase text-slate-900 dark:text-zinc-50">Desa ${name}</h3>
+              </div>
+              
+              <div class="space-y-3">
+                <div>
+                  <span class="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-0.5">Pusat Gempa Terjadi:</span>
+                  <div class="flex items-baseline">
+                    <span class="font-extrabold text-2xl text-slate-800 dark:text-zinc-100">${count}</span>
+                    <span class="ml-1 text-sm text-slate-600 dark:text-zinc-400 font-medium">Kali Gempa</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <span class="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">Tingkat Kerawanan Desa:</span>
+                  ${levelBadge}
+                </div>
+              </div>
+              
+              <div class="mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
+                <p class="text-[11px] leading-relaxed text-slate-500 dark:text-zinc-500 italic">
+                  * ${description}
+                </p>
+              </div>
+            </div>
+          `;
+          
+          // Mengganti bindTooltip (hover) menjadi bindPopup (klik)
+          layer.bindPopup(popupContent, {
+            className: 'custom-leaflet-popup !rounded-xl',
+            maxWidth: 280,
+            closeButton: true
+          });
+
+          // Highlight on hover (hanya efek outline poligon saja, tooltip dihapus)
+          layer.on({
+            mouseover: (e) => {
+              const target = e.target;
+              // Simpan style asli sebelum diubah jika Leaflet belum men-tracknya
+              if (!target.options.originalStyle) {
+                target.options.originalStyle = {
+                   weight: target.options.weight,
+                   color: target.options.color,
+                   fillOpacity: target.options.fillOpacity,
+                   fillColor: target.options.fillColor,
+                   opacity: target.options.opacity
+                };
+              }
+              
+              target.bringToFront();
+              
+              target.setStyle({
+                weight: 2.5,
+                color: '#1e293b', // Slate 800
+                fillOpacity: 0.85,
+              });
+            },
+            mouseout: (e) => {
+              const target = e.target;
+              // Memulihkan style dengan aman menghindari nyangkut
+              if (target.options.originalStyle) {
+                 target.setStyle(target.options.originalStyle);
+              } else {
+                 villageLayer.resetStyle(target);
+              }
+            }
+          });
+        }
       });
 
-      // Fit bounds to show all grids with padding
-      const bounds = grids.map(
-        (grid) => [grid.center.lat, grid.center.lon] as [number, number],
-      );
+      villageLayer.addTo(mapRef.current);
+      layersRef.current.push(villageLayer);
 
-      if (mapRef.current && bounds.length > 0) {
-        mapRef.current.fitBounds(bounds, { padding: [80, 80] });
+      // Focus map to all active grid points
+      const activeGrids = grids.filter(g => g.count > 0);
+      if (activeGrids.length > 0) {
+        const bounds = activeGrids.map(
+          (grid) => [grid.center.lat, grid.center.lon] as [number, number],
+        );
+
+        if (mapRef.current && bounds.length > 0) {
+          mapRef.current.fitBounds(bounds, { padding: [80, 80] });
+        }
       }
     }
-  }, [grids, bantulBoundary]);
+  }, [grids, bantulBoundary, resolvedTheme, showBpbdLayer]);
 
   // Manage BPBD Layer visibility
   useEffect(() => {
@@ -302,35 +364,47 @@ export default function FrequencyMap({
               fillOpacity: 0.3,
             };
           },
-          onEachFeature: (feature, layer) => {
-            const riskLevel = feature.properties?.bahaya || "Tidak diketahui";
-            const desa =
-              feature.properties?.desa ||
-              feature.properties?.desa_2 ||
-              "Tidak diketahui";
+            onEachFeature: (feature, layer) => {
+              const riskLevel = feature.properties?.bahaya || "Tidak diketahui";
+              const desa =
+                feature.properties?.desa ||
+                feature.properties?.desa_2 ||
+                "Tidak diketahui";
 
-            layer.bindTooltip(`Risiko: ${riskLevel}`, {
-              className: "custom-tooltip text-sm font-medium p-2",
-              direction: "auto",
-            });
+              const colorHex = riskLevel.toLowerCase() === "rendah" ? "#10b981" : 
+                               riskLevel.toLowerCase() === "sedang" ? "#f59e0b" : "#dc2626";
+              
+              const levelColor = riskLevel.toLowerCase() === "rendah" ? "bg-emerald-100 text-emerald-700 border-emerald-200" : 
+                                 riskLevel.toLowerCase() === "sedang" ? "bg-amber-100 text-amber-700 border-amber-200" : 
+                                 "bg-red-100 text-red-700 border-red-200";
 
-            layer.bindPopup(
-              `<div class="p-2 min-w-[150px]">
-                <p class="text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Area BPBD</p>
-                <p class="font-bold text-slate-800 mb-1">${desa}</p>
-                <div class="flex items-center gap-1.5 mt-2">
-                  <div class="w-2.5 h-2.5 rounded-full" style="background-color: ${
-                    riskLevel.toLowerCase() === "rendah"
-                      ? "#22c55e"
-                      : riskLevel.toLowerCase() === "sedang"
-                        ? "#f59e0b"
-                        : "#ef4444"
-                  }"></div>
-                  <p class="text-sm font-medium">Tingkat Risiko: ${riskLevel}</p>
-                </div>
-              </div>`,
-            );
-          },
+              layer.bindTooltip(`Risiko: ${riskLevel}`, {
+                className: "custom-tooltip text-sm font-medium p-2",
+                direction: "auto",
+              });
+
+              layer.bindPopup(
+                `<div class="font-sans min-w-[200px] max-w-[240px] text-slate-800 dark:text-zinc-200">
+                  <div class="border-b border-slate-100 dark:border-zinc-800 pb-2 mb-3">
+                    <span class="text-[10px] font-bold tracking-widest text-slate-400 dark:text-zinc-500 uppercase block mb-1">Area Rawan BPBD</span>
+                    <h3 class="font-bold text-[15px] leading-snug text-slate-900 dark:text-zinc-50 uppercase">${desa}</h3>
+                  </div>
+                  
+                  <div class="space-y-2">
+                    <span class="block text-xs font-medium text-slate-500 dark:text-zinc-400 mb-1.5">Tingkat Risiko Bencana:</span>
+                    <div class="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold border ${levelColor}">
+                      <div class="w-2 h-2 rounded-full mr-2" style="background-color: ${colorHex}"></div>
+                      Risiko ${riskLevel}
+                    </div>
+                  </div>
+                </div>`,
+                {
+                   className: 'custom-leaflet-popup !rounded-xl',
+                   maxWidth: 260,
+                   closeButton: true
+                }
+              );
+            },
         });
       }
 
@@ -454,25 +528,53 @@ export default function FrequencyMap({
         radiusGroup.addTo(earthquakeLayerRef.current!);
         earthquakeCirclesRef.current.set(eq.id, radiusGroup);
 
-        marker.bindPopup(
-          `<div class="p-3 min-w-[200px]">
-            <div class="flex items-center gap-2 mb-2">
-              <div class="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs font-bold">
-                M ${eq.magnitude}
+          const calendarIcon = ReactDOMServer.renderToString(<Calendar size={14} />);
+          const depthIcon = ReactDOMServer.renderToString(<ArrowDownToLine size={14} />);
+
+          marker.bindPopup(
+            `<div class="font-sans min-w-[240px] text-slate-800 dark:text-zinc-200">
+              <div class="border-b border-slate-100 dark:border-zinc-800 pb-2 mb-3">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-[10px] font-bold tracking-widest text-slate-400 dark:text-zinc-500 uppercase">Titik Gempa</span>
+                  <div class="px-2 py-0.5 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded text-xs font-extrabold shadow-sm">
+                    M ${eq.magnitude.toFixed(1)}
+                  </div>
+                </div>
+                <h3 class="font-bold text-[15px] leading-snug text-slate-900 dark:text-zinc-50 mt-2">${eq.location}</h3>
               </div>
-            </div>
-            <p class="font-bold text-slate-900 dark:text-zinc-100 mb-1 text-sm">${eq.location}</p>
-            <p class="text-xs text-slate-500 dark:text-zinc-400">
-              ${new Date(eq.time).toLocaleString("id-ID", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })} WIB
-            </p>
-          </div>`,
-        );
+              
+              <div class="space-y-2.5">
+                <div class="flex items-center gap-2">
+                  <div class="w-6 flex justify-center text-slate-400 dark:text-zinc-500">${calendarIcon}</div>
+                  <div>
+                    <span class="block text-[10px] font-medium text-slate-500 dark:text-zinc-400 uppercase">Waktu Kejadian</span>
+                    <span class="font-semibold text-slate-700 dark:text-zinc-300 text-sm">
+                      ${new Date(eq.time).toLocaleString("id-ID", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })} WIB
+                    </span>
+                  </div>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                  <div class="w-6 flex justify-center text-slate-400 dark:text-zinc-500">${depthIcon}</div>
+                  <div>
+                    <span class="block text-[10px] font-medium text-slate-500 dark:text-zinc-400 uppercase">Kedalaman</span>
+                    <span class="font-semibold text-slate-700 dark:text-zinc-300 text-sm">${(eq as any).depth !== undefined ? (eq as any).depth + ' km' : "Tidak diketahui"}</span>
+                  </div>
+                </div>
+              </div>
+            </div>`,
+            {
+               className: 'custom-leaflet-popup !rounded-xl',
+               maxWidth: 280,
+               closeButton: true
+            }
+          );
 
         earthquakeMarkersRef.current.set(eq.id, marker);
         marker.addTo(earthquakeLayerRef.current!);
