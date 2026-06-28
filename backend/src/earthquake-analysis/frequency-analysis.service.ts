@@ -6,18 +6,16 @@ import {
   BoundingBox,
   AnalysisConfig,
 } from './interfaces/grid-cell.interface';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as turfPointInPolygon from '@turf/boolean-point-in-polygon';
+import * as turfHelpers from '@turf/helpers';
+import turfCentroid from '@turf/centroid';
 
 @Injectable()
 export class FrequencyAnalysisService {
   private readonly logger = new Logger(FrequencyAnalysisService.name);
-
-  // Default configuration for Bantul area (more focused)
-  private readonly defaultBounds: BoundingBox = {
-    minLon: 110.25, // Batas barat Bantul
-    minLat: -8.0, // Batas selatan Bantul
-    maxLon: 110.5, // Batas timur Bantul
-    maxLat: -7.75, // Batas utara Bantul
-  };
+  private villageGeoJson: any = null;
 
   // Classification thresholds
   private readonly config: AnalysisConfig = {
@@ -26,59 +24,39 @@ export class FrequencyAnalysisService {
     highThreshold: Infinity,
   };
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {
+    this.loadVillageGeoJson();
+  }
 
-  /**
-   * Generate grid cells for the analysis area
-   */
-  generateGrid(bounds: BoundingBox, gridSizeKm: number): GridCell[] {
-    const grids: GridCell[] = [];
-
-    // Convert km to degrees (approximate)
-    // 1 degree ≈ 111 km at equator
-    const gridSizeDeg = gridSizeKm / 111;
-
-    let gridId = 1;
-    for (let lon = bounds.minLon; lon < bounds.maxLon; lon += gridSizeDeg) {
-      for (let lat = bounds.minLat; lat < bounds.maxLat; lat += gridSizeDeg) {
-        const maxLon = Math.min(lon + gridSizeDeg, bounds.maxLon);
-        const maxLat = Math.min(lat + gridSizeDeg, bounds.maxLat);
-
-        grids.push({
-          grid_id: `cell_${gridId}`,
-          minLon: lon,
-          minLat: lat,
-          maxLon,
-          maxLat,
-          geometry: `POLYGON((${lon} ${lat}, ${maxLon} ${lat}, ${maxLon} ${maxLat}, ${lon} ${maxLat}, ${lon} ${lat}))`,
-        });
-
-        gridId++;
-      }
+  private loadVillageGeoJson() {
+    try {
+      const filePath = path.join(process.cwd(), 'Data', 'GeoJSon', 'data_desa.geojson');
+      const fileData = fs.readFileSync(filePath, 'utf8');
+      this.villageGeoJson = JSON.parse(fileData);
+      this.logger.log('Successfully loaded data_desa.geojson');
+    } catch (error) {
+      this.logger.error('Failed to load data_desa.geojson', error);
     }
-
-    this.logger.log(`Generated ${grids.length} grid cells`);
-    return grids;
   }
 
   /**
-   * Calculate earthquake frequency for each grid cell
+   * Calculate earthquake frequency for each village polygon
    */
   async calculateFrequency(query: FrequencyQueryDto) {
     const {
       start_date,
       end_date,
-      grid_size = 5,
       min_magnitude = 0,
       max_depth,
     } = query;
 
     this.logger.log(
-      `Calculating frequency: ${start_date} to ${end_date}, grid: ${grid_size}km`,
+      `Calculating frequency for villages: ${start_date} to ${end_date}`,
     );
 
-    // Generate grid cells
-    const grids = this.generateGrid(this.defaultBounds, grid_size);
+    if (!this.villageGeoJson || !this.villageGeoJson.features) {
+      throw new Error('Village GeoJSON data is not loaded.');
+    }
 
     // 1. Ambil semua gempa yang memenuhi kriteria filter dalam SATU kueri
     const where: any = {
@@ -99,66 +77,72 @@ export class FrequencyAnalysisService {
       select: { lat: true, lon: true },
     });
 
-    // 2. Siapkan penampung untuk hitungan grid
-    const gridCounts = new Map<string, number>();
-    grids.forEach((g) => gridCounts.set(g.grid_id, 0));
+    // 2. Siapkan hitungan untuk setiap desa
+    const villageCounts = new Map<string, number>();
+    const features = this.villageGeoJson.features;
+    
+    features.forEach((feature: any) => {
+      const name = feature.properties.NAMOBJ;
+      if (name) {
+        villageCounts.set(name, 0);
+      }
+    });
 
-    // 3. Hitung jumlah gempa per grid murni di memori Node.js (Zero DB Query)
+    // 3. Hitung jumlah gempa per desa menggunakan Point-In-Polygon
     for (const eq of earthquakes) {
       if (typeof eq.lat !== 'number' || typeof eq.lon !== 'number') continue;
+      
+      const point = turfHelpers.point([eq.lon, eq.lat]); // Perhatikan: lon, lat di GeoJSON
 
-      for (const grid of grids) {
-        if (
-          eq.lon >= grid.minLon &&
-          eq.lon < grid.maxLon &&
-          eq.lat >= grid.minLat &&
-          eq.lat < grid.maxLat
-        ) {
-          gridCounts.set(grid.grid_id, gridCounts.get(grid.grid_id) + 1);
-          break; // Gempa hanya ada di 1 grid
+      for (const feature of features) {
+        try {
+          if (turfPointInPolygon.default(point, feature)) {
+            const name = feature.properties.NAMOBJ;
+            if (name) {
+              villageCounts.set(name, (villageCounts.get(name) || 0) + 1);
+            }
+            break; // Gempa hanya ada di 1 desa
+          }
+        } catch (e) {
+          // Abaikan jika polygon bermasalah
         }
       }
     }
 
-    // 4. Bangun data hasil (termasuk GeoJSON polygon untuk di render)
-    const results = grids.map((grid) => {
-      const count = gridCounts.get(grid.grid_id) || 0;
-
-      // Calculate center point
-      const centerLon = (grid.minLon + grid.maxLon) / 2;
-      const centerLat = (grid.minLat + grid.maxLat) / 2;
-
-      // Convert to GeoJSON
-      const geometry = {
-        type: 'Polygon',
-        coordinates: [
-          [
-            [grid.minLon, grid.minLat],
-            [grid.maxLon, grid.minLat],
-            [grid.maxLon, grid.maxLat],
-            [grid.minLon, grid.maxLat],
-            [grid.minLon, grid.minLat],
-          ],
-        ],
-      };
+    // 4. Bangun data hasil dengan format yang sama
+    const results = features.map((feature: any) => {
+      const name = feature.properties.NAMOBJ || 'Unknown';
+      const count = villageCounts.get(name) || 0;
+      
+      let centerLat = 0;
+      let centerLon = 0;
+      
+      try {
+        const center = turfCentroid(feature);
+        centerLon = center.geometry.coordinates[0];
+        centerLat = center.geometry.coordinates[1];
+      } catch (e) {
+        // Fallback jika tidak bisa hitung centroid
+      }
 
       return {
-        grid_id: grid.grid_id,
+        grid_id: name, // Gunakan nama desa sebagai ID
         count,
         level: this.classifyFrequency(count),
         center: {
           lat: centerLat,
           lon: centerLon,
         },
-        geometry,
+        geometry: feature.geometry,
+        properties: feature.properties,
       };
     });
 
     // Calculate statistics
     const statistics = {
-      low_count: results.filter((r) => r.level === 'low').length,
-      medium_count: results.filter((r) => r.level === 'medium').length,
-      high_count: results.filter((r) => r.level === 'high').length,
+      low_count: results.filter((r: any) => r.level === 'low').length,
+      medium_count: results.filter((r: any) => r.level === 'medium').length,
+      high_count: results.filter((r: any) => r.level === 'high').length,
     };
 
     // Get total earthquakes
@@ -173,8 +157,8 @@ export class FrequencyAnalysisService {
       metadata: {
         start_date,
         end_date,
-        grid_size,
-        total_grids: grids.length,
+        grid_size: 'village', // Indicate this is by village, not grid km
+        total_grids: features.length,
         total_earthquakes: totalEarthquakes,
       },
       grids: results,
