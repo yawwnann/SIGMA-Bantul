@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
 import { FrequencyQueryDto } from './dto/frequency-query.dto';
 import {
   GridCell,
@@ -11,11 +12,14 @@ import * as path from 'path';
 import * as turfPointInPolygon from '@turf/boolean-point-in-polygon';
 import * as turfHelpers from '@turf/helpers';
 import turfCentroid from '@turf/centroid';
+import turfBbox from '@turf/bbox';
 
 @Injectable()
 export class FrequencyAnalysisService {
   private readonly logger = new Logger(FrequencyAnalysisService.name);
   private villageGeoJson: any = null;
+  // Menyimpan Bounding Box (BBox) masing-masing desa untuk fast filtering
+  private villageBboxes: Map<string, number[]> = new Map();
 
   // Classification thresholds
   private readonly config: AnalysisConfig = {
@@ -24,7 +28,10 @@ export class FrequencyAnalysisService {
     highThreshold: Infinity,
   };
 
-  constructor(private prisma: PrismaService) {
+  constructor(
+    private prisma: PrismaService,
+    private redisService: RedisService,
+  ) {
     this.loadVillageGeoJson();
   }
 
@@ -33,7 +40,23 @@ export class FrequencyAnalysisService {
       const filePath = path.join(process.cwd(), 'Data', 'GeoJSon', 'data_desa.geojson');
       const fileData = fs.readFileSync(filePath, 'utf8');
       this.villageGeoJson = JSON.parse(fileData);
-      this.logger.log('Successfully loaded data_desa.geojson');
+      
+      // Pre-compute bounding boxes for faster point-in-polygon lookup
+      if (this.villageGeoJson.features) {
+        this.villageGeoJson.features.forEach((feature: any) => {
+           const name = feature.properties.NAMOBJ;
+           if (name) {
+             try {
+               const bbox = turfBbox(feature); // returns [minX, minY, maxX, maxY]
+               this.villageBboxes.set(name, bbox);
+             } catch(e) {
+               this.logger.warn(`Failed to generate bbox for ${name}`);
+             }
+           }
+        });
+      }
+
+      this.logger.log('Successfully loaded data_desa.geojson and generated bounding boxes');
     } catch (error) {
       this.logger.error('Failed to load data_desa.geojson', error);
     }
@@ -49,6 +72,20 @@ export class FrequencyAnalysisService {
       min_magnitude = 0,
       max_depth,
     } = query;
+
+    // --- CACHE LAYER ---
+    const cacheKey = `analysis:frequency:village:${start_date}:${end_date}:${min_magnitude}:${max_depth || 'all'}`;
+    const cachedData = await this.redisService.get(cacheKey);
+    
+    if (cachedData) {
+      this.logger.log(`Serving village frequency analysis from cache (Key: ${cacheKey})`);
+      try {
+         return JSON.parse(cachedData);
+      } catch (e) {
+         // Silently fail and recompute if cache is corrupted
+      }
+    }
+    // ------------------
 
     this.logger.log(
       `Calculating frequency for villages: ${start_date} to ${end_date}`,
@@ -88,19 +125,29 @@ export class FrequencyAnalysisService {
       }
     });
 
-    // 3. Hitung jumlah gempa per desa menggunakan Point-In-Polygon
+    // 3. Hitung jumlah gempa per desa menggunakan Fast BBox filtering + Point-In-Polygon
     for (const eq of earthquakes) {
       if (typeof eq.lat !== 'number' || typeof eq.lon !== 'number') continue;
       
       const point = turfHelpers.point([eq.lon, eq.lat]); // Perhatikan: lon, lat di GeoJSON
 
       for (const feature of features) {
+        const name = feature.properties.NAMOBJ;
+        if (!name) continue;
+
+        // FAST PATH: BBox check (Simple number comparison O(1))
+        const bbox = this.villageBboxes.get(name);
+        if (bbox) {
+           const [minLon, minLat, maxLon, maxLat] = bbox;
+           if (eq.lon < minLon || eq.lon > maxLon || eq.lat < minLat || eq.lat > maxLat) {
+              continue; // Titik di luar bounding box, lompati point-in-polygon!
+           }
+        }
+
+        // SLOW PATH: Turf Point-In-Polygon check (Hanya dieksekusi jika gempa ada di sekitar bbox desa)
         try {
           if (turfPointInPolygon.default(point, feature)) {
-            const name = feature.properties.NAMOBJ;
-            if (name) {
-              villageCounts.set(name, (villageCounts.get(name) || 0) + 1);
-            }
+            villageCounts.set(name, (villageCounts.get(name) || 0) + 1);
             break; // Gempa hanya ada di 1 desa
           }
         } catch (e) {
@@ -153,7 +200,7 @@ export class FrequencyAnalysisService {
       max_depth,
     );
 
-    return {
+    const finalResponse = {
       metadata: {
         start_date,
         end_date,
@@ -164,6 +211,12 @@ export class FrequencyAnalysisService {
       grids: results,
       statistics,
     };
+
+    // --- SAVE TO CACHE (Expiry: 24 hours = 86400 seconds) ---
+    await this.redisService.set(cacheKey, JSON.stringify(finalResponse), 86400);
+    // --------------------------------------------------------
+
+    return finalResponse;
   }
 
   /**

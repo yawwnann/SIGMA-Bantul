@@ -58,6 +58,7 @@
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/websockets": "^11.1.19",
     "@prisma/client": "^5.22.0",
+    "@turf/bbox": "^7.3.5",
     "@turf/boolean-point-in-polygon": "^7.3.5",
     "@turf/centroid": "^7.3.5",
     "@turf/helpers": "^7.3.5",
