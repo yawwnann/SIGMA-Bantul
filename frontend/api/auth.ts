@@ -24,7 +24,6 @@ export const authApi = {
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    // Clear auth cookie too
     document.cookie = 'auth_token=; path=/; max-age=0';
   },
 
