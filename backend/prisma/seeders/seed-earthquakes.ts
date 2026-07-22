@@ -176,14 +176,9 @@ async function main() {
       const timeStr = props['Origin Time (UTC)'] || '';
       const time = parseTime(tanggal, timeStr);
       
-      let locName = '';
-      if (bantulCoords && isWithinBantul(lat, lon, bantulCoords)) {
-        locName = 'Bantul';
-      } else {
-        const dist = Math.round(getDistance(BANTUL_LAT, BANTUL_LON, lat, lon));
-        const bearing = getBearing(BANTUL_LAT, BANTUL_LON, lat, lon);
-        locName = `${dist} km ${bearing} Bantul`;
-      }
+      const dist = Math.round(getDistance(BANTUL_LAT, BANTUL_LON, lat, lon));
+      const bearing = getBearing(BANTUL_LAT, BANTUL_LON, lat, lon);
+      const locName = dist === 0 ? 'BANTUL-DIY' : `${dist} km ${bearing} BANTUL-DIY`;
 
       const isLatest = (i === 0 && j === 0) ? 'true' : 'false';
       
