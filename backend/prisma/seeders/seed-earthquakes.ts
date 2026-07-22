@@ -76,6 +76,32 @@ function isWithinBantul(lat: number, lng: number, multiPolygonCoords: number[][]
   return false;
 }
 
+function getBearing(lat1: number, lon1: number, lat2: number, lon2: number): string {
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const y = Math.sin(dLon) * Math.cos(lat2 * Math.PI / 180);
+  const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
+            Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon);
+  
+  let brng = Math.atan2(y, x) * 180 / Math.PI;
+  brng = (brng + 360) % 360;
+
+  const directions = ['Utara', 'Timur Laut', 'Timur', 'Tenggara', 'Selatan', 'Barat Daya', 'Barat', 'Barat Laut'];
+  const index = Math.round(brng / 45) % 8;
+  return directions[index];
+}
+
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c; 
+}
+
 async function main() {
   console.log('🌍 Starting earthquake seeding from GeoJSON (Sebaran Gempa)...');
 
@@ -129,6 +155,10 @@ async function main() {
   const BATCH_SIZE = 500;
   let successCount = 0;
   
+  // Bantul center coordinates for distance calculation
+  const BANTUL_LAT = -7.876;
+  const BANTUL_LON = 110.327;
+
   for (let i = 0; i < features.length; i += BATCH_SIZE) {
     const batch = features.slice(i, i + BATCH_SIZE);
     
@@ -146,9 +176,13 @@ async function main() {
       const timeStr = props['Origin Time (UTC)'] || '';
       const time = parseTime(tanggal, timeStr);
       
-      let locName = 'Luar Daerah';
+      let locName = '';
       if (bantulCoords && isWithinBantul(lat, lon, bantulCoords)) {
         locName = 'Bantul';
+      } else {
+        const dist = Math.round(getDistance(BANTUL_LAT, BANTUL_LON, lat, lon));
+        const bearing = getBearing(BANTUL_LAT, BANTUL_LON, lat, lon);
+        locName = `${dist} km ${bearing} Bantul`;
       }
 
       const isLatest = (i === 0 && j === 0) ? 'true' : 'false';
