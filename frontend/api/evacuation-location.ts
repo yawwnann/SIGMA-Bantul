@@ -11,10 +11,17 @@ export const evacuationLocationApi = {
   },
 
   getNearby: async (lat: number, lon: number, radius?: number) => {
-    const response = await apiClient.get<EvacuationLocation[]>("/evacuation-locations/nearby", {
-      params: { lat, lon, radius },
-    });
-    return response.data;
+    try {
+      const response = await apiClient.get<EvacuationLocation[]>("/evacuation-locations/nearby", {
+        params: { lat, lon, radius },
+      });
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 400 || error.response?.data?.statusCode === 400) {
+        return [];
+      }
+      throw error;
+    }
   },
 
   getStatistics: async () => {

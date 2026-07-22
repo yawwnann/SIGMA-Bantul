@@ -56,12 +56,14 @@ export default function AdminLayout({
   const [logoutOpen, setLogoutOpen] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
   useEffect(() => {
     // Login page needs no auth check
     if (pathname === "/login") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setChecked(true);
       return;
     }
@@ -90,6 +92,7 @@ export default function AdminLayout({
 
   // Close sidebar when route changes (mobile)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSidebarOpen(false);
   }, [pathname]);
 

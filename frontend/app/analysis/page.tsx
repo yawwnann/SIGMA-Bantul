@@ -21,6 +21,7 @@ import {
   BarChart3,
   MapPin,
   Clock,
+  Info,
 } from "lucide-react";
 import {
   LineChart,
@@ -132,7 +133,13 @@ export default function AnalysisPage() {
       });
 
       const allData = response.data;
-      setRecentEarthquakes(allData.slice(0, 30));
+      
+      // Fetch Bantul specific latest earthquakes for the list
+      const bantulResponse = await earthquakeApi.getAll({
+        limit: 30,
+        region: "bantul",
+      });
+      setRecentEarthquakes(bantulResponse.data);
 
       // Calculate overall statistics
       if (allData.length > 0) {
@@ -423,7 +430,7 @@ export default function AnalysisPage() {
             <CardHeader className="pb-3 border-b border-slate-100 dark:border-zinc-800/50">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg font-semibold text-slate-800 dark:text-zinc-200">
-                  Gempa Terbaru
+                  Gempa Bantul Terbaru
                 </CardTitle>
                 <Badge
                   variant="outline"
@@ -590,6 +597,32 @@ export default function AnalysisPage() {
             </div>
           </CardHeader>
           <CardContent>
+            <div className="mb-4 space-y-2">
+              {!showBpbdLayer ? (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 flex items-start gap-3 text-blue-800 dark:text-blue-300">
+                  <Info className="h-5 w-5 mt-0.5 shrink-0" />
+                  <p className="text-sm">
+                    <strong className="font-semibold">Peta Frekuensi Desa:</strong> Menampilkan intensitas kejadian gempa bumi di setiap wilayah administrasi desa/kelurahan. Semakin merah/gelap warnanya, semakin sering wilayah tersebut menjadi pusat gempa.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3 flex items-start gap-3 text-emerald-800 dark:text-emerald-300">
+                  <Info className="h-5 w-5 mt-0.5 shrink-0" />
+                  <p className="text-sm">
+                    <strong className="font-semibold">Peta Risiko BPBD:</strong> Menampilkan tingkat kerawanan gempa di setiap wilayah Kabupaten Bantul berdasarkan data BPBD.
+                  </p>
+                </div>
+              )}
+
+              {showEarthquakes && (
+                <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 flex items-start gap-3 text-orange-800 dark:text-orange-300">
+                  <MapPin className="h-5 w-5 mt-0.5 shrink-0" />
+                  <p className="text-sm">
+                    <strong className="font-semibold">Titik Historis:</strong> Menampilkan sebaran titik koordinat pusat gempa bumi historis yang dapat difilter berdasarkan tahun, wilayah, dan batasan jumlah data.
+                  </p>
+                </div>
+              )}
+            </div>
             <div className="h-[600px] rounded-lg overflow-hidden border border-slate-200 dark:border-zinc-800/50">
               {loading ? (
                 <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-zinc-950">

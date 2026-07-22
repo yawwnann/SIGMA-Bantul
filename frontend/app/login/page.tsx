@@ -24,7 +24,7 @@ export default function LoginPage() {
       const res = await authApi.login(email, password);
       console.log("Login response:", res);
 
-      const token = res.access_token;
+      const token = res.accessToken || res.access_token;
       const user = res.user;
       console.log("Token:", token);
       console.log("User role:", user.role);

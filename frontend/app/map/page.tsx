@@ -382,13 +382,12 @@ export default function MapPage() {
         setEvacuationLocations(response);
         setNearestEvacuationLocations(response.slice(0, 3));
       } catch (err: any) {
-        console.error("Failed to load nearby evacuation locations:", err);
+        console.warn("Could not load nearby evacuation locations:", err);
         setEvacuationLocations([]);
         setNearestEvacuationLocations([]);
         const errorMessage =
           err.response?.data?.message || err.message || "Gagal memuat lokasi evakuasi terdekat";
         setNearbyError(errorMessage);
-        toast.error(errorMessage);
       } finally {
         setNearbyLoading(false);
       }

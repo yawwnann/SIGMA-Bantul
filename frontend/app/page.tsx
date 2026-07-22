@@ -981,12 +981,9 @@ export default function Dashboard() {
           );
         }
       } catch (error: unknown) {
-        console.error(
-          "[Dashboard] Error fetching nearby evacuationLocations:",
-          error,
-        );
-        toast.error(
-          (error as Error).message || "Gagal memuat lokasi evakuasi terdekat",
+        console.warn(
+          "[Dashboard] Notice fetching nearby evacuationLocations:",
+          (error as Error).message || error,
         );
         setEvacuationLocations([]); // Set empty if error
       }

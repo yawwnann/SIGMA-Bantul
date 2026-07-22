@@ -71,57 +71,26 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-const getLocalISODate = (d: Date) => {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
 
-const getInitialDates = () => {
-  const end = new Date();
-  const start = new Date();
-  start.setDate(end.getDate() - 30);
-  return {
-    start: getLocalISODate(start),
-    end: getLocalISODate(end),
-  };
-};
 
 export default function EarthquakesPage() {
-  const defaultDates = getInitialDates();
   const [earthquakes, setEarthquakes] = useState<Earthquake[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [startDate, setStartDate] = useState(defaultDates.start);
-  const [endDate, setEndDate] = useState(defaultDates.end);
-  const [regionFilter, setRegionFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
-  const fetchEarthquakes = async (overrides?: {
-    start?: string;
-    end?: string;
-    reg?: string;
-  }) => {
+  const fetchEarthquakes = async () => {
     setLoading(true);
     setError(null);
     try {
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      
       const data = await earthquakeApi.getAll({
-        startDate:
-          (overrides?.start !== undefined ? overrides.start : startDate)
-            ? `${overrides?.start !== undefined ? overrides.start : startDate}T00:00:00Z`
-            : undefined,
-        endDate:
-          (overrides?.end !== undefined ? overrides.end : endDate)
-            ? `${overrides?.end !== undefined ? overrides.end : endDate}T23:59:59Z`
-            : undefined,
-        region:
-          (overrides?.reg !== undefined ? overrides.reg : regionFilter) === ""
-            ? undefined
-            : overrides?.reg !== undefined
-              ? overrides.reg
-              : regionFilter,
+        startDate: thirtyDaysAgo.toISOString(),
+        endDate: now.toISOString(),
+        region: "Bantul",
         limit: 15000,
       });
       setEarthquakes(data.data);
@@ -180,7 +149,7 @@ export default function EarthquakesPage() {
             </h1>
           </div>
           <p className="text-slate-600 dark:text-zinc-400">
-            Histori dan data gempa bumi 30 hari terakhir dari BMKG untuk seluruh wilayah
+            Histori dan data gempa bumi 30 hari terakhir dari BMKG khusus untuk wilayah Bantul
           </p>
           <div className="mt-3 text-xs italic text-slate-500 dark:text-slate-400">
             *Sumber data gempa pada sistem ini berasal dari BMKG (Badan

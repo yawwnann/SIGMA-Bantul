@@ -170,7 +170,8 @@ export interface PaginatedResponse<T> {
 }
 
 export interface AuthResponse {
-  access_token: string;
+  access_token?: string;
+  accessToken?: string;
   user: User;
 }
 
