@@ -127,6 +127,28 @@ async function main() {
   const features = geojson.features;
   console.log(`📊 Found ${features.length} earthquakes in GeoJSON`);
 
+function getVillage(lat: number, lng: number, features: any[]): string | null {
+  for (const feature of features) {
+    if (!feature.geometry || !feature.geometry.coordinates) continue;
+    
+    const type = feature.geometry.type;
+    const coords = feature.geometry.coordinates;
+    
+    if (type === 'Polygon') {
+      if (pointInPolygon(lng, lat, coords[0])) {
+        return feature.properties.nm_kelurahan || null;
+      }
+    } else if (type === 'MultiPolygon') {
+      for (const polygon of coords) {
+        if (polygon[0] && pointInPolygon(lng, lat, polygon[0])) {
+          return feature.properties.nm_kelurahan || null;
+        }
+      }
+    }
+  }
+  return null;
+}
+
   console.log('🗺️ Loading Bantul boundary for clipping...');
   let bantulCoords: number[][][][] | null = null;
   let bantulPath = path.join(__dirname, '../../data/GeoJSon/34.02_Bantul.geojson');
@@ -143,6 +165,24 @@ async function main() {
     }
   } else {
     console.error(`⚠️ Bantul boundary file not found: ${bantulPath}`);
+  }
+
+  console.log('🗺️ Loading Kelurahan boundaries...');
+  let kelurahanFeatures: any[] = [];
+  let kelurahanPath = path.join(__dirname, '../../data/GeoJSon/34.02_kelurahan.geojson');
+  if (!fs.existsSync(kelurahanPath)) {
+    kelurahanPath = path.join(__dirname, '../../Data/GeoJSon/34.02_kelurahan.geojson');
+  }
+  if (fs.existsSync(kelurahanPath)) {
+    try {
+      const kelurahanGeojson = JSON.parse(fs.readFileSync(kelurahanPath, 'utf8'));
+      kelurahanFeatures = kelurahanGeojson.features || [];
+      console.log(`✅ Kelurahan boundaries loaded successfully (${kelurahanFeatures.length} villages).`);
+    } catch (e) {
+      console.error('⚠️ Failed to parse Kelurahan GeoJSON', e);
+    }
+  } else {
+    console.error(`⚠️ Kelurahan boundary file not found: ${kelurahanPath}`);
   }
 
   console.log('🗑️ Clearing existing earthquake data...');
@@ -178,7 +218,15 @@ async function main() {
       
       const dist = Math.round(getDistance(BANTUL_LAT, BANTUL_LON, lat, lon));
       const bearing = getBearing(BANTUL_LAT, BANTUL_LON, lat, lon);
-      const locName = dist === 0 ? 'BANTUL-DIY' : `${dist} km ${bearing} BANTUL-DIY`;
+      
+      const villageName = getVillage(lat, lon, kelurahanFeatures);
+      
+      let locName = '';
+      if (villageName) {
+        locName = `Kel. ${villageName}, Bantul`;
+      } else {
+        locName = dist === 0 ? 'BANTUL-DIY' : `${dist} km ${bearing} BANTUL-DIY`;
+      }
 
       const isLatest = (i === 0 && j === 0) ? 'true' : 'false';
       
